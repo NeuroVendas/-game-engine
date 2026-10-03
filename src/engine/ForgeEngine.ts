@@ -11,7 +11,7 @@ import {
   StandardMaterial,
   Vector3
 } from "@babylonjs/core";
-import type { ForgeEntity, ForgeSceneDocument } from "../types";
+import type { ForgeEntity, ForgePrimitive, ForgeSceneDocument } from "../types";
 import { ScriptRuntime } from "./ScriptRuntime";
 
 function vec3(value: [number, number, number] | undefined, fallback: [number, number, number]): Vector3 {
@@ -79,18 +79,52 @@ export class ForgeEngine {
   }
 
   addBox(): ForgeEntity {
-    const id = `Box_${Date.now().toString(36)}`;
+    return this.createPrimitive("box");
+  }
+
+  createPrimitive(kind: ForgePrimitive, name?: string): ForgeEntity {
+    const label = name ?? this.defaultPrimitiveName(kind);
+    const id = this.makeUniqueId(label);
+    const defaults: Record<ForgePrimitive, { position: [number, number, number]; size: [number, number, number]; color: string }> = {
+      box: { position: [0, 1, 0], size: [2, 2, 2], color: "#6f7d88" },
+      sphere: { position: [0, 1.25, 0], size: [2.5, 2.5, 2.5], color: "#72879a" },
+      capsule: { position: [0, 1.5, 0], size: [1.5, 3, 1.5], color: "#6e7d86" },
+      cylinder: { position: [0, 1.5, 0], size: [2, 3, 2], color: "#667986" },
+      ground: { position: [0, 0, 0], size: [16, 1, 16], color: "#3a4147" }
+    };
+
+    const preset = defaults[kind];
     const entity: ForgeEntity = {
       id,
-      name: id,
-      kind: "box",
-      position: [0, 1, 0],
-      size: [2, 2, 2],
-      color: "#6f7d88",
-      components: { Collider: { enabled: true } }
+      name: label,
+      kind,
+      position: [...preset.position],
+      size: [...preset.size],
+      color: preset.color,
+      components: {
+        Collider: { enabled: true }
+      }
     };
+
     this.createEntity(entity);
     return entity;
+  }
+
+  duplicateEntity(id: string): ForgeEntity | null {
+    const source = this.getEntity(id);
+    if (!source) return null;
+
+    const copy = structuredClone(source);
+    copy.id = this.makeUniqueId(`${source.name}_Copy`);
+    copy.name = `${source.name} Copy`;
+    copy.position = [
+      source.position[0] + 2,
+      source.position[1],
+      source.position[2] + 2
+    ];
+
+    this.createEntity(copy);
+    return copy;
   }
 
   deleteEntity(id: string): void {
@@ -133,6 +167,33 @@ export class ForgeEngine {
     this.engine.resize();
   }
 
+  private defaultPrimitiveName(kind: ForgePrimitive): string {
+    const names: Record<ForgePrimitive, string> = {
+      box: "Block",
+      sphere: "Sphere",
+      capsule: "Capsule",
+      cylinder: "Cylinder",
+      ground: "Ground"
+    };
+    return names[kind];
+  }
+
+  private makeUniqueId(name: string): string {
+    const base = name
+      .trim()
+      .replace(/[^a-zA-Z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .slice(0, 48) || "Entity";
+
+    let id = base;
+    let index = 2;
+    while (this.getEntity(id)) {
+      id = `${base}_${index}`;
+      index += 1;
+    }
+    return id;
+  }
+
   private createEntityMesh(entity: ForgeEntity): Mesh {
     const size = entity.size ?? [1, 1, 1];
     let mesh: Mesh;
@@ -150,6 +211,13 @@ export class ForgeEngine {
         height: size[1],
         subdivisions: 16
       }, this.scene);
+    } else if (entity.kind === "cylinder") {
+      mesh = MeshBuilder.CreateCylinder(entity.id, {
+        diameter: size[0],
+        height: size[1],
+        tessellation: 24
+      }, this.scene);
+      mesh.scaling.z = size[2] / Math.max(size[0], 0.0001);
     } else if (entity.kind === "ground") {
       mesh = MeshBuilder.CreateGround(entity.id, {
         width: size[0],
