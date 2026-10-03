@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Forge =] Engine v0.3</title>
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="brand">FORGE <span>=]</span><small>v0.3</small></div>
+        <div class="toolbar">
+          <button id="tool-move" title="Move (W)">Move</button>
+          <button id="tool-rotate" title="Rotate (E)">Rotate</button>
+          <button id="tool-scale" title="Scale (R)">Scale</button>
+          <span class="separator"></span>
+          <button id="add-box">+ Box</button>
+          <button id="delete-selected">Delete</button>
+          <span class="separator"></span>
+          <button id="play" class="play">▶ Play</button>
+          <button id="stop" disabled>■ Stop</button>
+          <button id="export-scene">Export Scene</button>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <aside class="panel explorer">
+          <h2>Explorer</h2>
+          <div class="service-tree">
+            <div class="service">▾ Workspace</div>
+            <div id="scene-tree" class="scene-tree"></div>
+            <div class="service muted">Players</div>
+            <div class="service muted">Lighting</div>
+            <div class="service muted">Scripts</div>
+          </div>
+        </aside>
+
+        <section class="viewport-wrap">
+          <canvas id="viewport"></canvas>
+          <div id="mode-badge" class="mode-badge">EDITOR</div>
+          <div class="help">Editor: click object • W/E/R gizmos • Play: WASD • Shift run • Space jump • E interact • C camera</div>
+        </section>
+
+        <aside class="panel inspector">
+          <h2>Properties</h2>
+          <div id="inspector-empty" class="empty">Select an object</div>
+          <div id="inspector-fields" hidden>
+            <label>Name<input id="prop-name" type="text" /></label>
+            <fieldset>
+              <legend>Position</legend>
+              <div class="triplet">
+                <input id="pos-x" type="number" step="0.1" />
+                <input id="pos-y" type="number" step="0.1" />
+                <input id="pos-z" type="number" step="0.1" />
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>Rotation °</legend>
+              <div class="triplet">
+                <input id="rot-x" type="number" step="1" />
+                <input id="rot-y" type="number" step="1" />
+                <input id="rot-z" type="number" step="1" />
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>Scale</legend>
+              <div class="triplet">
+                <input id="scale-x" type="number" step="0.1" />
+                <input id="scale-y" type="number" step="0.1" />
+                <input id="scale-z" type="number" step="0.1" />
+              </div>
+            </fieldset>
+            <div id="component-list" class="components"></div>
+          </div>
+        </aside>
+      </main>
+
+      <footer class="output">
+        <div><strong>Output</strong> <span id="status">Forge ready.</span></div>
+        <div id="fps">0 FPS</div>
+      </footer>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
