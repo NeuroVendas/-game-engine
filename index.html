@@ -3,19 +3,21 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Forge =] Engine v0.3</title>
+    <title>Forge =] Engine v0.4</title>
   </head>
   <body>
     <div id="app">
       <header class="topbar">
-        <div class="brand">FORGE <span>=]</span><small>v0.3</small></div>
+        <div class="brand">FORGE <span>=]</span><small>v0.4 dev</small></div>
         <div class="toolbar">
           <button id="tool-move" title="Move (W)">Move</button>
           <button id="tool-rotate" title="Rotate (E)">Rotate</button>
           <button id="tool-scale" title="Scale (R)">Scale</button>
           <span class="separator"></span>
-          <button id="add-box">+ Box</button>
-          <button id="delete-selected">Delete</button>
+          <button id="undo" title="Undo (Ctrl+Z)">↶ Undo</button>
+          <button id="redo" title="Redo (Ctrl+Y / Ctrl+Shift+Z)">↷ Redo</button>
+          <button id="duplicate-selected" title="Duplicate (Ctrl+D)">Duplicate</button>
+          <button id="delete-selected" title="Delete">Delete</button>
           <span class="separator"></span>
           <button id="play" class="play">▶ Play</button>
           <button id="stop" disabled>■ Stop</button>
@@ -25,12 +27,23 @@
 
       <main class="workspace">
         <aside class="panel explorer">
+          <h2>Create</h2>
+          <div class="create-palette">
+            <button data-primitive="box">▣ Block</button>
+            <button data-primitive="cylinder">● Cylinder</button>
+            <button data-primitive="sphere">● Sphere</button>
+            <button data-primitive="capsule">⬭ Capsule</button>
+            <button data-primitive="ground">▱ Ground</button>
+          </div>
+
           <h2>Explorer</h2>
           <div class="service-tree">
             <div class="service">▾ Workspace</div>
             <div id="scene-tree" class="scene-tree"></div>
             <div class="service muted">Players</div>
             <div class="service muted">Lighting</div>
+            <div class="service muted">Sound</div>
+            <div class="service muted">UI</div>
             <div class="service muted">Scripts</div>
           </div>
         </aside>
@@ -38,7 +51,11 @@
         <section class="viewport-wrap">
           <canvas id="viewport"></canvas>
           <div id="mode-badge" class="mode-badge">EDITOR</div>
-          <div class="help">Editor: click object • W/E/R gizmos • Play: WASD • Shift run • Space jump • E interact • C camera</div>
+          <div class="viewport-tip">
+            <strong>Editor</strong>
+            Right mouse + WASD move camera • mouse drag orbit • wheel zoom • F focus
+          </div>
+          <div class="help">W/E/R tools • Ctrl+D duplicate • Ctrl+Z undo • Play: WASD / Shift / Space / E / C</div>
         </section>
 
         <aside class="panel inspector">
@@ -77,6 +94,7 @@
 
       <footer class="output">
         <div><strong>Output</strong> <span id="status">Forge ready.</span></div>
+        <div id="history-state">Undo 0 • Redo 0</div>
         <div id="fps">0 FPS</div>
       </footer>
     </div>
