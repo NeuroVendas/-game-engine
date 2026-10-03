@@ -125,19 +125,25 @@ export class EditorApp {
       const dt = Math.min((now - previous) / 1000, 0.05);
       previous = now;
 
-      if (this.mode === "play") {
-        this.player?.update(dt);
-        this.forge.scripts.tick(dt);
-      } else {
-        this.updateEditorCamera(dt);
-        if (this.selectedId) {
-          this.forge.syncEntityFromMesh(this.selectedId);
+      try {
+        if (this.mode === "play") {
+          this.player?.update(dt);
+          this.forge.scripts.tick(dt);
+        } else {
+          this.updateEditorCamera(dt);
+          if (this.selectedId) {
+            this.forge.syncEntityFromMesh(this.selectedId);
+          }
+          this.moveGizmo.update(this.editorCamera.position);
         }
-        this.moveGizmo.update(this.editorCamera.position);
-      }
 
-      this.forge.scene.render();
-      this.fps.textContent = `${Math.round(this.forge.engine.getFps())} FPS`;
+        this.forge.scene.render();
+        this.fps.textContent = `${Math.round(this.forge.engine.getFps())} FPS`;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        this.canvas.dataset.runtimeError = message;
+        this.log(`RUNTIME ERROR: ${message}`);
+      }
     });
 
     window.addEventListener("resize", () => this.forge.resize());
@@ -839,6 +845,7 @@ export class EditorApp {
 
   private enterPlayMode(): void {
     if (this.mode === "play") return;
+    delete this.canvas.dataset.runtimeError;
 
     this.playSnapshot = this.forge.exportDocument();
     this.setSelection(null);

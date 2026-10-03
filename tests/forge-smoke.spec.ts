@@ -23,6 +23,13 @@ test("launcher opens first and Helios enters a working Play mode", async ({ page
   const pointerLocked = await page.evaluate(() => document.pointerLockElement !== null);
   expect(pointerLocked).toBe(false);
 
+  await page.waitForTimeout(800);
+  const runtimeError = await canvas.getAttribute("data-runtime-error");
+  const statusText = await page.locator("#status").textContent();
+  const fpsText = await page.locator("#fps").textContent();
+  console.log("PLAY DEBUG", { runtimeError, statusText, fpsText });
+
+  expect(runtimeError).toBeNull();
   await expect.poll(async () => canvas.getAttribute("data-player-position")).not.toBeNull();
   const before = (await canvas.getAttribute("data-player-position"))!;
 
