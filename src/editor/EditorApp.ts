@@ -49,6 +49,7 @@ export class EditorApp {
   private readonly fps = must<HTMLDivElement>("fps");
   private readonly historyState = must<HTMLDivElement>("history-state");
   private readonly modeBadge = must<HTMLDivElement>("mode-badge");
+  private readonly interactionPrompt = must<HTMLDivElement>("interaction-prompt");
   private readonly inspectorEmpty = must<HTMLDivElement>("inspector-empty");
   private readonly inspectorFields = must<HTMLDivElement>("inspector-fields");
   private readonly componentList = must<HTMLDivElement>("component-list");
@@ -811,7 +812,12 @@ export class EditorApp {
     this.rightMouseNavigation = false;
 
     const spawn = this.forge.document.playerSpawn ?? [0, 1.1, 20];
-    this.player = new PlayerController(this.forge, spawn, (message) => this.log(message));
+    this.player = new PlayerController(
+      this.forge,
+      spawn,
+      (message) => this.log(message),
+      (text, locked) => this.setInteractionPrompt(text, locked)
+    );
 
     must<HTMLButtonElement>("play").disabled = true;
     must<HTMLButtonElement>("stop").disabled = false;
@@ -842,6 +848,7 @@ export class EditorApp {
     must<HTMLButtonElement>("stop").disabled = true;
     this.modeBadge.textContent = "EDITOR";
     this.modeBadge.classList.remove("playing");
+    this.setInteractionPrompt(null, false);
     this.renderTree();
     this.renderInspector();
     this.updateHistoryUI();
@@ -924,6 +931,12 @@ export class EditorApp {
     anchor.click();
     URL.revokeObjectURL(url);
     this.log("Scene exported.");
+  }
+
+  private setInteractionPrompt(text: string | null, locked: boolean): void {
+    this.interactionPrompt.hidden = !text;
+    this.interactionPrompt.textContent = text ?? "";
+    this.interactionPrompt.classList.toggle("locked", locked);
   }
 
   private log(message: string): void {
