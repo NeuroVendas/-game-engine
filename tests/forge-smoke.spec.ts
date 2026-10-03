@@ -75,6 +75,25 @@ test("custom place creation opens a blank editable project", async ({ page }) =>
   await expect(page.locator("#studio-project-name")).toHaveText("Smoke Test Place");
   await expect(page.locator("#scene-tree")).toContainText("Baseplate");
 
+  const editorCanvas = page.locator("#viewport");
+  await expect.poll(async () => editorCanvas.getAttribute("data-editor-camera")).not.toBeNull();
+  const editorCameraBefore = (await editorCanvas.getAttribute("data-editor-camera"))!;
+
+  await page.keyboard.down("KeyD");
+  await page.waitForTimeout(450);
+  await page.keyboard.up("KeyD");
+  await page.waitForTimeout(80);
+
+  const editorCameraAfter = (await editorCanvas.getAttribute("data-editor-camera"))!;
+  expect(editorCameraAfter).not.toBe(editorCameraBefore);
+
+  await page.locator("[data-primitive='box']").click();
+  await expect(page.locator("#scene-tree")).toContainText("Block");
+  await expect(page.locator("#pos-x")).toHaveValue("0.00");
+  await page.locator("#pos-x").fill("6");
+  await page.locator("#pos-x").press("Enter");
+  await expect(page.locator("#pos-x")).toHaveValue("6.00");
+
   await page.locator(".scene-item", { hasText: "Baseplate" }).click();
   await page.locator("#code-selected").click();
   await expect(page.locator("#script-editor-dialog")).toBeVisible();

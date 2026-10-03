@@ -8,7 +8,6 @@ import { registerDefaultScripts } from "../engine/defaultScripts";
 import type { ForgePrefabName } from "../engine/prefabs";
 import { PlayerController } from "../player/PlayerController";
 import { HistoryManager } from "./HistoryManager";
-import { SixAxisMoveGizmo } from "./SixAxisMoveGizmo";
 
 type ToolMode = "move" | "rotate" | "scale";
 type AppMode = "editor" | "play";
@@ -34,7 +33,6 @@ export class EditorApp {
   private readonly gizmos: GizmoManager;
   private readonly history = new HistoryManager(60);
   private readonly editorNavKeys = new Set<string>();
-  private readonly moveGizmo: SixAxisMoveGizmo;
 
   private player: PlayerController | null = null;
   private mode: AppMode = "editor";
@@ -77,12 +75,17 @@ export class EditorApp {
     this.editorCamera.wheelPrecision = 18;
     this.editorCamera.panningSensibility = 70;
     this.editorCamera.attachControl(canvas, true);
+    const pointerInput = this.editorCamera.inputs.attached.pointers as { buttons?: number[] } | undefined;
+    if (pointerInput) pointerInput.buttons = [2];
     this.forge.scene.activeCamera = this.editorCamera;
 
     this.gizmos = new GizmoManager(this.forge.scene);
     this.gizmos.usePointerToAttachGizmos = false;
-    this.gizmos.positionGizmoEnabled = false;
-    this.moveGizmo = new SixAxisMoveGizmo(this.forge.scene);
+    this.gizmos.positionGizmoEnabled = true;
+    if (this.gizmos.gizmos.positionGizmo) {
+      this.gizmos.gizmos.positionGizmo.planarGizmoEnabled = false;
+      this.gizmos.gizmos.positionGizmo.updateGizmoRotationToMatchAttachedMesh = false;
+    }
 
     this.bindUI();
     this.bindScenePicking();
@@ -139,7 +142,14 @@ export class EditorApp {
           if (this.selectedId) {
             this.forge.syncEntityFromMesh(this.selectedId);
           }
-          this.moveGizmo.update(this.editorCamera.position);
+          this.canvas.dataset.editorCamera = [
+            this.editorCamera.position.x.toFixed(3),
+            this.editorCamera.position.y.toFixed(3),
+            this.editorCamera.position.z.toFixed(3),
+            this.editorCamera.target.x.toFixed(3),
+            this.editorCamera.target.y.toFixed(3),
+            this.editorCamera.target.z.toFixed(3)
+          ].join(",");
         }
 
         this.forge.scene.render();
@@ -278,7 +288,11 @@ export class EditorApp {
 
   private bindKeyboard(): void {
     window.addEventListener("keydown", (event) => {
-      if (event.target instanceof HTMLInputElement) return;
+      if (
+        event.target instanceof HTMLInputElement
+        || event.target instanceof HTMLTextAreaElement
+        || event.target instanceof HTMLSelectElement
+      ) return;
 
       if (this.mode === "editor") {
         this.editorNavKeys.add(event.code);
@@ -305,10 +319,20 @@ export class EditorApp {
           return;
         }
 
-        if (!this.rightMouseNavigation) {
-          if (event.code === "KeyW") this.setTool("move");
-          if (event.code === "KeyE") this.setTool("rotate");
-          if (event.code === "KeyR") this.setTool("scale");
+        if (control && event.code === "Digit2") {
+          event.preventDefault();
+          this.setTool("move");
+          return;
+        }
+        if (control && event.code === "Digit3") {
+          event.preventDefault();
+          this.setTool("scale");
+          return;
+        }
+        if (control && event.code === "Digit4") {
+          event.preventDefault();
+          this.setTool("rotate");
+          return;
         }
 
         if (event.code === "Delete") {
@@ -350,8 +374,6 @@ export class EditorApp {
   }
 
   private updateEditorCamera(dt: number): void {
-    if (!this.rightMouseNavigation) return;
-
     const forward = this.editorCamera.getForwardRay().direction.clone();
     forward.y = 0;
     if (forward.lengthSquared() < 0.0001) return;
@@ -377,10 +399,12 @@ export class EditorApp {
   private setTool(tool: ToolMode): void {
     if (this.mode !== "editor") return;
     this.tool = tool;
-    this.gizmos.positionGizmoEnabled = false;
+    this.gizmos.positionGizmoEnabled = tool === "move";
     this.gizmos.rotationGizmoEnabled = tool === "rotate";
     this.gizmos.scaleGizmoEnabled = tool === "scale";
-    this.moveGizmo.setEnabled(tool === "move" && Boolean(this.selectedId));
+    if (this.gizmos.gizmos.positionGizmo) {
+      this.gizmos.gizmos.positionGizmo.planarGizmoEnabled = false;
+    }
 
     for (const name of ["move", "rotate", "scale"] as const) {
       must<HTMLButtonElement>(`tool-${name}`).classList.toggle("active", name === tool);
@@ -394,7 +418,9 @@ export class EditorApp {
     const rotationDistance = this.snapEnabled ? radians(15) : 0;
     const scaleDistance = this.snapEnabled ? 0.1 : 0;
 
-    this.moveGizmo.setSnapDistance(moveDistance);
+    if (this.gizmos.gizmos.positionGizmo) {
+      this.gizmos.gizmos.positionGizmo.snapDistance = moveDistance;
+    }
     if (this.gizmos.gizmos.rotationGizmo) {
       this.gizmos.gizmos.rotationGizmo.snapDistance = rotationDistance;
     }
@@ -469,8 +495,6 @@ export class EditorApp {
 
     if (!id) {
       this.gizmos.attachToMesh(null);
-      this.moveGizmo.setTarget(null);
-      this.moveGizmo.setEnabled(false);
       return;
     }
 
@@ -483,8 +507,6 @@ export class EditorApp {
 
     mesh.showBoundingBox = true;
     this.gizmos.attachToMesh(mesh);
-    this.moveGizmo.setTarget(mesh);
-    this.moveGizmo.setEnabled(this.tool === "move");
   }
 
   private focusSelected(): void {
@@ -950,7 +972,6 @@ Forge.onInteract(() => {
     this.gizmos.positionGizmoEnabled = false;
     this.gizmos.rotationGizmoEnabled = false;
     this.gizmos.scaleGizmoEnabled = false;
-    this.moveGizmo.setEnabled(false);
     this.editorCamera.detachControl();
     this.editorNavKeys.clear();
     this.rightMouseNavigation = false;

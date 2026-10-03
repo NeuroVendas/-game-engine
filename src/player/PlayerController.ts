@@ -62,13 +62,13 @@ export class PlayerController {
     const scene = forge.scene;
 
     this.body = MeshBuilder.CreateCapsule("__player-collider", {
-      height: 2.55,
+      height: 3.05,
       radius: 0.45,
       subdivisions: 8
     }, scene);
     this.body.position = new Vector3(spawn[0], spawn[1], spawn[2]);
     this.body.checkCollisions = true;
-    this.body.ellipsoid = new Vector3(0.45, 1.22, 0.45);
+    this.body.ellipsoid = new Vector3(0.52, 1.48, 0.52);
     this.body.ellipsoidOffset = Vector3.Zero();
     this.body.isPickable = false;
     this.body.visibility = 0;
@@ -87,39 +87,33 @@ export class PlayerController {
 
     const torso = this.makePart(
       "__avatar-torso",
-      [1.2, 0.92, 0.58],
-      [0, 0.16, 0],
+      [1.42, 1.08, 0.62],
+      [0, 0.18, 0],
       shirt,
       this.avatarRoot
     );
 
-    this.headPivot = this.makePivot("__avatar-head-pivot", [0, 0.72, 0], this.avatarRoot);
-    const head = this.makePart(
-      "__avatar-head",
-      [0.78, 0.78, 0.78],
-      [0, 0.39, 0],
-      skin,
-      this.headPivot
-    );
+    this.headPivot = this.makePivot("__avatar-head-pivot", [0, 0.90, 0], this.avatarRoot);
+    const head = this.makeRoundedHead("__avatar-head", [0, 0.38, 0], skin);
 
-    const leftShoulder = this.makePivot("__avatar-left-shoulder", [-0.82, 0.54, 0], this.avatarRoot);
-    const rightShoulder = this.makePivot("__avatar-right-shoulder", [0.82, 0.54, 0], this.avatarRoot);
-    const leftHip = this.makePivot("__avatar-left-hip", [-0.31, -0.30, 0], this.avatarRoot);
-    const rightHip = this.makePivot("__avatar-right-hip", [0.31, -0.30, 0], this.avatarRoot);
+    const leftShoulder = this.makePivot("__avatar-left-shoulder", [-0.94, 0.64, 0], this.avatarRoot);
+    const rightShoulder = this.makePivot("__avatar-right-shoulder", [0.94, 0.64, 0], this.avatarRoot);
+    const leftHip = this.makePivot("__avatar-left-hip", [-0.37, -0.40, 0], this.avatarRoot);
+    const rightHip = this.makePivot("__avatar-right-hip", [0.37, -0.40, 0], this.avatarRoot);
 
     this.armPivots = [leftShoulder, rightShoulder];
     this.legPivots = [leftHip, rightHip];
 
-    this.makePart("__avatar-arm-left", [0.38, 1.02, 0.42], [0, -0.45, 0], skin, leftShoulder);
-    this.makePart("__avatar-arm-right", [0.38, 1.02, 0.42], [0, -0.45, 0], skin, rightShoulder);
-    this.makePart("__avatar-leg-left", [0.50, 1.05, 0.54], [0, -0.50, 0], pants, leftHip);
-    this.makePart("__avatar-leg-right", [0.50, 1.05, 0.54], [0, -0.50, 0], pants, rightHip);
+    this.makePart("__avatar-arm-left", [0.50, 1.18, 0.50], [0, -0.53, 0], skin, leftShoulder);
+    this.makePart("__avatar-arm-right", [0.50, 1.18, 0.50], [0, -0.53, 0], skin, rightShoulder);
+    this.makePart("__avatar-leg-left", [0.61, 1.18, 0.60], [0, -0.56, 0], pants, leftHip);
+    this.makePart("__avatar-leg-right", [0.61, 1.18, 0.60], [0, -0.56, 0], pants, rightHip);
 
     // Original Forge =] face: simple geometric eyes + bracket smile.
-    this.makePart("__avatar-eye-left", [0.075, 0.075, 0.035], [-0.15, 0.49, 0.405], dark, this.headPivot);
-    this.makePart("__avatar-eye-right", [0.075, 0.075, 0.035], [0.15, 0.49, 0.405], dark, this.headPivot);
-    this.makePart("__avatar-smile", [0.24, 0.045, 0.035], [-0.04, 0.28, 0.405], dark, this.headPivot);
-    this.makePart("__avatar-smile-bracket", [0.045, 0.18, 0.035], [0.11, 0.34, 0.405], dark, this.headPivot);
+    this.makePart("__avatar-eye-left", [0.075, 0.075, 0.035], [-0.16, 0.48, 0.43], dark, this.headPivot);
+    this.makePart("__avatar-eye-right", [0.075, 0.075, 0.035], [0.16, 0.48, 0.43], dark, this.headPivot);
+    this.makePart("__avatar-smile", [0.25, 0.045, 0.035], [-0.04, 0.27, 0.43], dark, this.headPivot);
+    this.makePart("__avatar-smile-bracket", [0.045, 0.18, 0.035], [0.12, 0.33, 0.43], dark, this.headPivot);
 
     // Forge chest mark. This is deliberately original instead of copying legacy game-platform logos.
     this.makePart("__avatar-badge", [0.48, 0.34, 0.035], [0, 0.18, 0.31], dark, torso);
@@ -248,6 +242,27 @@ export class PlayerController {
     return pivot;
   }
 
+  private makeRoundedHead(
+    name: string,
+    position: [number, number, number],
+    material: StandardMaterial
+  ): Mesh {
+    const head = MeshBuilder.CreateCapsule(name, {
+      height: 0.88,
+      radius: 0.42,
+      subdivisions: 8,
+      tessellation: 16
+    }, this.forge.scene);
+    head.parent = this.headPivot;
+    head.position = new Vector3(position[0], position[1], position[2]);
+    head.scaling.z = 1.05;
+    head.material = material;
+    head.checkCollisions = false;
+    head.isPickable = false;
+    this.avatarParts.push(head);
+    return head;
+  }
+
   private makePart(
     name: string,
     size: [number, number, number],
@@ -318,12 +333,12 @@ export class PlayerController {
     const hit = this.forge.scene.pickWithRay(ray, (mesh) => mesh !== this.body && mesh.checkCollisions);
 
     if (hit?.hit && hit.pickedPoint) {
-      this.body.position.y = hit.pickedPoint.y + 1.30;
+      this.body.position.y = hit.pickedPoint.y + 1.53;
     }
   }
 
   private isGrounded(): boolean {
-    const ray = new Ray(this.body.position.add(new Vector3(0, -1.04, 0)), Vector3.Down(), 0.45);
+    const ray = new Ray(this.body.position.add(new Vector3(0, -1.34, 0)), Vector3.Down(), 0.42);
     const hit = this.forge.scene.pickWithRay(ray, (mesh) => mesh !== this.body && mesh.checkCollisions);
     return hit?.hit ?? false;
   }
