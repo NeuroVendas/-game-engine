@@ -1,4 +1,7 @@
-import { Animation, Color3, StandardMaterial, Vector3 } from "@babylonjs/core";
+import { Animation } from "@babylonjs/core/Animations/animation";
+import { Color3 } from "@babylonjs/core/Maths/math.color";
+import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
+import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { ScriptRuntime } from "./ScriptRuntime";
 
 export function registerDefaultScripts(runtime: ScriptRuntime): void {
