@@ -141,6 +141,14 @@ export class EditorApp {
 
     must<HTMLButtonElement>("play").addEventListener("click", () => this.enterPlayMode());
     must<HTMLButtonElement>("stop").addEventListener("click", () => this.exitPlayMode());
+    must<HTMLButtonElement>("save-local").addEventListener("click", () => this.saveLocal());
+    must<HTMLButtonElement>("load-local").addEventListener("click", () => this.loadLocal());
+    must<HTMLButtonElement>("import-scene").addEventListener("click", () => {
+      must<HTMLInputElement>("scene-file-input").click();
+    });
+    must<HTMLInputElement>("scene-file-input").addEventListener("change", (event) => {
+      void this.importSceneFile(event);
+    });
     must<HTMLButtonElement>("export-scene").addEventListener("click", () => this.exportScene());
 
     const transformInputs = [
@@ -560,6 +568,72 @@ export class EditorApp {
     this.renderInspector();
     this.updateHistoryUI();
     this.log("Returned to editor. Runtime changes reverted.");
+  }
+
+  private saveLocal(): void {
+    if (this.mode !== "editor") return;
+    const sceneDocument = this.forge.exportDocument();
+    localStorage.setItem("forge:last-scene", JSON.stringify(sceneDocument));
+    this.log(`Saved ${sceneDocument.name} in this browser.`);
+  }
+
+  private loadLocal(): void {
+    if (this.mode !== "editor") return;
+
+    const raw = localStorage.getItem("forge:last-scene");
+    if (!raw) {
+      this.log("No browser save found.");
+      return;
+    }
+
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      if (!this.isForgeSceneDocument(parsed)) {
+        throw new Error("Saved data is not a valid Forge scene.");
+      }
+      this.loadSceneDocument(parsed, "Loaded browser save.");
+    } catch (error) {
+      this.log(`Load failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  private async importSceneFile(event: Event): Promise<void> {
+    if (this.mode !== "editor") return;
+
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    try {
+      const parsed: unknown = JSON.parse(await file.text());
+      if (!this.isForgeSceneDocument(parsed)) {
+        throw new Error("File is not a Forge scene v1.");
+      }
+      this.loadSceneDocument(parsed, `Imported ${file.name}.`);
+    } catch (error) {
+      this.log(`Import failed: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      input.value = "";
+    }
+  }
+
+  private loadSceneDocument(sceneDocument: ForgeSceneDocument, message: string): void {
+    this.checkpoint();
+    this.setSelection(null);
+    this.forge.loadDocument(sceneDocument);
+    this.renderTree();
+    this.renderInspector();
+    this.updateHistoryUI();
+    this.log(message);
+  }
+
+  private isForgeSceneDocument(value: unknown): value is ForgeSceneDocument {
+    if (!value || typeof value !== "object") return false;
+    const candidate = value as Partial<ForgeSceneDocument>;
+    return candidate.format === "forge.scene"
+      && candidate.version === 1
+      && typeof candidate.name === "string"
+      && Array.isArray(candidate.entities);
   }
 
   private exportScene(): void {
