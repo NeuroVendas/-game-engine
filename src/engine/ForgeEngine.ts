@@ -12,9 +12,6 @@ import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import type { ForgeEntity, ForgePrimitive, ForgeSceneDocument } from "../types";
 import { ScriptRuntime } from "./ScriptRuntime";
 import { createPrefabTemplate, type ForgePrefabName } from "./prefabs";
-import type { ForgeEntity, ForgePrimitive, ForgeSceneDocument } from "../types";
-import { ScriptRuntime } from "./ScriptRuntime";
-import { createPrefabTemplate, type ForgePrefabName } from "./prefabs";
 
 function vec3(value: [number, number, number] | undefined, fallback: [number, number, number]): Vector3 {
   const v = value ?? fallback;
