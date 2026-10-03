@@ -13,6 +13,14 @@ export interface ForgeComponents {
   Door?: {
     openHeight?: number;
   };
+  Clearance?: {
+    level: number;
+  };
+  PowerConsumer?: {
+    bus: string;
+    draw?: number;
+    required?: boolean;
+  };
   Reactor?: {
     power?: number;
     temperature?: number;
