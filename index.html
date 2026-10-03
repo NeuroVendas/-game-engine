@@ -3,22 +3,122 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Forge =] Engine v0.4</title>
+    <title>Forge =]</title>
   </head>
   <body>
-    <div id="app">
+    <section id="launcher" class="launcher">
+      <header class="site-header">
+        <div class="site-logo">FORGE <span>=]</span></div>
+        <nav class="site-nav">
+          <button class="nav-tab active" data-launch-tab="games">Games</button>
+          <button class="nav-tab" data-launch-tab="create">Create</button>
+          <button class="nav-tab" data-launch-tab="friends">Friends</button>
+        </nav>
+        <div class="site-account">Builder <span class="online-dot"></span></div>
+      </header>
+
+      <div class="classic-subnav">
+        <button class="subnav-link active">Home</button>
+        <button class="subnav-link">My Places</button>
+        <button class="subnav-link">Recently Played</button>
+        <div class="launcher-search"><input id="launcher-search" placeholder="Search places..." /></div>
+      </div>
+
+      <main class="launcher-content">
+        <aside class="launcher-sidebar">
+          <div class="profile-card">
+            <div class="avatar-placeholder">=]</div>
+            <strong>Builder</strong>
+            <small>Forge Creator</small>
+          </div>
+          <button id="new-place-side" class="classic-big-button">+ Create New Place</button>
+          <div class="sidebar-block">
+            <b>My Forge</b>
+            <button>Places</button>
+            <button>Favorites</button>
+            <button>Friends Online <span class="count-pill">0</span></button>
+          </div>
+        </aside>
+
+        <section class="launcher-main">
+          <div class="launcher-heading">
+            <div>
+              <h1>My Places</h1>
+              <p>Build something, press Play, and invite people later.</p>
+            </div>
+            <button id="new-place" class="primary-classic">Create Place</button>
+          </div>
+
+          <div id="game-grid" class="game-grid">
+            <article class="game-card featured-card" data-open-helios>
+              <div class="game-thumb helios-thumb">
+                <div class="reactor-ring"></div>
+                <span>PROJECT HELIOS</span>
+              </div>
+              <div class="game-info">
+                <h3>Project Helios</h3>
+                <p>Industrial reactor benchmark</p>
+                <div class="game-meta">Private • Studio test place</div>
+              </div>
+              <button class="open-place">Edit</button>
+            </article>
+
+            <article class="game-card new-card" data-create-place>
+              <div class="new-plus">+</div>
+              <h3>New Place</h3>
+              <p>Start from a classic baseplate.</p>
+            </article>
+          </div>
+
+          <section class="news-box">
+            <div class="news-title">Forge News</div>
+            <b>Forge v0.4 development build</b>
+            <p>Classic creator workflow, six-way move handles, reusable components, and Project Helios testing.</p>
+          </section>
+        </section>
+      </main>
+    </section>
+
+    <dialog id="create-place-dialog" class="create-dialog">
+      <form method="dialog" id="create-place-form">
+        <div class="dialog-title">Create a New Place</div>
+        <label>Place name<input id="new-place-name" value="My Place" maxlength="48" /></label>
+        <label>Template
+          <select id="new-place-template">
+            <option value="baseplate">Classic Baseplate</option>
+            <option value="industrial">Industrial Blank</option>
+          </select>
+        </label>
+        <div class="dialog-actions">
+          <button value="cancel">Cancel</button>
+          <button id="confirm-create-place" value="default" class="primary-classic">Create</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div id="app" class="studio-shell" hidden>
+      <div class="studio-menubar">
+        <button id="home-button" class="studio-home">FORGE <span>=]</span></button>
+        <button>File</button>
+        <button>Edit</button>
+        <button>View</button>
+        <button>Insert</button>
+        <button>Tools</button>
+        <button>Help</button>
+        <div class="studio-title">Forge Studio — <span id="studio-project-name">Untitled</span></div>
+      </div>
+
       <header class="topbar">
-        <div class="brand">FORGE <span>=]</span><small>v0.4 dev</small></div>
         <div class="toolbar">
-          <button id="tool-move" title="Move (W)">Move</button>
-          <button id="tool-rotate" title="Rotate (E)">Rotate</button>
-          <button id="tool-scale" title="Scale (R)">Scale</button>
+          <button id="tool-move" title="Move (W)">↔ Move</button>
+          <button id="tool-rotate" title="Rotate (E)">⟳ Rotate</button>
+          <button id="tool-scale" title="Scale (R)">□ Scale</button>
           <button id="snap-toggle" class="active" title="Toggle transform snapping">Snap On</button>
           <select id="snap-size" title="Move snap size">
-            <option value="0.25">0.25u</option>
-            <option value="0.5">0.5u</option>
-            <option value="1" selected>1u</option>
-            <option value="2">2u</option>
+            <option value="0.25">0.25</option>
+            <option value="0.5">0.5</option>
+            <option value="1" selected>1 stud</option>
+            <option value="2">2 studs</option>
           </select>
           <span class="separator"></span>
           <button id="undo" title="Undo (Ctrl+Z)">↶ Undo</button>
@@ -28,9 +128,10 @@
           <span class="separator"></span>
           <button id="play" class="play">▶ Play</button>
           <button id="stop" disabled>■ Stop</button>
-          <button id="save-local" title="Save in this browser">Save</button>
-          <button id="load-local" title="Load last browser save">Load</button>
-          <button id="import-scene" title="Import .forge.json">Import</button>
+          <span class="separator"></span>
+          <button id="save-local">Save</button>
+          <button id="load-local">Load</button>
+          <button id="import-scene">Import</button>
           <button id="export-scene">Export</button>
           <input id="scene-file-input" type="file" accept=".json,.forge.json,application/json" hidden />
         </div>
@@ -38,7 +139,7 @@
 
       <main class="workspace">
         <aside class="panel explorer">
-          <h2>Create</h2>
+          <div class="classic-panel-title">Toolbox</div>
           <div class="create-palette">
             <button data-primitive="box">▣ Block</button>
             <button data-primitive="wedge">◩ Wedge</button>
@@ -46,14 +147,14 @@
             <button data-primitive="sphere">● Sphere</button>
             <button data-primitive="capsule">⬭ Capsule</button>
             <button data-primitive="ground">▱ Ground</button>
-            <div class="palette-label">Industrial Prefabs</div>
+            <div class="palette-label">Industrial</div>
             <button data-prefab="blast-door">▥ Blast Door</button>
             <button data-prefab="console">▰ Console</button>
             <button data-prefab="catwalk">═ Catwalk</button>
             <button data-prefab="coolant-pump">◉ Pump</button>
           </div>
 
-          <h2>Explorer</h2>
+          <div class="classic-panel-title">Explorer</div>
           <div class="service-tree">
             <div class="service">▾ Workspace</div>
             <div id="scene-tree" class="scene-tree"></div>
@@ -69,15 +170,12 @@
           <canvas id="viewport"></canvas>
           <div id="mode-badge" class="mode-badge">EDITOR</div>
           <div id="interaction-prompt" class="interaction-prompt" hidden></div>
-          <div class="viewport-tip">
-            <strong>Editor</strong>
-            Right mouse + WASD move camera • mouse drag orbit • wheel zoom • F focus
-          </div>
-          <div class="help">W/E/R tools • Ctrl+D duplicate • Ctrl+Z undo • Play: WASD + mouse / Shift / Space / E / C</div>
+          <div class="viewport-tip"><strong>Studio</strong> right mouse + WASD fly • wheel zoom • F focus</div>
+          <div class="help">Play: WASD • hold right mouse to look • wheel zoom • Shift run • Space jump • E interact</div>
         </section>
 
         <aside class="panel inspector">
-          <h2>Properties</h2>
+          <div class="classic-panel-title">Properties</div>
           <div id="inspector-empty" class="empty">Select an object</div>
           <div id="inspector-fields" hidden>
             <label>Name<input id="prop-name" type="text" /></label>
@@ -107,7 +205,7 @@
             </fieldset>
             <div id="component-list" class="components"></div>
             <div class="component-add">
-              <select id="component-type" title="Component type">
+              <select id="component-type">
                 <option value="Collider">Collider</option>
                 <option value="Interactable">Interactable</option>
                 <option value="Door">Door</option>

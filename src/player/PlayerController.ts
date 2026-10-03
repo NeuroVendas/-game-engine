@@ -1,10 +1,10 @@
 import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
+import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
-import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { ForgeEngine } from "../engine/ForgeEngine";
 
 export class PlayerController {
@@ -15,20 +15,26 @@ export class PlayerController {
   private readonly arms: [Mesh, Mesh];
   private readonly legs: [Mesh, Mesh];
 
-  private keys = new Set<string>();
+  private readonly keys = new Set<string>();
   private verticalVelocity = 0;
   private firstPerson = false;
   private interactPressed = false;
   private walkTime = 0;
   private clearanceLevel = 1;
-  private readonly mouseSensitivity = 0.0025;
+  private cameraDragging = false;
+  private lastMouseX = 0;
+  private lastMouseY = 0;
 
   private readonly onKeyDown = (event: KeyboardEvent) => {
+    if (["KeyW", "KeyA", "KeyS", "KeyD", "Space", "ShiftLeft", "ShiftRight"].includes(event.code)) {
+      event.preventDefault();
+    }
+
     this.keys.add(event.code);
 
     if (event.code === "KeyC" && !event.repeat) {
       this.firstPerson = !this.firstPerson;
-      this.camera.radius = this.firstPerson ? 0.2 : 6;
+      this.camera.radius = this.firstPerson ? 0.45 : 6;
       this.setAvatarVisible(!this.firstPerson);
       this.log(this.firstPerson ? "First-person camera." : "Third-person camera.");
     }
@@ -42,37 +48,42 @@ export class PlayerController {
     this.keys.delete(event.code);
   };
 
-  private readonly onMouseMove = (event: MouseEvent) => {
-    if (document.pointerLockElement !== this.forge.canvas) return;
+  private readonly onMouseDown = (event: MouseEvent) => {
+    if (event.button !== 2) return;
+    event.preventDefault();
+    this.cameraDragging = true;
+    this.lastMouseX = event.clientX;
+    this.lastMouseY = event.clientY;
+  };
 
-    this.camera.alpha += event.movementX * this.mouseSensitivity;
+  private readonly onMouseMove = (event: MouseEvent) => {
+    if (!this.cameraDragging) return;
+
+    const dx = event.clientX - this.lastMouseX;
+    const dy = event.clientY - this.lastMouseY;
+    this.lastMouseX = event.clientX;
+    this.lastMouseY = event.clientY;
+
+    this.camera.alpha -= dx * 0.006;
     this.camera.beta = Math.min(
-      Math.PI - 0.35,
-      Math.max(0.35, this.camera.beta + event.movementY * this.mouseSensitivity)
+      Math.PI - 0.28,
+      Math.max(0.35, this.camera.beta + dy * 0.006)
     );
   };
 
-  private readonly onCanvasClick = () => {
-    this.captureMouse();
+  private readonly onMouseUp = (event: MouseEvent) => {
+    if (event.button === 2) this.cameraDragging = false;
   };
 
   private readonly onWheel = (event: WheelEvent) => {
-    if (this.firstPerson) return;
     event.preventDefault();
-    this.camera.radius = Math.min(10, Math.max(2.5, this.camera.radius + event.deltaY * 0.005));
+    if (this.firstPerson) return;
+    this.camera.radius = Math.min(10, Math.max(2.5, this.camera.radius + event.deltaY * 0.006));
   };
 
-  private readonly onPointerLockChange = () => {
-    if (document.pointerLockElement === this.forge.canvas) {
-      this.log("Mouse captured • WASD move • mouse look • Esc releases mouse");
-    } else {
-      this.keys.clear();
-      this.log("Mouse released • click the game view to resume");
-    }
-  };
-
-  private readonly onWindowBlur = () => {
+  private readonly onBlur = () => {
     this.keys.clear();
+    this.cameraDragging = false;
   };
 
   constructor(
@@ -91,9 +102,11 @@ export class PlayerController {
     this.body.position = new Vector3(spawn[0], spawn[1], spawn[2]);
     this.body.checkCollisions = true;
     this.body.ellipsoid = new Vector3(0.42, 0.9, 0.42);
-    this.body.ellipsoidOffset = new Vector3(0, 0, 0);
+    this.body.ellipsoidOffset = Vector3.Zero();
     this.body.isPickable = false;
     this.body.visibility = 0;
+
+    this.snapToSafeGround();
 
     const skin = new StandardMaterial("__avatar-skin", scene);
     skin.diffuseColor = Color3.FromHexString("#e7c6a5");
@@ -118,28 +131,28 @@ export class PlayerController {
     this.camera = new ArcRotateCamera(
       "__player-camera",
       -Math.PI / 2,
-      1.15,
+      1.12,
       6,
-      this.body.position.clone(),
+      this.body.position.add(new Vector3(0, 0.4, 0)),
       scene
     );
-    this.camera.lowerRadiusLimit = 0.15;
+    this.camera.lowerRadiusLimit = 0.35;
     this.camera.upperRadiusLimit = 10;
-    this.camera.wheelPrecision = 18;
     this.camera.panningSensibility = 0;
     this.camera.checkCollisions = true;
     this.camera.collisionRadius = new Vector3(0.25, 0.25, 0.25);
     scene.activeCamera = this.camera;
 
-    window.addEventListener("keydown", this.onKeyDown);
+    window.addEventListener("keydown", this.onKeyDown, { passive: false });
     window.addEventListener("keyup", this.onKeyUp);
-    window.addEventListener("blur", this.onWindowBlur);
-    document.addEventListener("mousemove", this.onMouseMove);
-    document.addEventListener("pointerlockchange", this.onPointerLockChange);
-    forge.canvas.addEventListener("click", this.onCanvasClick);
+    window.addEventListener("blur", this.onBlur);
+    window.addEventListener("mouseup", this.onMouseUp);
+    window.addEventListener("mousemove", this.onMouseMove);
+    forge.canvas.addEventListener("mousedown", this.onMouseDown);
+    forge.canvas.addEventListener("contextmenu", (event) => event.preventDefault());
     forge.canvas.addEventListener("wheel", this.onWheel, { passive: false });
 
-    this.log("Play: WASD move • mouse look • Shift run • Space jump • E interact • C camera");
+    this.log("Play: WASD move • right mouse drag looks • wheel zoom • Shift run • Space jump • E interact");
   }
 
   update(dt: number): void {
@@ -161,7 +174,7 @@ export class PlayerController {
     if (moving) {
       direction.normalize();
       const running = this.keys.has("ShiftLeft") || this.keys.has("ShiftRight");
-      const speed = running ? 7.5 : 4.5;
+      const speed = running ? 7.5 : 4.7;
       this.body.moveWithCollisions(direction.scale(speed * dt));
       this.body.rotation.y = Math.atan2(direction.x, direction.z);
       this.animateWalk(dt, running ? 10 : 7);
@@ -176,7 +189,18 @@ export class PlayerController {
     this.verticalVelocity -= 16 * dt;
     this.body.moveWithCollisions(new Vector3(0, this.verticalVelocity * dt, 0));
 
-    this.camera.target = this.body.position.add(new Vector3(0, 0.45, 0));
+    this.camera.target.copyFrom(this.body.position.add(new Vector3(0, 0.45, 0)));
+    this.forge.canvas.dataset.playerPosition = [
+      this.body.position.x.toFixed(3),
+      this.body.position.y.toFixed(3),
+      this.body.position.z.toFixed(3)
+    ].join(",");
+    this.forge.canvas.dataset.cameraAngles = [
+      this.camera.alpha.toFixed(4),
+      this.camera.beta.toFixed(4),
+      this.camera.radius.toFixed(3)
+    ].join(",");
+
     this.updateInteractionPrompt();
 
     if (this.interactPressed) {
@@ -185,39 +209,31 @@ export class PlayerController {
     }
   }
 
-  captureMouse(): void {
-    if (document.pointerLockElement === this.forge.canvas) return;
-    try {
-      const result = this.forge.canvas.requestPointerLock();
-      if (result && typeof (result as Promise<void>).catch === "function") {
-        void (result as Promise<void>).catch(() => {
-          this.log("Click the game view to control the camera.");
-        });
-      }
-    } catch {
-      this.log("Click the game view to control the camera.");
-    }
-  }
-
   dispose(): void {
     window.removeEventListener("keydown", this.onKeyDown);
     window.removeEventListener("keyup", this.onKeyUp);
-    window.removeEventListener("blur", this.onWindowBlur);
-    document.removeEventListener("mousemove", this.onMouseMove);
-    document.removeEventListener("pointerlockchange", this.onPointerLockChange);
-    this.forge.canvas.removeEventListener("click", this.onCanvasClick);
+    window.removeEventListener("blur", this.onBlur);
+    window.removeEventListener("mouseup", this.onMouseUp);
+    window.removeEventListener("mousemove", this.onMouseMove);
+    this.forge.canvas.removeEventListener("mousedown", this.onMouseDown);
     this.forge.canvas.removeEventListener("wheel", this.onWheel);
-    if (document.pointerLockElement === this.forge.canvas) {
-      document.exitPointerLock();
-    }
     this.camera.dispose();
     this.setPrompt(null, false);
+    delete this.forge.canvas.dataset.playerPosition;
+    delete this.forge.canvas.dataset.cameraAngles;
 
-    for (const part of this.avatarParts) {
-      part.dispose();
-    }
-
+    for (const part of this.avatarParts) part.dispose();
     this.body.dispose();
+  }
+
+  private snapToSafeGround(): void {
+    const origin = new Vector3(this.body.position.x, this.body.position.y + 12, this.body.position.z);
+    const ray = new Ray(origin, Vector3.Down(), 30);
+    const hit = this.forge.scene.pickWithRay(ray, (mesh) => mesh !== this.body && mesh.checkCollisions);
+
+    if (hit?.hit && hit.pickedPoint) {
+      this.body.position.y = hit.pickedPoint.y + 1.02;
+    }
   }
 
   private makeAvatarPart(
@@ -241,15 +257,12 @@ export class PlayerController {
   }
 
   private setAvatarVisible(visible: boolean): void {
-    for (const part of this.avatarParts) {
-      part.setEnabled(visible);
-    }
+    for (const part of this.avatarParts) part.setEnabled(visible);
   }
 
   private animateWalk(dt: number, speed: number): void {
     this.walkTime += dt * speed;
     const swing = Math.sin(this.walkTime) * 0.55;
-
     this.arms[0].rotation.x = swing;
     this.arms[1].rotation.x = -swing;
     this.legs[0].rotation.x = -swing;
@@ -264,7 +277,7 @@ export class PlayerController {
   }
 
   private isGrounded(): boolean {
-    const ray = new Ray(this.body.position.add(new Vector3(0, -0.65, 0)), Vector3.Down(), 0.5);
+    const ray = new Ray(this.body.position.add(new Vector3(0, -0.65, 0)), Vector3.Down(), 0.55);
     const hit = this.forge.scene.pickWithRay(ray, (mesh) => mesh !== this.body && mesh.checkCollisions);
     return hit?.hit ?? false;
   }
@@ -303,15 +316,11 @@ export class PlayerController {
 
     const requiredClearance = entity.components?.Clearance?.level ?? 0;
     if (requiredClearance > this.clearanceLevel) {
-      this.setPrompt(
-        `LOCKED • Clearance ${requiredClearance} required • You have ${this.clearanceLevel}`,
-        true
-      );
+      this.setPrompt(`LOCKED • Clearance ${requiredClearance} required • You have ${this.clearanceLevel}`, true);
       return;
     }
 
-    const prompt = entity.components?.Interactable?.prompt?.trim()
-      || `E • ${entity.name}`;
+    const prompt = entity.components?.Interactable?.prompt?.trim() || `E • ${entity.name}`;
     this.setPrompt(prompt, false);
   }
 
@@ -325,6 +334,7 @@ export class PlayerController {
 
     const entity = this.forge.getEntity(nearestId);
     const requiredClearance = entity?.components?.Clearance?.level ?? 0;
+
     if (requiredClearance > this.clearanceLevel) {
       this.log(`ACCESS DENIED • Clearance ${requiredClearance} required • You have ${this.clearanceLevel}`);
       return;

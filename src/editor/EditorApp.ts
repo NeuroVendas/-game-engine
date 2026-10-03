@@ -8,7 +8,7 @@ import { registerDefaultScripts } from "../engine/defaultScripts";
 import type { ForgePrefabName } from "../engine/prefabs";
 import { PlayerController } from "../player/PlayerController";
 import { HistoryManager } from "./HistoryManager";
-import heliosScene from "../../public/scenes/project-helios.forge.json";
+import { SixAxisMoveGizmo } from "./SixAxisMoveGizmo";
 
 type ToolMode = "move" | "rotate" | "scale";
 type AppMode = "editor" | "play";
@@ -34,6 +34,7 @@ export class EditorApp {
   private readonly gizmos: GizmoManager;
   private readonly history = new HistoryManager(60);
   private readonly editorNavKeys = new Set<string>();
+  private readonly moveGizmo: SixAxisMoveGizmo;
 
   private player: PlayerController | null = null;
   private mode: AppMode = "editor";
@@ -75,10 +76,8 @@ export class EditorApp {
 
     this.gizmos = new GizmoManager(this.forge.scene);
     this.gizmos.usePointerToAttachGizmos = false;
-    this.gizmos.positionGizmoEnabled = true;
-    if (this.gizmos.gizmos.positionGizmo) {
-      this.gizmos.gizmos.positionGizmo.planarGizmoEnabled = true;
-    }
+    this.gizmos.positionGizmoEnabled = false;
+    this.moveGizmo = new SixAxisMoveGizmo(this.forge.scene);
 
     this.bindUI();
     this.bindScenePicking();
@@ -88,14 +87,34 @@ export class EditorApp {
     this.updateHistoryUI();
   }
 
-  async init(): Promise<void> {
-    const sceneDocument = structuredClone(heliosScene) as ForgeSceneDocument;
-    this.forge.loadDocument(sceneDocument);
+  async init(sceneDocument: ForgeSceneDocument): Promise<void> {
+    this.forge.loadDocument(structuredClone(sceneDocument));
     this.history.clear();
     this.renderTree();
     this.renderInspector();
     this.updateHistoryUI();
     this.startLoop();
+    requestAnimationFrame(() => this.forge.resize());
+  }
+
+  openDocument(sceneDocument: ForgeSceneDocument): void {
+    if (this.mode === "play") this.exitPlayMode();
+    this.setSelection(null);
+    this.forge.loadDocument(structuredClone(sceneDocument));
+    this.history.clear();
+    this.renderTree();
+    this.renderInspector();
+    this.updateHistoryUI();
+    this.forge.resize();
+    this.log(`Opened ${sceneDocument.name}`);
+  }
+
+  returnToLauncher(): void {
+    if (this.mode === "play") this.exitPlayMode();
+  }
+
+  getDocument(): ForgeSceneDocument {
+    return this.forge.exportDocument();
   }
 
   private startLoop(): void {
@@ -114,6 +133,7 @@ export class EditorApp {
         if (this.selectedId) {
           this.forge.syncEntityFromMesh(this.selectedId);
         }
+        this.moveGizmo.update(this.editorCamera.position);
       }
 
       this.forge.scene.render();
@@ -328,13 +348,10 @@ export class EditorApp {
   private setTool(tool: ToolMode): void {
     if (this.mode !== "editor") return;
     this.tool = tool;
-    this.gizmos.positionGizmoEnabled = tool === "move";
+    this.gizmos.positionGizmoEnabled = false;
     this.gizmos.rotationGizmoEnabled = tool === "rotate";
     this.gizmos.scaleGizmoEnabled = tool === "scale";
-
-    if (tool === "move" && this.gizmos.gizmos.positionGizmo) {
-      this.gizmos.gizmos.positionGizmo.planarGizmoEnabled = true;
-    }
+    this.moveGizmo.setEnabled(tool === "move" && Boolean(this.selectedId));
 
     for (const name of ["move", "rotate", "scale"] as const) {
       must<HTMLButtonElement>(`tool-${name}`).classList.toggle("active", name === tool);
@@ -348,9 +365,7 @@ export class EditorApp {
     const rotationDistance = this.snapEnabled ? radians(15) : 0;
     const scaleDistance = this.snapEnabled ? 0.1 : 0;
 
-    if (this.gizmos.gizmos.positionGizmo) {
-      this.gizmos.gizmos.positionGizmo.snapDistance = moveDistance;
-    }
+    this.moveGizmo.setSnapDistance(moveDistance);
     if (this.gizmos.gizmos.rotationGizmo) {
       this.gizmos.gizmos.rotationGizmo.snapDistance = rotationDistance;
     }
@@ -425,6 +440,8 @@ export class EditorApp {
 
     if (!id) {
       this.gizmos.attachToMesh(null);
+      this.moveGizmo.setTarget(null);
+      this.moveGizmo.setEnabled(false);
       return;
     }
 
@@ -437,6 +454,8 @@ export class EditorApp {
 
     mesh.showBoundingBox = true;
     this.gizmos.attachToMesh(mesh);
+    this.moveGizmo.setTarget(mesh);
+    this.moveGizmo.setEnabled(this.tool === "move");
   }
 
   private focusSelected(): void {
@@ -828,18 +847,18 @@ export class EditorApp {
     this.gizmos.positionGizmoEnabled = false;
     this.gizmos.rotationGizmoEnabled = false;
     this.gizmos.scaleGizmoEnabled = false;
+    this.moveGizmo.setEnabled(false);
     this.editorCamera.detachControl();
     this.editorNavKeys.clear();
     this.rightMouseNavigation = false;
 
-    const spawn = this.forge.document.playerSpawn ?? [0, 1.1, 20];
+    const spawn = this.forge.document.playerSpawn ?? [0, 2.2, 20];
     this.player = new PlayerController(
       this.forge,
       spawn,
       (message) => this.log(message),
       (text, locked) => this.setInteractionPrompt(text, locked)
     );
-    this.player.captureMouse();
 
     must<HTMLButtonElement>("play").disabled = true;
     must<HTMLButtonElement>("stop").disabled = false;
@@ -881,6 +900,7 @@ export class EditorApp {
     if (this.mode !== "editor") return;
     const sceneDocument = this.forge.exportDocument();
     localStorage.setItem("forge:last-scene", JSON.stringify(sceneDocument));
+    window.dispatchEvent(new CustomEvent("forge:scene-saved", { detail: structuredClone(sceneDocument) }));
     this.log(`Saved ${sceneDocument.name} in this browser.`);
   }
 
