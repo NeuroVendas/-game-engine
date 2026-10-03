@@ -21,9 +21,6 @@ export class PlayerController {
   private interactPressed = false;
   private walkTime = 0;
   private clearanceLevel = 1;
-  private cameraDragging = false;
-  private lastMouseX = 0;
-  private lastMouseY = 0;
 
   private readonly onKeyDown = (event: KeyboardEvent) => {
     if (["KeyW", "KeyA", "KeyS", "KeyD", "Space", "ShiftLeft", "ShiftRight"].includes(event.code)) {
@@ -48,42 +45,8 @@ export class PlayerController {
     this.keys.delete(event.code);
   };
 
-  private readonly onMouseDown = (event: MouseEvent) => {
-    if (event.button !== 2) return;
-    event.preventDefault();
-    this.cameraDragging = true;
-    this.lastMouseX = event.clientX;
-    this.lastMouseY = event.clientY;
-  };
-
-  private readonly onMouseMove = (event: MouseEvent) => {
-    if (!this.cameraDragging) return;
-
-    const dx = event.clientX - this.lastMouseX;
-    const dy = event.clientY - this.lastMouseY;
-    this.lastMouseX = event.clientX;
-    this.lastMouseY = event.clientY;
-
-    this.camera.alpha -= dx * 0.006;
-    this.camera.beta = Math.min(
-      Math.PI - 0.28,
-      Math.max(0.35, this.camera.beta + dy * 0.006)
-    );
-  };
-
-  private readonly onMouseUp = (event: MouseEvent) => {
-    if (event.button === 2) this.cameraDragging = false;
-  };
-
-  private readonly onWheel = (event: WheelEvent) => {
-    event.preventDefault();
-    if (this.firstPerson) return;
-    this.camera.radius = Math.min(10, Math.max(2.5, this.camera.radius + event.deltaY * 0.006));
-  };
-
   private readonly onBlur = () => {
     this.keys.clear();
-    this.cameraDragging = false;
   };
 
   constructor(
@@ -139,20 +102,17 @@ export class PlayerController {
     this.camera.lowerRadiusLimit = 0.35;
     this.camera.upperRadiusLimit = 10;
     this.camera.panningSensibility = 0;
+    this.camera.wheelPrecision = 20;
     this.camera.checkCollisions = true;
     this.camera.collisionRadius = new Vector3(0.25, 0.25, 0.25);
+    this.camera.attachControl(forge.canvas, true);
     scene.activeCamera = this.camera;
 
     window.addEventListener("keydown", this.onKeyDown, { passive: false });
     window.addEventListener("keyup", this.onKeyUp);
     window.addEventListener("blur", this.onBlur);
-    window.addEventListener("mouseup", this.onMouseUp);
-    window.addEventListener("mousemove", this.onMouseMove);
-    forge.canvas.addEventListener("mousedown", this.onMouseDown);
-    forge.canvas.addEventListener("contextmenu", (event) => event.preventDefault());
-    forge.canvas.addEventListener("wheel", this.onWheel, { passive: false });
 
-    this.log("Play: WASD move • right mouse drag looks • wheel zoom • Shift run • Space jump • E interact");
+    this.log("Play: WASD move • drag mouse to look • wheel zoom • Shift run • Space jump • E interact");
   }
 
   update(dt: number): void {
@@ -213,10 +173,7 @@ export class PlayerController {
     window.removeEventListener("keydown", this.onKeyDown);
     window.removeEventListener("keyup", this.onKeyUp);
     window.removeEventListener("blur", this.onBlur);
-    window.removeEventListener("mouseup", this.onMouseUp);
-    window.removeEventListener("mousemove", this.onMouseMove);
-    this.forge.canvas.removeEventListener("mousedown", this.onMouseDown);
-    this.forge.canvas.removeEventListener("wheel", this.onWheel);
+    this.camera.detachControl();
     this.camera.dispose();
     this.setPrompt(null, false);
     delete this.forge.canvas.dataset.playerPosition;
