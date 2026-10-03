@@ -14,6 +14,7 @@ import {
 } from "@babylonjs/core";
 import type { ForgeEntity, ForgePrimitive, ForgeSceneDocument } from "../types";
 import { ScriptRuntime } from "./ScriptRuntime";
+import { createPrefabTemplate, type ForgePrefabName } from "./prefabs";
 
 function vec3(value: [number, number, number] | undefined, fallback: [number, number, number]): Vector3 {
   const v = value ?? fallback;
@@ -108,6 +109,16 @@ export class ForgeEngine {
       }
     };
 
+    this.createEntity(entity);
+    return entity;
+  }
+
+  createPrefab(prefab: ForgePrefabName): ForgeEntity {
+    const template = createPrefabTemplate(prefab);
+    const entity: ForgeEntity = {
+      ...structuredClone(template),
+      id: this.makeUniqueId(template.name)
+    };
     this.createEntity(entity);
     return entity;
   }
