@@ -1,17 +1,17 @@
-import {
-  Color3,
-  Color4,
-  DirectionalLight,
-  Engine,
-  HemisphericLight,
-  Mesh,
-  MeshBuilder,
-  PointLight,
-  Scene,
-  StandardMaterial,
-  Vector3,
-  VertexData
-} from "@babylonjs/core";
+import { Engine } from "@babylonjs/core/Engines/engine";
+import { Scene } from "@babylonjs/core/scene";
+import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
+import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
+import { DirectionalLight } from "@babylonjs/core/Lights/directionalLight";
+import { PointLight } from "@babylonjs/core/Lights/pointLight";
+import { Mesh } from "@babylonjs/core/Meshes/mesh";
+import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
+import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
+import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
+import type { ForgeEntity, ForgePrimitive, ForgeSceneDocument } from "../types";
+import { ScriptRuntime } from "./ScriptRuntime";
+import { createPrefabTemplate, type ForgePrefabName } from "./prefabs";
 import type { ForgeEntity, ForgePrimitive, ForgeSceneDocument } from "../types";
 import { ScriptRuntime } from "./ScriptRuntime";
 import { createPrefabTemplate, type ForgePrefabName } from "./prefabs";
