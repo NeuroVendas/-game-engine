@@ -38,4 +38,12 @@ export class HistoryManager {
   get canRedo(): boolean {
     return this.redoStack.length > 0;
   }
+
+  get undoCount(): number {
+    return this.undoStack.length;
+  }
+
+  get redoCount(): number {
+    return this.redoStack.length;
+  }
 }
