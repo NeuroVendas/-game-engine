@@ -8,13 +8,15 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "validate": "node scripts/validate-scenes.mjs",
-    "check": "npm run validate && tsc -b --pretty false"
+    "check": "npm run validate && tsc -b --pretty false",
+    "test:browser": "playwright test"
   },
   "dependencies": {
     "@babylonjs/core": "^8.0.0"
   },
   "devDependencies": {
     "typescript": "^5.9.0",
-    "vite": "^7.1.0"
+    "vite": "^7.1.0",
+    "@playwright/test": "^1.55.0"
   }
 }
