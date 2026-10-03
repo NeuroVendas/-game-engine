@@ -87,7 +87,7 @@ export class EditorApp {
   }
 
   async init(): Promise<void> {
-    const response = await fetch("/scenes/project-helios.forge.json");
+    const response = await fetch("./scenes/project-helios.forge.json");
     if (!response.ok) throw new Error(`Failed to load Project Helios scene: ${response.status}`);
 
     const sceneDocument = await response.json() as ForgeSceneDocument;
