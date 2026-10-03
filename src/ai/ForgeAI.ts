@@ -1,5 +1,6 @@
 import type { ForgeEngine } from "../engine/ForgeEngine";
-import type { ForgeEntity, Vec3 } from "../types";
+import type { ForgePrefabName } from "../engine/prefabs";
+import type { ForgeComponents, ForgeEntity, Vec3 } from "../types";
 
 export type ForgeAIOperation =
   | {
@@ -8,6 +9,22 @@ export type ForgeAIOperation =
       position: Vec3;
       size: Vec3;
       color?: string;
+    }
+  | {
+      op: "place_prefab";
+      prefab: ForgePrefabName;
+      position: Vec3;
+      rotation?: Vec3;
+    }
+  | {
+      op: "set_components";
+      id: string;
+      components: ForgeComponents;
+    }
+  | {
+      op: "rename";
+      id: string;
+      name: string;
     }
   | {
       op: "move";
@@ -56,6 +73,40 @@ export class ForgeAI {
           }
         };
         this.forge.createEntity(entity);
+        return;
+      }
+
+      case "place_prefab": {
+        const entity = this.forge.createPrefab(operation.prefab);
+        const mesh = this.requireMesh(entity.id);
+        mesh.position.set(...operation.position);
+
+        if (operation.rotation) {
+          mesh.rotation.set(
+            operation.rotation[0] * Math.PI / 180,
+            operation.rotation[1] * Math.PI / 180,
+            operation.rotation[2] * Math.PI / 180
+          );
+        }
+
+        this.forge.syncEntityFromMesh(entity.id);
+        return;
+      }
+
+      case "set_components": {
+        const entity = this.forge.getEntity(operation.id);
+        if (!entity) throw new Error(`Unknown entity: ${operation.id}`);
+        entity.components = {
+          ...(entity.components ?? {}),
+          ...structuredClone(operation.components)
+        };
+        return;
+      }
+
+      case "rename": {
+        const entity = this.forge.getEntity(operation.id);
+        if (!entity) throw new Error(`Unknown entity: ${operation.id}`);
+        entity.name = operation.name.trim() || entity.name;
         return;
       }
 
