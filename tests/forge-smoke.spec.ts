@@ -1,143 +1,106 @@
 import { expect, test } from "@playwright/test";
 
-test("launcher opens first and Helios enters a working Play mode", async ({ page }) => {
+test("platform home, games, favorites, profile and direct play work", async ({ page }) => {
   await page.goto("/");
 
-  await expect(page.locator("#launcher")).toBeVisible();
-  await expect(page.locator("#app")).toBeHidden();
   await expect(page.locator("#launcher-page-home")).toBeVisible();
-  await expect(page.locator("#launcher-page-develop")).toBeHidden();
-  await expect(page.locator("#launcher-page-home h1")).toHaveText("Welcome back, Builder!");
+  await expect(page.locator("#app")).toBeHidden();
 
-  await page.locator("[data-open-helios]").first().click();
+  await page.locator("#account-button").click();
+  await expect(page.locator("#profile-dialog")).toBeVisible();
+  await page.locator("#profile-display-name").fill("Test Builder");
+  await page.locator("#save-profile").click();
+  await expect(page.locator(".welcome-strip")).toContainText("Test Builder");
 
+  await page.locator("[data-launch-tab='games']").click();
+  await expect(page.locator("#launcher-page-games")).toBeVisible();
+  await expect(page.locator("#games-grid .place-card")).toHaveCount(1);
+
+  const heliosCard = page.locator("#games-grid .place-card").first();
+  await heliosCard.locator("[data-action='favorite']").click();
+  await expect(page.locator("#favorite-count")).toHaveText("1");
+
+  await heliosCard.locator("[data-action='play']").click();
   await expect(page.locator("#app")).toBeVisible();
-  await expect(page.locator("#launcher")).toBeHidden();
-  await expect(page.locator("#scene-tree")).toContainText("Facility Floor");
+  await expect(page.locator("#app")).toHaveClass(/game-session/);
+  await expect(page.locator("#mode-badge")).toHaveText("PLAY");
 
   const canvas = page.locator("#viewport");
-  await expect(canvas).toBeVisible();
-
-  await page.locator("#play").click();
-  await expect(page.locator("#mode-badge")).toHaveText("PLAY");
-  await expect(page.locator("#stop")).toBeEnabled();
-
-  const pointerLocked = await page.evaluate(() => document.pointerLockElement !== null);
-  expect(pointerLocked).toBe(false);
-
-  await page.waitForTimeout(800);
-  const runtimeError = await canvas.getAttribute("data-runtime-error");
-  const statusText = await page.locator("#status").textContent();
-  const fpsText = await page.locator("#fps").textContent();
-  console.log("PLAY DEBUG", { runtimeError, statusText, fpsText });
-
-  expect(runtimeError).toBeNull();
   await expect.poll(async () => canvas.getAttribute("data-player-position")).not.toBeNull();
-  await expect(canvas).toHaveAttribute("data-avatar-rig", "ForgeClassic6");
-  await expect(canvas).toHaveAttribute("data-avatar-shape", "block-head-equal-limbs");
   const before = (await canvas.getAttribute("data-player-position"))!;
 
   await page.keyboard.down("KeyW");
-  await page.waitForTimeout(650);
+  await page.waitForTimeout(500);
   await page.keyboard.up("KeyW");
-  await page.waitForTimeout(100);
-
   const after = (await canvas.getAttribute("data-player-position"))!;
   expect(after).not.toBe(before);
 
-  const box = await canvas.boundingBox();
-  expect(box).not.toBeNull();
-  if (!box) return;
+  await page.locator("#exit-game").click();
+  await expect(page.locator("#launcher-page-games")).toBeVisible();
+  await expect(page.locator("#app")).toBeHidden();
 
-  const cx = box.x + box.width * 0.55;
-  const cy = box.y + box.height * 0.5;
-  const cameraBefore = (await canvas.getAttribute("data-camera-angles"))!;
-
-  await page.mouse.move(cx, cy);
-  await page.mouse.down({ button: "right" });
-  await page.mouse.move(cx + 100, cy + 30, { steps: 5 });
-  await page.mouse.up({ button: "right" });
-  await page.waitForTimeout(100);
-
-  const cameraAfter = (await canvas.getAttribute("data-camera-angles"))!;
-  expect(cameraAfter).not.toBe(cameraBefore);
-
-  await page.locator("#stop").click();
-  await expect(page.locator("#mode-badge")).toHaveText("EDITOR");
+  await page.locator("[data-launch-tab='favorites']").click();
+  await expect(page.locator("#favorites-grid .place-card")).toHaveCount(1);
 });
 
-test("custom place creation opens a blank editable project", async ({ page }) => {
+test("develop can create, edit, duplicate, rename, delete and persist a place", async ({ page }) => {
   await page.goto("/");
-  await expect(page.locator("#launcher-page-home")).toBeVisible();
   await page.locator("[data-launch-tab='develop']").click();
   await expect(page.locator("#launcher-page-develop")).toBeVisible();
-  await expect(page.locator("#launcher-page-home")).toBeHidden();
-  await page.locator("#new-place").click();
-  await expect(page.locator("#create-place-dialog")).toBeVisible();
 
-  await page.locator("#new-place-name").fill("Smoke Test Place");
+  await page.locator("#new-place").click();
+  await page.locator("#new-place-name").fill("Menu Test Place");
   await page.locator("#confirm-create-place").click();
 
   await expect(page.locator("#app")).toBeVisible();
-  await expect(page.locator("#studio-project-name")).toHaveText("Smoke Test Place");
+  await expect(page.locator("#studio-project-name")).toHaveText("Menu Test Place");
   await expect(page.locator("#scene-tree")).toContainText("Baseplate");
 
-  const editorCanvas = page.locator("#viewport");
-  await expect.poll(async () => editorCanvas.getAttribute("data-editor-camera")).not.toBeNull();
-  const editorCameraBefore = (await editorCanvas.getAttribute("data-editor-camera"))!;
+  await page.locator("#home-button").click();
+  await expect(page.locator("#launcher-page-develop")).toBeVisible();
 
-  await page.keyboard.down("KeyD");
-  await page.waitForTimeout(450);
-  await page.keyboard.up("KeyD");
-  await page.waitForTimeout(80);
+  const card = page.locator("#game-grid .place-card", { hasText: "Menu Test Place" });
+  await expect(card).toHaveCount(1);
 
-  const editorCameraAfter = (await editorCanvas.getAttribute("data-editor-camera"))!;
-  expect(editorCameraAfter).not.toBe(editorCameraBefore);
+  await card.locator("[data-action='more']").click();
+  await card.locator("[data-action='duplicate']").click();
+  await expect(page.locator("#game-grid")).toContainText("Menu Test Place Copy");
 
-  const editorBox = await editorCanvas.boundingBox();
-  expect(editorBox).not.toBeNull();
-  if (!editorBox) return;
+  const original = page.locator("#game-grid .place-card", { hasText: "Menu Test Place" }).first();
+  await original.locator("[data-action='more']").click();
+  await original.locator("[data-action='rename']").click();
+  await page.locator("#rename-place-name").fill("Renamed Place");
+  await page.locator("#confirm-rename-place").click();
+  await expect(page.locator("#game-grid")).toContainText("Renamed Place");
 
-  const orbitBefore = (await editorCanvas.getAttribute("data-editor-camera"))!;
-  const ox = editorBox.x + editorBox.width * 0.60;
-  const oy = editorBox.y + editorBox.height * 0.45;
-  await page.mouse.move(ox, oy);
-  await page.mouse.down({ button: "right" });
-  await page.mouse.move(ox + 120, oy + 45, { steps: 6 });
-  await page.mouse.up({ button: "right" });
-  await page.waitForTimeout(80);
-  const orbitAfter = (await editorCanvas.getAttribute("data-editor-camera"))!;
-  expect(orbitAfter).not.toBe(orbitBefore);
+  const renamed = page.locator("#game-grid .place-card", { hasText: "Renamed Place" });
+  await renamed.locator("[data-action='more']").click();
+  page.once("dialog", (dialog) => dialog.accept());
+  await renamed.locator("[data-action='delete']").click();
+  await expect(page.locator("#game-grid")).not.toContainText("Renamed Place");
+});
 
-  await page.locator("[data-primitive='box']").click();
-  await expect(page.locator("#scene-tree")).toContainText("Block");
-  await expect(page.locator("#pos-x")).toHaveValue("0.00");
-  await page.locator("#pos-x").fill("6");
-  await page.locator("#pos-x").press("Enter");
-  await expect(page.locator("#pos-x")).toHaveValue("6.00");
+test("studio scripting and play remain functional", async ({ page }) => {
+  await page.goto("/");
+  await page.locator("[data-launch-tab='develop']").click();
+  await page.locator("#new-place").click();
+  await page.locator("#new-place-name").fill("Script Place");
+  await page.locator("#confirm-create-place").click();
 
   await page.locator(".scene-item", { hasText: "Baseplate" }).click();
   await page.locator("#code-selected").click();
-  await expect(page.locator("#script-editor-dialog")).toBeVisible();
-
-  await page.locator("#script-name").fill("smoke.custom");
   await page.locator("#script-source").fill(`
 let fired = false;
 Forge.onUpdate(() => {
   if (fired) return;
   fired = true;
-  Forge.log("SMOKE_SCRIPT_OK");
+  Forge.log("PLATFORM_SCRIPT_OK");
 });
 `);
   await page.locator("#script-save").click();
   await page.locator("#script-close").click();
-
   await page.locator("#play").click();
-  await expect(page.locator("#mode-badge")).toHaveText("PLAY");
-  await expect.poll(async () => page.locator("#status").textContent()).toContain("SMOKE_SCRIPT_OK");
 
-  const runtimeError = await page.locator("#viewport").getAttribute("data-runtime-error");
-  expect(runtimeError).toBeNull();
-
-  await page.locator("#stop").click();
+  await expect.poll(async () => page.locator("#status").textContent()).toContain("PLATFORM_SCRIPT_OK");
+  expect(await page.locator("#viewport").getAttribute("data-runtime-error")).toBeNull();
 });

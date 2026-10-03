@@ -124,6 +124,18 @@ export class EditorApp {
     return this.forge.exportDocument();
   }
 
+  startPlay(): void {
+    this.enterPlayMode();
+  }
+
+  stopPlay(): void {
+    this.exitPlayMode();
+  }
+
+  isPlayMode(): boolean {
+    return this.mode === "play";
+  }
+
   private startLoop(): void {
     let previous = performance.now();
 
