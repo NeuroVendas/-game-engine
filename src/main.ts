@@ -287,7 +287,11 @@ function renderAll(): void {
   must<HTMLElement>("favorites-empty").hidden = searchedFavorites.length > 0;
 
   developGrid.replaceChildren();
-  for (const scene of all) developGrid.appendChild(projectCard(scene, "develop"));
+  const developScenes = search && currentPage === "develop"
+    ? all.filter((scene) => scene.name.toLowerCase().includes(search))
+    : all;
+
+  for (const scene of developScenes) developGrid.appendChild(projectCard(scene, "develop"));
 }
 
 function setPage(page: LauncherPage): void {
@@ -351,6 +355,10 @@ async function playPlace(scene: ForgeSceneDocument): Promise<void> {
 }
 
 function returnToLauncher(page: LauncherPage = currentPage): void {
+  if (sessionMode === "edit" && editor) {
+    saveLocalScene(editor.getDocument());
+  }
+
   if (editor?.isPlayMode()) editor.stopPlay();
   editor?.returnToLauncher();
 
