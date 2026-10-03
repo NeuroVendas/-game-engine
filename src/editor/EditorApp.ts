@@ -1,9 +1,13 @@
-import {
-  ArcRotateCamera,
-  GizmoManager,
-  PointerEventTypes,
-  Vector3
-} from "@babylonjs/core";
+import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
+import { GizmoManager } from "@babylonjs/core/Gizmos/gizmoManager";
+import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
+import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import type { ForgeComponents, ForgeEntity, ForgePrimitive, ForgeSceneDocument } from "../types";
+import { ForgeEngine } from "../engine/ForgeEngine";
+import { registerDefaultScripts } from "../engine/defaultScripts";
+import type { ForgePrefabName } from "../engine/prefabs";
+import { PlayerController } from "../player/PlayerController";
+import { HistoryManager } from "./HistoryManager";
 import type { ForgeComponents, ForgeEntity, ForgePrimitive, ForgeSceneDocument } from "../types";
 import { ForgeEngine } from "../engine/ForgeEngine";
 import { registerDefaultScripts } from "../engine/defaultScripts";
