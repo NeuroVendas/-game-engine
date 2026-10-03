@@ -1,10 +1,10 @@
 import {
   ArcRotateCamera,
+  Color3,
   Mesh,
   MeshBuilder,
   Ray,
   StandardMaterial,
-  Color3,
   Vector3
 } from "@babylonjs/core";
 import type { ForgeEngine } from "../engine/ForgeEngine";
@@ -13,10 +13,15 @@ export class PlayerController {
   readonly body: Mesh;
   readonly camera: ArcRotateCamera;
 
+  private readonly avatarParts: Mesh[] = [];
+  private readonly arms: [Mesh, Mesh];
+  private readonly legs: [Mesh, Mesh];
+
   private keys = new Set<string>();
   private verticalVelocity = 0;
   private firstPerson = false;
   private interactPressed = false;
+  private walkTime = 0;
 
   private readonly onKeyDown = (event: KeyboardEvent) => {
     this.keys.add(event.code);
@@ -24,6 +29,8 @@ export class PlayerController {
     if (event.code === "KeyC" && !event.repeat) {
       this.firstPerson = !this.firstPerson;
       this.camera.radius = this.firstPerson ? 0.2 : 6;
+      this.setAvatarVisible(!this.firstPerson);
+      this.log(this.firstPerson ? "First-person camera." : "Third-person camera.");
     }
 
     if (event.code === "KeyE" && !event.repeat) {
@@ -42,19 +49,37 @@ export class PlayerController {
   ) {
     const scene = forge.scene;
 
-    this.body = MeshBuilder.CreateCapsule("__player", {
-      height: 1.8,
+    this.body = MeshBuilder.CreateCapsule("__player-collider", {
+      height: 1.9,
       radius: 0.42,
-      subdivisions: 12
+      subdivisions: 8
     }, scene);
     this.body.position = new Vector3(spawn[0], spawn[1], spawn[2]);
     this.body.checkCollisions = true;
     this.body.ellipsoid = new Vector3(0.42, 0.9, 0.42);
-    this.body.ellipsoidOffset = new Vector3(0, 0.9, 0);
+    this.body.ellipsoidOffset = new Vector3(0, 0, 0);
+    this.body.isPickable = false;
+    this.body.visibility = 0;
 
-    const mat = new StandardMaterial("__player-mat", scene);
-    mat.diffuseColor = new Color3(0.62, 0.72, 0.78);
-    this.body.material = mat;
+    const skin = new StandardMaterial("__avatar-skin", scene);
+    skin.diffuseColor = Color3.FromHexString("#e7c6a5");
+
+    const shirt = new StandardMaterial("__avatar-shirt", scene);
+    shirt.diffuseColor = Color3.FromHexString("#b7f34a");
+
+    const pants = new StandardMaterial("__avatar-pants", scene);
+    pants.diffuseColor = Color3.FromHexString("#3c4a57");
+
+    const head = this.makeAvatarPart("__avatar-head", [0.52, 0.52, 0.52], [0, 0.72, 0], skin);
+    const torso = this.makeAvatarPart("__avatar-torso", [0.76, 0.7, 0.38], [0, 0.16, 0], shirt);
+    const leftArm = this.makeAvatarPart("__avatar-arm-left", [0.24, 0.72, 0.26], [-0.52, 0.14, 0], skin);
+    const rightArm = this.makeAvatarPart("__avatar-arm-right", [0.24, 0.72, 0.26], [0.52, 0.14, 0], skin);
+    const leftLeg = this.makeAvatarPart("__avatar-leg-left", [0.28, 0.72, 0.3], [-0.2, -0.58, 0], pants);
+    const rightLeg = this.makeAvatarPart("__avatar-leg-right", [0.28, 0.72, 0.3], [0.2, -0.58, 0], pants);
+
+    this.avatarParts.push(head, torso, leftArm, rightArm, leftLeg, rightLeg);
+    this.arms = [leftArm, rightArm];
+    this.legs = [leftLeg, rightLeg];
 
     this.camera = new ArcRotateCamera(
       "__player-camera",
@@ -65,8 +90,8 @@ export class PlayerController {
       scene
     );
     this.camera.lowerRadiusLimit = 0.15;
-    this.camera.upperRadiusLimit = 9;
-    this.camera.wheelPrecision = 20;
+    this.camera.upperRadiusLimit = 10;
+    this.camera.wheelPrecision = 18;
     this.camera.panningSensibility = 0;
     this.camera.attachControl(forge.canvas, true);
     scene.activeCamera = this.camera;
@@ -74,7 +99,7 @@ export class PlayerController {
     window.addEventListener("keydown", this.onKeyDown);
     window.addEventListener("keyup", this.onKeyUp);
 
-    this.log("Play mode: WASD move • Shift run • Space jump • E interact • C camera");
+    this.log("Play: WASD move • Shift run • Space jump • E interact • C camera");
   }
 
   update(dt: number): void {
@@ -91,11 +116,17 @@ export class PlayerController {
     if (this.keys.has("KeyD")) direction.addInPlace(right);
     if (this.keys.has("KeyA")) direction.subtractInPlace(right);
 
-    if (direction.lengthSquared() > 0) {
+    const moving = direction.lengthSquared() > 0;
+
+    if (moving) {
       direction.normalize();
-      const speed = this.keys.has("ShiftLeft") || this.keys.has("ShiftRight") ? 7.5 : 4.5;
+      const running = this.keys.has("ShiftLeft") || this.keys.has("ShiftRight");
+      const speed = running ? 7.5 : 4.5;
       this.body.moveWithCollisions(direction.scale(speed * dt));
       this.body.rotation.y = Math.atan2(direction.x, direction.z);
+      this.animateWalk(dt, running ? 10 : 7);
+    } else {
+      this.relaxWalkPose(dt);
     }
 
     const grounded = this.isGrounded();
@@ -105,7 +136,7 @@ export class PlayerController {
     this.verticalVelocity -= 16 * dt;
     this.body.moveWithCollisions(new Vector3(0, this.verticalVelocity * dt, 0));
 
-    this.camera.target = this.body.position.add(new Vector3(0, 1.15, 0));
+    this.camera.target = this.body.position.add(new Vector3(0, 0.45, 0));
 
     if (this.interactPressed) {
       this.interactPressed = false;
@@ -118,11 +149,59 @@ export class PlayerController {
     window.removeEventListener("keyup", this.onKeyUp);
     this.camera.detachControl();
     this.camera.dispose();
+
+    for (const part of this.avatarParts) {
+      part.dispose();
+    }
+
     this.body.dispose();
   }
 
+  private makeAvatarPart(
+    name: string,
+    size: [number, number, number],
+    position: [number, number, number],
+    material: StandardMaterial
+  ): Mesh {
+    const part = MeshBuilder.CreateBox(name, {
+      width: size[0],
+      height: size[1],
+      depth: size[2]
+    }, this.forge.scene);
+
+    part.parent = this.body;
+    part.position = new Vector3(position[0], position[1], position[2]);
+    part.material = material;
+    part.checkCollisions = false;
+    part.isPickable = false;
+    return part;
+  }
+
+  private setAvatarVisible(visible: boolean): void {
+    for (const part of this.avatarParts) {
+      part.setEnabled(visible);
+    }
+  }
+
+  private animateWalk(dt: number, speed: number): void {
+    this.walkTime += dt * speed;
+    const swing = Math.sin(this.walkTime) * 0.55;
+
+    this.arms[0].rotation.x = swing;
+    this.arms[1].rotation.x = -swing;
+    this.legs[0].rotation.x = -swing;
+    this.legs[1].rotation.x = swing;
+  }
+
+  private relaxWalkPose(dt: number): void {
+    const blend = Math.min(1, dt * 10);
+    for (const limb of [...this.arms, ...this.legs]) {
+      limb.rotation.x += (0 - limb.rotation.x) * blend;
+    }
+  }
+
   private isGrounded(): boolean {
-    const ray = new Ray(this.body.position.add(new Vector3(0, 0.1, 0)), Vector3.Down(), 1.2);
+    const ray = new Ray(this.body.position.add(new Vector3(0, -0.65, 0)), Vector3.Down(), 0.5);
     const hit = this.forge.scene.pickWithRay(ray, (mesh) => mesh !== this.body && mesh.checkCollisions);
     return hit?.hit ?? false;
   }
