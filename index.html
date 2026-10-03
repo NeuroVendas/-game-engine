@@ -8,75 +8,192 @@
   <body>
     <section id="launcher" class="launcher">
       <header class="site-header">
-        <div class="site-logo">FORGE <span>=]</span></div>
-        <nav class="site-nav">
-          <button class="nav-tab active" data-launch-tab="games">Games</button>
-          <button class="nav-tab" data-launch-tab="create">Create</button>
+        <button class="site-logo site-logo-button" data-go-page="home">FORGE <span>=]</span></button>
+        <nav class="site-nav" aria-label="Forge navigation">
+          <button class="nav-tab active" data-launch-tab="home">Home</button>
+          <button class="nav-tab" data-launch-tab="games">Games</button>
           <button class="nav-tab" data-launch-tab="friends">Friends</button>
+          <button class="nav-tab develop-tab" data-launch-tab="develop">Develop</button>
         </nav>
-        <div class="site-account">Builder <span class="online-dot"></span></div>
+        <div class="site-account">
+          <span class="mail-icon">✉</span>
+          <span class="account-name">Builder</span>
+          <span class="online-dot"></span>
+        </div>
       </header>
 
       <div class="classic-subnav">
-        <button class="subnav-link active">Home</button>
-        <button class="subnav-link">My Places</button>
-        <button class="subnav-link">Recently Played</button>
-        <div class="launcher-search"><input id="launcher-search" placeholder="Search places..." /></div>
+        <button class="subnav-link active" data-go-page="home">My Forge</button>
+        <button class="subnav-link" data-go-page="games">Places</button>
+        <button class="subnav-link" data-go-page="friends">People</button>
+        <button class="subnav-link" data-go-page="develop">Studio</button>
+        <div class="launcher-search">
+          <input id="launcher-search" placeholder="Search Forge..." autocomplete="off" />
+          <button id="launcher-search-button">Search</button>
+        </div>
       </div>
 
-      <main class="launcher-content">
+      <main class="launcher-content launcher-v2">
         <aside class="launcher-sidebar">
-          <div class="profile-card">
-            <div class="avatar-placeholder">=]</div>
+          <div class="profile-card profile-card-v2">
+            <div class="avatar-placeholder">
+              <div class="mini-avatar-head">=]</div>
+              <div class="mini-avatar-body"></div>
+            </div>
             <strong>Builder</strong>
-            <small>Forge Creator</small>
+            <small>Online • Forge Creator</small>
           </div>
-          <button id="new-place-side" class="classic-big-button">+ Create New Place</button>
-          <div class="sidebar-block">
-            <b>My Forge</b>
-            <button>Places</button>
-            <button>Favorites</button>
-            <button>Friends Online <span class="count-pill">0</span></button>
+
+          <div class="sidebar-block launcher-links">
+            <b>Navigation</b>
+            <button class="side-link active" data-go-page="home">⌂ Home</button>
+            <button class="side-link" data-go-page="games">▦ Games</button>
+            <button class="side-link" data-go-page="friends">☺ Friends <span class="count-pill">0</span></button>
+            <button class="side-link" data-go-page="home">✉ Messages <span class="count-pill">0</span></button>
+            <button class="side-link" data-go-page="home">★ Favorites</button>
+            <button class="side-link" data-go-page="home">♟ Groups</button>
+          </div>
+
+          <button id="new-place-side" class="classic-big-button">Open Studio / Create</button>
+
+          <div class="sidebar-status">
+            <b>Forge =] v0.4</b>
+            <span>Classic Preview</span>
+            <span class="status-online">● Online</span>
           </div>
         </aside>
 
-        <section class="launcher-main">
-          <div class="launcher-heading">
+        <section class="launcher-main launcher-page" id="launcher-page-home" data-page="home">
+          <div class="welcome-strip">
             <div>
-              <h1>My Places</h1>
-              <p>Build something, press Play, and invite people later.</p>
+              <h1>Welcome back, Builder!</h1>
+              <p>What do you want to play or build today?</p>
             </div>
-            <button id="new-place" class="primary-classic">Create Place</button>
+            <div class="welcome-actions">
+              <button class="classic-action" data-go-page="games">Browse Games</button>
+              <button class="primary-classic" data-go-page="develop">Develop</button>
+            </div>
           </div>
 
-          <div id="game-grid" class="game-grid">
+          <section class="classic-section">
+            <div class="section-heading">
+              <h2>Continue Building</h2>
+              <button class="text-button" data-go-page="develop">See My Places »</button>
+            </div>
+            <div id="home-projects" class="home-projects">
+              <article class="wide-place-card" data-open-helios>
+                <div class="wide-thumb helios-thumb"><div class="reactor-ring"></div><span>PROJECT HELIOS</span></div>
+                <div class="wide-info">
+                  <h3>Project Helios</h3>
+                  <p>Your current benchmark place</p>
+                  <small>Last edited in Forge Studio</small>
+                </div>
+                <button class="open-place">Edit</button>
+              </article>
+            </div>
+          </section>
+
+          <div class="home-columns">
+            <section class="classic-section">
+              <div class="section-heading"><h2>Recently Played</h2><button class="text-button" data-go-page="games">View All »</button></div>
+              <article class="list-place" data-open-helios>
+                <div class="tiny-thumb helios-thumb"></div>
+                <div><b>Project Helios</b><span>Industrial reactor prototype</span></div>
+                <button>Play</button>
+              </article>
+              <div class="classic-empty-row">Your recently played places will appear here.</div>
+            </section>
+
+            <section class="classic-section">
+              <div class="section-heading"><h2>Friends Online</h2><button class="text-button" data-go-page="friends">Friends »</button></div>
+              <div class="friend-empty">
+                <div class="old-face">=]</div>
+                <p>No friends online yet.</p>
+                <button data-go-page="friends">Find People</button>
+              </div>
+            </section>
+          </div>
+
+          <section class="news-box home-news">
+            <div class="news-title">Forge News</div>
+            <article><b>Forge Studio v0.4</b><span>Custom scripting, classic avatar rig, components, and Play mode.</span></article>
+            <article><b>Project Helios</b><span>The first real Forge game continues to drive engine development.</span></article>
+          </section>
+        </section>
+
+        <section class="launcher-main launcher-page" id="launcher-page-games" data-page="games" hidden>
+          <div class="launcher-heading">
+            <div><h1>Games</h1><p>Browse places you can open and play in Forge.</p></div>
+          </div>
+          <div class="category-tabs">
+            <button class="active">Featured</button><button>Top Rated</button><button>Classic</button><button>Recently Updated</button>
+          </div>
+          <div class="game-grid browse-grid">
             <article class="game-card featured-card" data-open-helios>
-              <div class="game-thumb helios-thumb">
-                <div class="reactor-ring"></div>
-                <span>PROJECT HELIOS</span>
-              </div>
-              <div class="game-info">
-                <h3>Project Helios</h3>
-                <p>Industrial reactor benchmark</p>
-                <div class="game-meta">Private • Studio test place</div>
-              </div>
+              <div class="game-thumb helios-thumb"><div class="reactor-ring"></div><span>PROJECT HELIOS</span></div>
+              <div class="game-info"><h3>Project Helios</h3><p>Industrial reactor roleplay / simulation</p><div class="game-meta">Forge official benchmark • Development</div></div>
+              <button class="open-place">Open</button>
+            </article>
+            <article class="game-card disabled-card">
+              <div class="game-thumb classic-placeholder-thumb"><span>MORE PLACES</span></div>
+              <div class="game-info"><h3>Community Games</h3><p>Publishing and public servers arrive later.</p><div class="game-meta">Coming in a future Forge version</div></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="launcher-main launcher-page" id="launcher-page-friends" data-page="friends" hidden>
+          <div class="launcher-heading">
+            <div><h1>Friends</h1><p>Your Forge social page.</p></div>
+          </div>
+          <div class="friends-toolbar">
+            <button class="active">Friends <span class="count-pill">0</span></button>
+            <button>Requests <span class="count-pill">0</span></button>
+            <button>Following <span class="count-pill">0</span></button>
+          </div>
+          <div class="social-empty">
+            <div class="old-face big">=]</div>
+            <h2>No friends yet</h2>
+            <p>Profiles, friend requests, presence and Join Friend are part of Forge's social roadmap.</p>
+            <div class="fake-search"><input placeholder="Search username..." disabled /><button disabled>Search</button></div>
+          </div>
+        </section>
+
+        <section class="launcher-main launcher-page" id="launcher-page-develop" data-page="develop" hidden>
+          <div class="launcher-heading">
+            <div><h1>Develop</h1><p>Your places and Forge Studio projects live here — separate from the player home page.</p></div>
+            <button id="new-place" class="primary-classic">Create New Place</button>
+          </div>
+
+          <div class="develop-toolbar">
+            <button class="active">My Places</button>
+            <button>Templates</button>
+            <button>Shared With Me</button>
+            <span class="develop-count" id="develop-count">1 place</span>
+          </div>
+
+          <div id="game-grid" class="game-grid develop-grid">
+            <article class="game-card featured-card" data-open-helios>
+              <div class="game-thumb helios-thumb"><div class="reactor-ring"></div><span>PROJECT HELIOS</span></div>
+              <div class="game-info"><h3>Project Helios</h3><p>Industrial reactor benchmark</p><div class="game-meta">Private • Studio test place</div></div>
               <button class="open-place">Edit</button>
             </article>
 
             <article class="game-card new-card" data-create-place>
-              <div class="new-plus">+</div>
-              <h3>New Place</h3>
-              <p>Start from a classic baseplate.</p>
+              <div class="new-plus">+</div><h3>New Place</h3><p>Start from a classic baseplate.</p>
             </article>
           </div>
 
-          <section class="news-box">
-            <div class="news-title">Forge News</div>
-            <b>Forge v0.4 development build</b>
-            <p>Classic creator workflow, six-way move handles, reusable components, and Project Helios testing.</p>
+          <section class="developer-note">
+            <b>Forge Studio</b>
+            <span>Build visually, script in JavaScript, test instantly, then publish when the platform layer is ready.</span>
           </section>
         </section>
       </main>
+
+      <footer class="launcher-footer">
+        <span>FORGE =] • classic creation platform preview</span>
+        <span>About • Help • Terms • Status</span>
+      </footer>
     </section>
 
     <dialog id="create-place-dialog" class="create-dialog">
@@ -171,7 +288,7 @@
           <canvas id="viewport"></canvas>
           <div id="mode-badge" class="mode-badge">EDITOR</div>
           <div id="interaction-prompt" class="interaction-prompt" hidden></div>
-          <div class="viewport-tip"><strong>Studio</strong> right mouse + WASD fly • wheel zoom • F focus</div>
+          <div class="viewport-tip"><strong>Studio</strong> WASD fly • right-drag look • wheel zoom • F focus</div>
           <div class="help">Play: WASD • hold right mouse to look • wheel zoom • Shift run • Space jump • E interact</div>
         </section>
 

@@ -5,7 +5,9 @@ test("launcher opens first and Helios enters a working Play mode", async ({ page
 
   await expect(page.locator("#launcher")).toBeVisible();
   await expect(page.locator("#app")).toBeHidden();
-  await expect(page.locator(".launcher-heading h1")).toHaveText("My Places");
+  await expect(page.locator("#launcher-page-home")).toBeVisible();
+  await expect(page.locator("#launcher-page-develop")).toBeHidden();
+  await expect(page.locator("#launcher-page-home h1")).toHaveText("Welcome back, Builder!");
 
   await page.locator("[data-open-helios]").first().click();
 
@@ -32,6 +34,7 @@ test("launcher opens first and Helios enters a working Play mode", async ({ page
   expect(runtimeError).toBeNull();
   await expect.poll(async () => canvas.getAttribute("data-player-position")).not.toBeNull();
   await expect(canvas).toHaveAttribute("data-avatar-rig", "ForgeClassic6");
+  await expect(canvas).toHaveAttribute("data-avatar-shape", "block-head-equal-limbs");
   const before = (await canvas.getAttribute("data-player-position"))!;
 
   await page.keyboard.down("KeyW");
@@ -65,6 +68,10 @@ test("launcher opens first and Helios enters a working Play mode", async ({ page
 
 test("custom place creation opens a blank editable project", async ({ page }) => {
   await page.goto("/");
+  await expect(page.locator("#launcher-page-home")).toBeVisible();
+  await page.locator("[data-launch-tab='develop']").click();
+  await expect(page.locator("#launcher-page-develop")).toBeVisible();
+  await expect(page.locator("#launcher-page-home")).toBeHidden();
   await page.locator("#new-place").click();
   await expect(page.locator("#create-place-dialog")).toBeVisible();
 
@@ -86,6 +93,21 @@ test("custom place creation opens a blank editable project", async ({ page }) =>
 
   const editorCameraAfter = (await editorCanvas.getAttribute("data-editor-camera"))!;
   expect(editorCameraAfter).not.toBe(editorCameraBefore);
+
+  const editorBox = await editorCanvas.boundingBox();
+  expect(editorBox).not.toBeNull();
+  if (!editorBox) return;
+
+  const orbitBefore = (await editorCanvas.getAttribute("data-editor-camera"))!;
+  const ox = editorBox.x + editorBox.width * 0.60;
+  const oy = editorBox.y + editorBox.height * 0.45;
+  await page.mouse.move(ox, oy);
+  await page.mouse.down({ button: "right" });
+  await page.mouse.move(ox + 120, oy + 45, { steps: 6 });
+  await page.mouse.up({ button: "right" });
+  await page.waitForTimeout(80);
+  const orbitAfter = (await editorCanvas.getAttribute("data-editor-camera"))!;
+  expect(orbitAfter).not.toBe(orbitBefore);
 
   await page.locator("[data-primitive='box']").click();
   await expect(page.locator("#scene-tree")).toContainText("Block");

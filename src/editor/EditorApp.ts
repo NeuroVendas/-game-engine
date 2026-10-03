@@ -40,6 +40,8 @@ export class EditorApp {
   private selectedId: string | null = null;
   private playSnapshot: ForgeSceneDocument | null = null;
   private rightMouseNavigation = false;
+  private editorOrbitLastX = 0;
+  private editorOrbitLastY = 0;
   private snapEnabled = true;
   private moveSnap = 1;
 
@@ -74,9 +76,6 @@ export class EditorApp {
     this.editorCamera.upperRadiusLimit = 120;
     this.editorCamera.wheelPrecision = 18;
     this.editorCamera.panningSensibility = 70;
-    this.editorCamera.attachControl(canvas, true);
-    const pointerInput = this.editorCamera.inputs.attached.pointers as { buttons?: number[] } | undefined;
-    if (pointerInput) pointerInput.buttons = [2];
     this.forge.scene.activeCamera = this.editorCamera;
 
     this.gizmos = new GizmoManager(this.forge.scene);
@@ -353,6 +352,7 @@ export class EditorApp {
     window.addEventListener("blur", () => {
       this.editorNavKeys.clear();
       this.rightMouseNavigation = false;
+      this.canvas.classList.remove("camera-orbiting");
     });
   }
 
@@ -360,16 +360,46 @@ export class EditorApp {
     this.canvas.addEventListener("contextmenu", (event) => event.preventDefault());
 
     this.canvas.addEventListener("pointerdown", (event) => {
-      if (event.button === 2 && this.mode === "editor") {
-        this.rightMouseNavigation = true;
-        this.canvas.setPointerCapture?.(event.pointerId);
-      }
+      if (event.button !== 2 || this.mode !== "editor") return;
+
+      event.preventDefault();
+      this.rightMouseNavigation = true;
+      this.editorOrbitLastX = event.clientX;
+      this.editorOrbitLastY = event.clientY;
+      this.canvas.setPointerCapture?.(event.pointerId);
+      this.canvas.classList.add("camera-orbiting");
     });
 
+    this.canvas.addEventListener("pointermove", (event) => {
+      if (!this.rightMouseNavigation || this.mode !== "editor") return;
+
+      const dx = event.clientX - this.editorOrbitLastX;
+      const dy = event.clientY - this.editorOrbitLastY;
+      this.editorOrbitLastX = event.clientX;
+      this.editorOrbitLastY = event.clientY;
+
+      this.editorCamera.alpha -= dx * 0.006;
+      this.editorCamera.beta = Math.min(
+        Math.PI - 0.18,
+        Math.max(0.18, this.editorCamera.beta + dy * 0.006)
+      );
+    });
+
+    this.canvas.addEventListener("wheel", (event) => {
+      if (this.mode !== "editor") return;
+      event.preventDefault();
+
+      const nextRadius = this.editorCamera.radius + event.deltaY * 0.025;
+      this.editorCamera.radius = Math.min(
+        this.editorCamera.upperRadiusLimit ?? 120,
+        Math.max(this.editorCamera.lowerRadiusLimit ?? 2, nextRadius)
+      );
+    }, { passive: false });
+
     window.addEventListener("pointerup", (event) => {
-      if (event.button === 2) {
-        this.rightMouseNavigation = false;
-      }
+      if (event.button !== 2) return;
+      this.rightMouseNavigation = false;
+      this.canvas.classList.remove("camera-orbiting");
     });
   }
 
@@ -1006,7 +1036,6 @@ Forge.onInteract(() => {
     }
 
     this.forge.scene.activeCamera = this.editorCamera;
-    this.editorCamera.attachControl(this.canvas, true);
     this.setTool(this.tool);
 
     must<HTMLButtonElement>("play").disabled = false;
