@@ -3,6 +3,7 @@ import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
+import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import type { ForgeEngine } from "../engine/ForgeEngine";
@@ -11,9 +12,12 @@ export class PlayerController {
   readonly body: Mesh;
   readonly camera: ArcRotateCamera;
 
+  private readonly avatarRoot: TransformNode;
   private readonly avatarParts: Mesh[] = [];
-  private readonly arms: [Mesh, Mesh];
-  private readonly legs: [Mesh, Mesh];
+  private readonly avatarNodes: TransformNode[] = [];
+  private readonly armPivots: [TransformNode, TransformNode];
+  private readonly legPivots: [TransformNode, TransformNode];
+  private readonly headPivot: TransformNode;
 
   private readonly keys = new Set<string>();
   private verticalVelocity = 0;
@@ -32,7 +36,7 @@ export class PlayerController {
     if (event.code === "KeyC" && !event.repeat) {
       this.firstPerson = !this.firstPerson;
       this.camera.radius = this.firstPerson ? 0.45 : 6;
-      this.setAvatarVisible(!this.firstPerson);
+      this.avatarRoot.setEnabled(!this.firstPerson);
       this.log(this.firstPerson ? "First-person camera." : "Third-person camera.");
     }
 
@@ -58,45 +62,77 @@ export class PlayerController {
     const scene = forge.scene;
 
     this.body = MeshBuilder.CreateCapsule("__player-collider", {
-      height: 1.9,
-      radius: 0.42,
+      height: 2.55,
+      radius: 0.45,
       subdivisions: 8
     }, scene);
     this.body.position = new Vector3(spawn[0], spawn[1], spawn[2]);
     this.body.checkCollisions = true;
-    this.body.ellipsoid = new Vector3(0.42, 0.9, 0.42);
+    this.body.ellipsoid = new Vector3(0.45, 1.22, 0.45);
     this.body.ellipsoidOffset = Vector3.Zero();
     this.body.isPickable = false;
     this.body.visibility = 0;
 
     this.snapToSafeGround();
 
-    const skin = new StandardMaterial("__avatar-skin", scene);
-    skin.diffuseColor = Color3.FromHexString("#e7c6a5");
+    this.avatarRoot = new TransformNode("__forge-classic-avatar", scene);
+    this.avatarRoot.parent = this.body;
+    this.avatarNodes.push(this.avatarRoot);
 
-    const shirt = new StandardMaterial("__avatar-shirt", scene);
-    shirt.diffuseColor = Color3.FromHexString("#b7f34a");
+    const skin = this.makeMaterial("__avatar-skin", "#d6b15d");
+    const shirt = this.makeMaterial("__avatar-shirt", "#e8edf0");
+    const pants = this.makeMaterial("__avatar-pants", "#41678f");
+    const dark = this.makeMaterial("__avatar-dark", "#202a31");
+    const accent = this.makeMaterial("__avatar-accent", "#b7f34a");
 
-    const pants = new StandardMaterial("__avatar-pants", scene);
-    pants.diffuseColor = Color3.FromHexString("#3c4a57");
+    const torso = this.makePart(
+      "__avatar-torso",
+      [1.2, 0.92, 0.58],
+      [0, 0.16, 0],
+      shirt,
+      this.avatarRoot
+    );
 
-    const head = this.makeAvatarPart("__avatar-head", [0.52, 0.52, 0.52], [0, 0.72, 0], skin);
-    const torso = this.makeAvatarPart("__avatar-torso", [0.76, 0.7, 0.38], [0, 0.16, 0], shirt);
-    const leftArm = this.makeAvatarPart("__avatar-arm-left", [0.24, 0.72, 0.26], [-0.52, 0.14, 0], skin);
-    const rightArm = this.makeAvatarPart("__avatar-arm-right", [0.24, 0.72, 0.26], [0.52, 0.14, 0], skin);
-    const leftLeg = this.makeAvatarPart("__avatar-leg-left", [0.28, 0.72, 0.3], [-0.2, -0.58, 0], pants);
-    const rightLeg = this.makeAvatarPart("__avatar-leg-right", [0.28, 0.72, 0.3], [0.2, -0.58, 0], pants);
+    this.headPivot = this.makePivot("__avatar-head-pivot", [0, 0.72, 0], this.avatarRoot);
+    const head = this.makePart(
+      "__avatar-head",
+      [0.78, 0.78, 0.78],
+      [0, 0.39, 0],
+      skin,
+      this.headPivot
+    );
 
-    this.avatarParts.push(head, torso, leftArm, rightArm, leftLeg, rightLeg);
-    this.arms = [leftArm, rightArm];
-    this.legs = [leftLeg, rightLeg];
+    const leftShoulder = this.makePivot("__avatar-left-shoulder", [-0.82, 0.54, 0], this.avatarRoot);
+    const rightShoulder = this.makePivot("__avatar-right-shoulder", [0.82, 0.54, 0], this.avatarRoot);
+    const leftHip = this.makePivot("__avatar-left-hip", [-0.31, -0.30, 0], this.avatarRoot);
+    const rightHip = this.makePivot("__avatar-right-hip", [0.31, -0.30, 0], this.avatarRoot);
+
+    this.armPivots = [leftShoulder, rightShoulder];
+    this.legPivots = [leftHip, rightHip];
+
+    this.makePart("__avatar-arm-left", [0.38, 1.02, 0.42], [0, -0.45, 0], skin, leftShoulder);
+    this.makePart("__avatar-arm-right", [0.38, 1.02, 0.42], [0, -0.45, 0], skin, rightShoulder);
+    this.makePart("__avatar-leg-left", [0.50, 1.05, 0.54], [0, -0.50, 0], pants, leftHip);
+    this.makePart("__avatar-leg-right", [0.50, 1.05, 0.54], [0, -0.50, 0], pants, rightHip);
+
+    // Original Forge =] face: simple geometric eyes + bracket smile.
+    this.makePart("__avatar-eye-left", [0.075, 0.075, 0.035], [-0.15, 0.49, 0.405], dark, this.headPivot);
+    this.makePart("__avatar-eye-right", [0.075, 0.075, 0.035], [0.15, 0.49, 0.405], dark, this.headPivot);
+    this.makePart("__avatar-smile", [0.24, 0.045, 0.035], [-0.04, 0.28, 0.405], dark, this.headPivot);
+    this.makePart("__avatar-smile-bracket", [0.045, 0.18, 0.035], [0.11, 0.34, 0.405], dark, this.headPivot);
+
+    // Forge chest mark. This is deliberately original instead of copying legacy game-platform logos.
+    this.makePart("__avatar-badge", [0.48, 0.34, 0.035], [0, 0.18, 0.31], dark, torso);
+    this.makePart("__avatar-badge-eq-top", [0.17, 0.035, 0.025], [-0.08, 0.23, 0.34], accent, torso);
+    this.makePart("__avatar-badge-eq-bottom", [0.17, 0.035, 0.025], [-0.08, 0.13, 0.34], accent, torso);
+    this.makePart("__avatar-badge-bracket", [0.035, 0.19, 0.025], [0.10, 0.18, 0.34], accent, torso);
 
     this.camera = new ArcRotateCamera(
       "__player-camera",
       -Math.PI / 2,
       1.12,
       6,
-      this.body.position.add(new Vector3(0, 0.4, 0)),
+      this.body.position.add(new Vector3(0, 0.48, 0)),
       scene
     );
     this.camera.lowerRadiusLimit = 0.35;
@@ -107,6 +143,9 @@ export class PlayerController {
     this.camera.collisionRadius = new Vector3(0.25, 0.25, 0.25);
     this.camera.attachControl(forge.canvas, true);
     scene.activeCamera = this.camera;
+
+    forge.canvas.dataset.avatarRig = "ForgeClassic6";
+    forge.canvas.dataset.avatarAnimation = "idle";
 
     window.addEventListener("keydown", this.onKeyDown, { passive: false });
     window.addEventListener("keyup", this.onKeyUp);
@@ -129,27 +168,32 @@ export class PlayerController {
     if (this.keys.has("KeyD")) direction.addInPlace(right);
     if (this.keys.has("KeyA")) direction.subtractInPlace(right);
 
+    const grounded = this.isGrounded();
     const moving = direction.lengthSquared() > 0;
+    const running = moving && (this.keys.has("ShiftLeft") || this.keys.has("ShiftRight"));
 
     if (moving) {
       direction.normalize();
-      const running = this.keys.has("ShiftLeft") || this.keys.has("ShiftRight");
       const speed = running ? 7.5 : 4.7;
       this.body.moveWithCollisions(direction.scale(speed * dt));
       this.body.rotation.y = Math.atan2(direction.x, direction.z);
-      this.animateWalk(dt, running ? 10 : 7);
-    } else {
-      this.relaxWalkPose(dt);
     }
 
-    const grounded = this.isGrounded();
     if (grounded && this.verticalVelocity < 0) this.verticalVelocity = -0.1;
     if (grounded && this.keys.has("Space")) this.verticalVelocity = 6.2;
 
     this.verticalVelocity -= 16 * dt;
     this.body.moveWithCollisions(new Vector3(0, this.verticalVelocity * dt, 0));
 
-    this.camera.target.copyFrom(this.body.position.add(new Vector3(0, 0.45, 0)));
+    if (!grounded || Math.abs(this.verticalVelocity) > 0.7) {
+      this.animateJump(dt);
+    } else if (moving) {
+      this.animateClassicWalk(dt, running);
+    } else {
+      this.animateIdle(dt);
+    }
+
+    this.camera.target.copyFrom(this.body.position.add(new Vector3(0, 0.48, 0)));
     this.forge.canvas.dataset.playerPosition = [
       this.body.position.x.toFixed(3),
       this.body.position.y.toFixed(3),
@@ -176,11 +220,96 @@ export class PlayerController {
     this.camera.detachControl();
     this.camera.dispose();
     this.setPrompt(null, false);
+
     delete this.forge.canvas.dataset.playerPosition;
     delete this.forge.canvas.dataset.cameraAngles;
+    delete this.forge.canvas.dataset.avatarRig;
+    delete this.forge.canvas.dataset.avatarAnimation;
 
     for (const part of this.avatarParts) part.dispose();
+    for (const node of this.avatarNodes.slice().reverse()) {
+      if (!node.isDisposed()) node.dispose();
+    }
     this.body.dispose();
+  }
+
+  private makeMaterial(name: string, hex: string): StandardMaterial {
+    const material = new StandardMaterial(name, this.forge.scene);
+    material.diffuseColor = Color3.FromHexString(hex);
+    material.specularColor = new Color3(0.08, 0.08, 0.08);
+    return material;
+  }
+
+  private makePivot(name: string, position: [number, number, number], parent: TransformNode | Mesh): TransformNode {
+    const pivot = new TransformNode(name, this.forge.scene);
+    pivot.parent = parent;
+    pivot.position = new Vector3(position[0], position[1], position[2]);
+    this.avatarNodes.push(pivot);
+    return pivot;
+  }
+
+  private makePart(
+    name: string,
+    size: [number, number, number],
+    position: [number, number, number],
+    material: StandardMaterial,
+    parent: TransformNode | Mesh
+  ): Mesh {
+    const part = MeshBuilder.CreateBox(name, {
+      width: size[0],
+      height: size[1],
+      depth: size[2]
+    }, this.forge.scene);
+
+    part.parent = parent;
+    part.position = new Vector3(position[0], position[1], position[2]);
+    part.material = material;
+    part.checkCollisions = false;
+    part.isPickable = false;
+    this.avatarParts.push(part);
+    return part;
+  }
+
+  private animateClassicWalk(dt: number, running: boolean): void {
+    const cadence = running ? 10.5 : 7.2;
+    const amplitude = running ? 0.82 : 0.60;
+
+    this.walkTime += dt * cadence;
+    const swing = Math.sin(this.walkTime) * amplitude;
+    const bob = Math.abs(Math.sin(this.walkTime * 2)) * (running ? 0.055 : 0.035);
+
+    this.easeRotation(this.armPivots[0], swing, dt, 16);
+    this.easeRotation(this.armPivots[1], -swing, dt, 16);
+    this.easeRotation(this.legPivots[0], -swing * 0.82, dt, 16);
+    this.easeRotation(this.legPivots[1], swing * 0.82, dt, 16);
+
+    this.avatarRoot.position.y += (bob - this.avatarRoot.position.y) * Math.min(1, dt * 18);
+    this.headPivot.rotation.z = Math.sin(this.walkTime) * 0.025;
+    this.forge.canvas.dataset.avatarAnimation = running ? "run" : "walk";
+  }
+
+  private animateIdle(dt: number): void {
+    this.easeRotation(this.armPivots[0], 0, dt, 10);
+    this.easeRotation(this.armPivots[1], 0, dt, 10);
+    this.easeRotation(this.legPivots[0], 0, dt, 10);
+    this.easeRotation(this.legPivots[1], 0, dt, 10);
+
+    this.avatarRoot.position.y += (0 - this.avatarRoot.position.y) * Math.min(1, dt * 10);
+    this.headPivot.rotation.z += (0 - this.headPivot.rotation.z) * Math.min(1, dt * 8);
+    this.forge.canvas.dataset.avatarAnimation = "idle";
+  }
+
+  private animateJump(dt: number): void {
+    this.easeRotation(this.armPivots[0], -0.35, dt, 12);
+    this.easeRotation(this.armPivots[1], -0.35, dt, 12);
+    this.easeRotation(this.legPivots[0], 0.18, dt, 12);
+    this.easeRotation(this.legPivots[1], -0.18, dt, 12);
+    this.avatarRoot.position.y += (0.025 - this.avatarRoot.position.y) * Math.min(1, dt * 10);
+    this.forge.canvas.dataset.avatarAnimation = "jump";
+  }
+
+  private easeRotation(node: TransformNode, targetX: number, dt: number, speed: number): void {
+    node.rotation.x += (targetX - node.rotation.x) * Math.min(1, dt * speed);
   }
 
   private snapToSafeGround(): void {
@@ -189,52 +318,12 @@ export class PlayerController {
     const hit = this.forge.scene.pickWithRay(ray, (mesh) => mesh !== this.body && mesh.checkCollisions);
 
     if (hit?.hit && hit.pickedPoint) {
-      this.body.position.y = hit.pickedPoint.y + 1.02;
-    }
-  }
-
-  private makeAvatarPart(
-    name: string,
-    size: [number, number, number],
-    position: [number, number, number],
-    material: StandardMaterial
-  ): Mesh {
-    const part = MeshBuilder.CreateBox(name, {
-      width: size[0],
-      height: size[1],
-      depth: size[2]
-    }, this.forge.scene);
-
-    part.parent = this.body;
-    part.position = new Vector3(position[0], position[1], position[2]);
-    part.material = material;
-    part.checkCollisions = false;
-    part.isPickable = false;
-    return part;
-  }
-
-  private setAvatarVisible(visible: boolean): void {
-    for (const part of this.avatarParts) part.setEnabled(visible);
-  }
-
-  private animateWalk(dt: number, speed: number): void {
-    this.walkTime += dt * speed;
-    const swing = Math.sin(this.walkTime) * 0.55;
-    this.arms[0].rotation.x = swing;
-    this.arms[1].rotation.x = -swing;
-    this.legs[0].rotation.x = -swing;
-    this.legs[1].rotation.x = swing;
-  }
-
-  private relaxWalkPose(dt: number): void {
-    const blend = Math.min(1, dt * 10);
-    for (const limb of [...this.arms, ...this.legs]) {
-      limb.rotation.x += (0 - limb.rotation.x) * blend;
+      this.body.position.y = hit.pickedPoint.y + 1.30;
     }
   }
 
   private isGrounded(): boolean {
-    const ray = new Ray(this.body.position.add(new Vector3(0, -0.65, 0)), Vector3.Down(), 0.55);
+    const ray = new Ray(this.body.position.add(new Vector3(0, -1.04, 0)), Vector3.Down(), 0.45);
     const hit = this.forge.scene.pickWithRay(ray, (mesh) => mesh !== this.body && mesh.checkCollisions);
     return hit?.hit ?? false;
   }

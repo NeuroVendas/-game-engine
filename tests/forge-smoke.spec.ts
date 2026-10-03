@@ -31,6 +31,7 @@ test("launcher opens first and Helios enters a working Play mode", async ({ page
 
   expect(runtimeError).toBeNull();
   await expect.poll(async () => canvas.getAttribute("data-player-position")).not.toBeNull();
+  await expect(canvas).toHaveAttribute("data-avatar-rig", "ForgeClassic6");
   const before = (await canvas.getAttribute("data-player-position"))!;
 
   await page.keyboard.down("KeyW");
