@@ -2,7 +2,11 @@ name: Forge CI
 
 on:
   push:
-    branches: [main, forge-v0.3]
+    branches:
+      - main
+      - "forge-v*"
+      - "feature/**"
+      - "fix/**"
   pull_request:
     branches: [main]
 
