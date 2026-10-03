@@ -1,6 +1,6 @@
 export type Vec3 = [number, number, number];
 
-export type ForgePrimitive = "box" | "sphere" | "capsule" | "cylinder" | "ground";
+export type ForgePrimitive = "box" | "wedge" | "sphere" | "capsule" | "cylinder" | "ground";
 
 export interface ForgeComponents {
   Collider?: {
