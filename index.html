@@ -125,6 +125,7 @@
           <button id="redo" title="Redo (Ctrl+Y / Ctrl+Shift+Z)">↷ Redo</button>
           <button id="duplicate-selected" title="Duplicate (Ctrl+D)">Duplicate</button>
           <button id="delete-selected" title="Delete">Delete</button>
+          <button id="code-selected" title="Open script editor for selected object">&lt;/&gt; Code</button>
           <span class="separator"></span>
           <button id="play" class="play">▶ Play</button>
           <button id="stop" disabled>■ Stop</button>
@@ -226,6 +227,37 @@
         <div id="fps">0 FPS</div>
       </footer>
     </div>
+
+    <dialog id="script-editor-dialog" class="script-editor-dialog">
+      <div class="script-window">
+        <div class="script-window-title">
+          <div>
+            <strong>Forge Script Editor</strong>
+            <span id="script-editor-target">No object selected</span>
+          </div>
+          <button id="script-close" type="button">×</button>
+        </div>
+        <div class="script-toolbar">
+          <label>Script name <input id="script-name" value="custom.script" /></label>
+          <span class="script-language">JavaScript • local trusted scripts</span>
+        </div>
+        <textarea id="script-source" spellcheck="false" aria-label="Forge script source"></textarea>
+        <div class="script-docs">
+          <code>Forge.self.move(x,y,z)</code>
+          <code>Forge.self.setPosition(x,y,z)</code>
+          <code>Forge.world.get("ObjectId")</code>
+          <code>Forge.onStart(fn)</code>
+          <code>Forge.onUpdate(fn)</code>
+          <code>Forge.onInteract(fn)</code>
+        </div>
+        <div class="script-actions">
+          <span>Ctrl+S saves. Custom scripts run when you press Play.</span>
+          <button id="script-template" type="button">Starter Code</button>
+          <button id="script-save" type="button" class="primary-classic">Save Script</button>
+        </div>
+      </div>
+    </dialog>
+
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

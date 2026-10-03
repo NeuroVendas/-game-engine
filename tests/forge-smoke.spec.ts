@@ -73,4 +73,29 @@ test("custom place creation opens a blank editable project", async ({ page }) =>
   await expect(page.locator("#app")).toBeVisible();
   await expect(page.locator("#studio-project-name")).toHaveText("Smoke Test Place");
   await expect(page.locator("#scene-tree")).toContainText("Baseplate");
+
+  await page.locator(".scene-item", { hasText: "Baseplate" }).click();
+  await page.locator("#code-selected").click();
+  await expect(page.locator("#script-editor-dialog")).toBeVisible();
+
+  await page.locator("#script-name").fill("smoke.custom");
+  await page.locator("#script-source").fill(`
+let fired = false;
+Forge.onUpdate(() => {
+  if (fired) return;
+  fired = true;
+  Forge.log("SMOKE_SCRIPT_OK");
+});
+`);
+  await page.locator("#script-save").click();
+  await page.locator("#script-close").click();
+
+  await page.locator("#play").click();
+  await expect(page.locator("#mode-badge")).toHaveText("PLAY");
+  await expect.poll(async () => page.locator("#status").textContent()).toContain("SMOKE_SCRIPT_OK");
+
+  const runtimeError = await page.locator("#viewport").getAttribute("data-runtime-error");
+  expect(runtimeError).toBeNull();
+
+  await page.locator("#stop").click();
 });

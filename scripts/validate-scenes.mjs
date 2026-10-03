@@ -101,8 +101,15 @@ for (const file of files) {
       if (typeof components.Script.name !== "string" || !components.Script.name.trim()) {
         throw new Error(`${file}: ${entity.id} Script.name is required`);
       }
-      if (!knownScripts.has(components.Script.name)) {
-        throw new Error(`${file}: ${entity.id} references unknown script "${components.Script.name}"`);
+      if (components.Script.enabled !== undefined && typeof components.Script.enabled !== "boolean") {
+        throw new Error(`${file}: ${entity.id} Script.enabled must be boolean`);
+      }
+      if (components.Script.source !== undefined && typeof components.Script.source !== "string") {
+        throw new Error(`${file}: ${entity.id} Script.source must be a string`);
+      }
+      const hasCustomSource = typeof components.Script.source === "string" && components.Script.source.trim().length > 0;
+      if (!hasCustomSource && !knownScripts.has(components.Script.name)) {
+        throw new Error(`${file}: ${entity.id} references unknown built-in script "${components.Script.name}"`);
       }
     }
   }

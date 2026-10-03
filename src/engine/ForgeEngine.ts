@@ -279,7 +279,7 @@ export class ForgeEngine {
     mesh.position = vec3(entity.position, [0, 0, 0]);
     mesh.rotation = vec3(entity.rotation, [0, 0, 0]).scale(Math.PI / 180);
     mesh.scaling = vec3(entity.scale, [1, 1, 1]);
-    mesh.metadata = { forgeEntityId: entity.id };
+    mesh.metadata = { forgeEntityId: entity.id, forgeEntityName: entity.name };
     mesh.checkCollisions = entity.components?.Collider?.enabled ?? false;
     mesh.isPickable = true;
 

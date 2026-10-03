@@ -54,6 +54,11 @@ export class EditorApp {
   private readonly inspectorEmpty = must<HTMLDivElement>("inspector-empty");
   private readonly inspectorFields = must<HTMLDivElement>("inspector-fields");
   private readonly componentList = must<HTMLDivElement>("component-list");
+  private readonly scriptDialog = must<HTMLDialogElement>("script-editor-dialog");
+  private readonly scriptTarget = must<HTMLSpanElement>("script-editor-target");
+  private readonly scriptName = must<HTMLInputElement>("script-name");
+  private readonly scriptSource = must<HTMLTextAreaElement>("script-source");
+  private scriptEditingEntityId: string | null = null;
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     this.forge = new ForgeEngine(canvas, (message) => this.log(message));
@@ -189,7 +194,25 @@ export class EditorApp {
 
     must<HTMLButtonElement>("duplicate-selected").addEventListener("click", () => this.duplicateSelected());
     must<HTMLButtonElement>("delete-selected").addEventListener("click", () => this.deleteSelected());
+    must<HTMLButtonElement>("code-selected").addEventListener("click", () => this.openScriptEditor());
     must<HTMLButtonElement>("add-component").addEventListener("click", () => this.addSelectedComponent());
+    must<HTMLButtonElement>("script-close").addEventListener("click", () => this.scriptDialog.close());
+    must<HTMLButtonElement>("script-save").addEventListener("click", () => this.saveScriptEditor());
+    must<HTMLButtonElement>("script-template").addEventListener("click", () => {
+      this.scriptSource.value = this.defaultScriptSource();
+    });
+    this.scriptSource.addEventListener("keydown", (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.code === "KeyS") {
+        event.preventDefault();
+        this.saveScriptEditor();
+      }
+      if (event.key === "Tab") {
+        event.preventDefault();
+        const start = this.scriptSource.selectionStart;
+        const end = this.scriptSource.selectionEnd;
+        this.scriptSource.setRangeText("  ", start, end, "end");
+      }
+    });
     must<HTMLButtonElement>("undo").addEventListener("click", () => this.undo());
     must<HTMLButtonElement>("redo").addEventListener("click", () => this.redo());
 
@@ -546,7 +569,11 @@ export class EditorApp {
         components.Reactor = { power: 0, temperature: 20 };
         break;
       case "Script":
-        components.Script = { name: "console.status" };
+        components.Script = {
+          name: `custom.${entity.id}`,
+          enabled: true,
+          source: this.defaultScriptSource()
+        };
         break;
     }
 
@@ -679,12 +706,81 @@ export class EditorApp {
       case "Script": {
         const component = components.Script;
         if (!component) return;
+        this.appendCheckboxField(container, "Enabled", component.enabled ?? true, (value) => {
+          component.enabled = value;
+        });
         this.appendTextField(container, "Script name", component.name, (value) => {
           component.name = value;
         });
+
+        const open = document.createElement("button");
+        open.type = "button";
+        open.textContent = component.source?.trim() ? "Open Code" : "Override with Custom Code";
+        open.addEventListener("click", () => this.openScriptEditor(entity.id));
+        container.appendChild(open);
         break;
       }
     }
+  }
+
+  private defaultScriptSource(): string {
+    return `let elapsed = 0;
+
+Forge.onStart(() => {
+  Forge.log(Forge.self.name + " started");
+});
+
+Forge.onUpdate((dt) => {
+  elapsed += dt;
+});
+
+Forge.onInteract(() => {
+  Forge.log("Interacted with " + Forge.self.name);
+  // Example:
+  // Forge.self.move(0, 1, 0);
+});
+`;
+  }
+
+  private openScriptEditor(entityId = this.selectedId): void {
+    if (this.mode !== "editor") return;
+
+    if (!entityId) {
+      this.log("Select an object before opening Code.");
+      return;
+    }
+
+    const entity = this.forge.getEntity(entityId);
+    if (!entity) return;
+
+    this.scriptEditingEntityId = entity.id;
+    const script = entity.components?.Script;
+    this.scriptTarget.textContent = entity.name;
+    this.scriptName.value = script?.name || `custom.${entity.id}`;
+    this.scriptSource.value = script?.source?.trim()
+      ? script.source
+      : this.defaultScriptSource();
+
+    this.scriptDialog.showModal();
+    requestAnimationFrame(() => this.scriptSource.focus());
+  }
+
+  private saveScriptEditor(): void {
+    if (this.mode !== "editor" || !this.scriptEditingEntityId) return;
+
+    const entity = this.forge.getEntity(this.scriptEditingEntityId);
+    if (!entity) return;
+
+    this.checkpoint();
+    const components = entity.components ?? (entity.components = {});
+    components.Script = {
+      name: this.scriptName.value.trim() || `custom.${entity.id}`,
+      enabled: true,
+      source: this.scriptSource.value
+    };
+
+    this.renderInspector();
+    this.log(`Saved script: ${components.Script.name} • press Play to run`);
   }
 
   private appendTextField(

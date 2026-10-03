@@ -27,6 +27,8 @@ export interface ForgeComponents {
   };
   Script?: {
     name: string;
+    enabled?: boolean;
+    source?: string;
   };
 }
 
