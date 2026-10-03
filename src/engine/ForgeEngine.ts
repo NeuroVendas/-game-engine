@@ -9,7 +9,8 @@ import {
   PointLight,
   Scene,
   StandardMaterial,
-  Vector3
+  Vector3,
+  VertexData
 } from "@babylonjs/core";
 import type { ForgeEntity, ForgePrimitive, ForgeSceneDocument } from "../types";
 import { ScriptRuntime } from "./ScriptRuntime";
@@ -87,6 +88,7 @@ export class ForgeEngine {
     const id = this.makeUniqueId(label);
     const defaults: Record<ForgePrimitive, { position: [number, number, number]; size: [number, number, number]; color: string }> = {
       box: { position: [0, 1, 0], size: [2, 2, 2], color: "#6f7d88" },
+      wedge: { position: [0, 1, 0], size: [2, 2, 2], color: "#71808b" },
       sphere: { position: [0, 1.25, 0], size: [2.5, 2.5, 2.5], color: "#72879a" },
       capsule: { position: [0, 1.5, 0], size: [1.5, 3, 1.5], color: "#6e7d86" },
       cylinder: { position: [0, 1.5, 0], size: [2, 3, 2], color: "#667986" },
@@ -170,6 +172,7 @@ export class ForgeEngine {
   private defaultPrimitiveName(kind: ForgePrimitive): string {
     const names: Record<ForgePrimitive, string> = {
       box: "Block",
+      wedge: "Wedge",
       sphere: "Sphere",
       capsule: "Capsule",
       cylinder: "Cylinder",
@@ -198,7 +201,39 @@ export class ForgeEngine {
     const size = entity.size ?? [1, 1, 1];
     let mesh: Mesh;
 
-    if (entity.kind === "sphere") {
+    if (entity.kind === "wedge") {
+      mesh = new Mesh(entity.id, this.scene);
+
+      const width = size[0];
+      const height = size[1];
+      const depth = size[2];
+
+      const positions = [
+        -width / 2, -height / 2, -depth / 2,
+         width / 2, -height / 2, -depth / 2,
+        -width / 2, -height / 2,  depth / 2,
+         width / 2, -height / 2,  depth / 2,
+        -width / 2,  height / 2,  depth / 2,
+         width / 2,  height / 2,  depth / 2
+      ];
+
+      const indices = [
+        0, 2, 3, 0, 3, 1,
+        2, 4, 5, 2, 5, 3,
+        0, 4, 2,
+        1, 3, 5,
+        0, 1, 5, 0, 5, 4
+      ];
+
+      const normals: number[] = [];
+      VertexData.ComputeNormals(positions, indices, normals);
+
+      const data = new VertexData();
+      data.positions = positions;
+      data.indices = indices;
+      data.normals = normals;
+      data.applyToMesh(mesh);
+    } else if (entity.kind === "sphere") {
       mesh = MeshBuilder.CreateSphere(entity.id, {
         diameterX: size[0],
         diameterY: size[1] || size[0],
