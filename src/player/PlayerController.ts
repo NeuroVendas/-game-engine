@@ -46,7 +46,8 @@ export class PlayerController {
   constructor(
     private readonly forge: ForgeEngine,
     spawn: [number, number, number],
-    private readonly log: (message: string) => void
+    private readonly log: (message: string) => void,
+    private readonly setPrompt: (text: string | null, locked: boolean) => void = () => {}
   ) {
     const scene = forge.scene;
 
@@ -138,6 +139,7 @@ export class PlayerController {
     this.body.moveWithCollisions(new Vector3(0, this.verticalVelocity * dt, 0));
 
     this.camera.target = this.body.position.add(new Vector3(0, 0.45, 0));
+    this.updateInteractionPrompt();
 
     if (this.interactPressed) {
       this.interactPressed = false;
@@ -150,6 +152,7 @@ export class PlayerController {
     window.removeEventListener("keyup", this.onKeyUp);
     this.camera.detachControl();
     this.camera.dispose();
+    this.setPrompt(null, false);
 
     for (const part of this.avatarParts) {
       part.dispose();
@@ -207,7 +210,7 @@ export class PlayerController {
     return hit?.hit ?? false;
   }
 
-  private tryInteract(): void {
+  private findNearestInteractable(): string | null {
     let nearestId: string | null = null;
     let nearestDistance = Infinity;
 
@@ -222,6 +225,39 @@ export class PlayerController {
         nearestId = entity.id;
       }
     }
+
+    return nearestId;
+  }
+
+  private updateInteractionPrompt(): void {
+    const nearestId = this.findNearestInteractable();
+    if (!nearestId) {
+      this.setPrompt(null, false);
+      return;
+    }
+
+    const entity = this.forge.getEntity(nearestId);
+    if (!entity) {
+      this.setPrompt(null, false);
+      return;
+    }
+
+    const requiredClearance = entity.components?.Clearance?.level ?? 0;
+    if (requiredClearance > this.clearanceLevel) {
+      this.setPrompt(
+        `LOCKED • Clearance ${requiredClearance} required • You have ${this.clearanceLevel}`,
+        true
+      );
+      return;
+    }
+
+    const prompt = entity.components?.Interactable?.prompt?.trim()
+      || `E • ${entity.name}`;
+    this.setPrompt(prompt, false);
+  }
+
+  private tryInteract(): void {
+    const nearestId = this.findNearestInteractable();
 
     if (!nearestId) {
       this.log("Nothing interactable nearby.");
