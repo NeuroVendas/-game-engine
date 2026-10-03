@@ -1,0 +1,698 @@
+{
+  "format": "forge.scene",
+  "version": 1,
+  "name": "Project Helios",
+  "playerSpawn": [
+    0,
+    1.1,
+    23
+  ],
+  "entities": [
+    {
+      "id": "FacilityFloor",
+      "name": "Facility Floor",
+      "kind": "ground",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "size": [
+        60,
+        1,
+        60
+      ],
+      "color": "#2d343a",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "NorthWall",
+      "name": "North Wall",
+      "kind": "box",
+      "position": [
+        0,
+        4,
+        -30
+      ],
+      "size": [
+        60,
+        8,
+        1
+      ],
+      "color": "#3c464e",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "SouthWallLeft",
+      "name": "South Wall Left",
+      "kind": "box",
+      "position": [
+        -18,
+        4,
+        30
+      ],
+      "size": [
+        24,
+        8,
+        1
+      ],
+      "color": "#3c464e",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "SouthWallRight",
+      "name": "South Wall Right",
+      "kind": "box",
+      "position": [
+        18,
+        4,
+        30
+      ],
+      "size": [
+        24,
+        8,
+        1
+      ],
+      "color": "#3c464e",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "EastWall",
+      "name": "East Wall",
+      "kind": "box",
+      "position": [
+        30,
+        4,
+        0
+      ],
+      "size": [
+        1,
+        8,
+        60
+      ],
+      "color": "#3c464e",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "WestWall",
+      "name": "West Wall",
+      "kind": "box",
+      "position": [
+        -30,
+        4,
+        0
+      ],
+      "size": [
+        1,
+        8,
+        60
+      ],
+      "color": "#3c464e",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "EntryBlastDoor",
+      "name": "ENTRY BLAST DOOR",
+      "kind": "box",
+      "position": [
+        0,
+        3.5,
+        29.5
+      ],
+      "size": [
+        10,
+        7,
+        0.8
+      ],
+      "color": "#59666f",
+      "components": {
+        "Collider": {
+          "enabled": true
+        },
+        "Interactable": {
+          "enabled": true,
+          "prompt": "E • Open blast door"
+        },
+        "Door": {
+          "openHeight": 7.5
+        },
+        "Script": {
+          "name": "door.basic"
+        }
+      }
+    },
+    {
+      "id": "ControlDeck",
+      "name": "Control Deck",
+      "kind": "box",
+      "position": [
+        0,
+        0.75,
+        17
+      ],
+      "size": [
+        28,
+        1.5,
+        12
+      ],
+      "color": "#252c31",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "MasterConsole",
+      "name": "MASTER REACTOR CONTROL",
+      "kind": "box",
+      "position": [
+        0,
+        2.1,
+        13
+      ],
+      "rotation": [
+        -12,
+        0,
+        0
+      ],
+      "size": [
+        8,
+        1.8,
+        2.2
+      ],
+      "color": "#303d45",
+      "emissive": "#14313a",
+      "components": {
+        "Collider": {
+          "enabled": true
+        },
+        "Interactable": {
+          "enabled": true,
+          "prompt": "E • Inspect reactor status"
+        },
+        "Script": {
+          "name": "console.status"
+        }
+      }
+    },
+    {
+      "id": "ConsoleLeft",
+      "name": "Coolant Console",
+      "kind": "box",
+      "position": [
+        -9,
+        2,
+        14
+      ],
+      "rotation": [
+        -10,
+        18,
+        0
+      ],
+      "size": [
+        5,
+        1.6,
+        2
+      ],
+      "color": "#36454d",
+      "emissive": "#0d2c35",
+      "components": {
+        "Collider": {
+          "enabled": true
+        },
+        "Interactable": {
+          "enabled": true
+        },
+        "Script": {
+          "name": "console.status"
+        }
+      }
+    },
+    {
+      "id": "ConsoleRight",
+      "name": "Magnet Console",
+      "kind": "box",
+      "position": [
+        9,
+        2,
+        14
+      ],
+      "rotation": [
+        -10,
+        -18,
+        0
+      ],
+      "size": [
+        5,
+        1.6,
+        2
+      ],
+      "color": "#36454d",
+      "emissive": "#0d2c35",
+      "components": {
+        "Collider": {
+          "enabled": true
+        },
+        "Interactable": {
+          "enabled": true
+        },
+        "Script": {
+          "name": "console.status"
+        }
+      }
+    },
+    {
+      "id": "ObservationRail",
+      "name": "Observation Rail",
+      "kind": "box",
+      "position": [
+        0,
+        2.4,
+        9
+      ],
+      "size": [
+        28,
+        1.2,
+        0.25
+      ],
+      "color": "#7b858b",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "ReactorPedestal",
+      "name": "AR-01 Pedestal",
+      "kind": "capsule",
+      "position": [
+        0,
+        3,
+        -8
+      ],
+      "size": [
+        6,
+        6,
+        6
+      ],
+      "color": "#424c53",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "AR01Core",
+      "name": "AR-01 Antimatter Core",
+      "kind": "sphere",
+      "position": [
+        0,
+        7.2,
+        -8
+      ],
+      "size": [
+        4.2,
+        4.2,
+        4.2
+      ],
+      "color": "#4f8993",
+      "emissive": "#5ceaff",
+      "components": {
+        "Reactor": {
+          "power": 0.12,
+          "temperature": 410
+        },
+        "Script": {
+          "name": "reactor.pulse"
+        }
+      }
+    },
+    {
+      "id": "MagnetNorth",
+      "name": "Magnet Array North",
+      "kind": "box",
+      "position": [
+        0,
+        7.2,
+        -15
+      ],
+      "size": [
+        3,
+        3,
+        8
+      ],
+      "color": "#53616b",
+      "emissive": "#173e49",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "MagnetSouth",
+      "name": "Magnet Array South",
+      "kind": "box",
+      "position": [
+        0,
+        7.2,
+        -1
+      ],
+      "size": [
+        3,
+        3,
+        8
+      ],
+      "color": "#53616b",
+      "emissive": "#173e49",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "MagnetEast",
+      "name": "Magnet Array East",
+      "kind": "box",
+      "position": [
+        7,
+        7.2,
+        -8
+      ],
+      "size": [
+        8,
+        3,
+        3
+      ],
+      "color": "#53616b",
+      "emissive": "#173e49",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "MagnetWest",
+      "name": "Magnet Array West",
+      "kind": "box",
+      "position": [
+        -7,
+        7.2,
+        -8
+      ],
+      "size": [
+        8,
+        3,
+        3
+      ],
+      "color": "#53616b",
+      "emissive": "#173e49",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "CatwalkNorth",
+      "name": "North Catwalk",
+      "kind": "box",
+      "position": [
+        0,
+        5,
+        -21
+      ],
+      "size": [
+        26,
+        0.5,
+        3
+      ],
+      "color": "#4b555b",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "CatwalkEast",
+      "name": "East Catwalk",
+      "kind": "box",
+      "position": [
+        18,
+        5,
+        -8
+      ],
+      "size": [
+        3,
+        0.5,
+        26
+      ],
+      "color": "#4b555b",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "CatwalkWest",
+      "name": "West Catwalk",
+      "kind": "box",
+      "position": [
+        -18,
+        5,
+        -8
+      ],
+      "size": [
+        3,
+        0.5,
+        26
+      ],
+      "color": "#4b555b",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "ServiceBlockA",
+      "name": "Coolant Pump A",
+      "kind": "capsule",
+      "position": [
+        -23,
+        2.5,
+        -20
+      ],
+      "size": [
+        3,
+        5,
+        3
+      ],
+      "color": "#40515a",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "ServiceBlockB",
+      "name": "Coolant Pump B",
+      "kind": "capsule",
+      "position": [
+        23,
+        2.5,
+        -20
+      ],
+      "size": [
+        3,
+        5,
+        3
+      ],
+      "color": "#40515a",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "AuxConsole",
+      "name": "Auxiliary Grid Console",
+      "kind": "box",
+      "position": [
+        19,
+        1.5,
+        20
+      ],
+      "size": [
+        4,
+        3,
+        1.5
+      ],
+      "color": "#334149",
+      "emissive": "#0a2530",
+      "components": {
+        "Collider": {
+          "enabled": true
+        },
+        "Interactable": {
+          "enabled": true
+        },
+        "Script": {
+          "name": "console.status"
+        }
+      }
+    },
+    {
+      "id": "ClassifiedBulkheadLeft",
+      "name": "Classified Bulkhead Left",
+      "kind": "box",
+      "position": [
+        -17,
+        3.5,
+        3
+      ],
+      "size": [
+        26,
+        7,
+        1
+      ],
+      "color": "#333b40",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "ClassifiedBulkheadRight",
+      "name": "Classified Bulkhead Right",
+      "kind": "box",
+      "position": [
+        17,
+        3.5,
+        3
+      ],
+      "size": [
+        26,
+        7,
+        1
+      ],
+      "color": "#333b40",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "ClassifiedAccessDoor",
+      "name": "CLASSIFIED ACCESS — LEVEL 4",
+      "kind": "box",
+      "position": [
+        0,
+        3.5,
+        3
+      ],
+      "size": [
+        8,
+        7,
+        0.8
+      ],
+      "color": "#4b5156",
+      "emissive": "#321010",
+      "components": {
+        "Collider": {
+          "enabled": true
+        },
+        "Interactable": {
+          "enabled": true,
+          "prompt": "E • Classified access"
+        },
+        "Door": {
+          "openHeight": 7.5
+        },
+        "Clearance": {
+          "level": 4
+        },
+        "PowerConsumer": {
+          "bus": "AUX-GRID",
+          "draw": 12,
+          "required": true
+        },
+        "Script": {
+          "name": "door.basic"
+        }
+      }
+    },
+    {
+      "id": "ClassifiedStatusConsole",
+      "name": "AUX GRID / CLASSIFIED LOAD",
+      "kind": "box",
+      "position": [
+        5.6,
+        1.3,
+        4.2
+      ],
+      "rotation": [
+        -12,
+        0,
+        0
+      ],
+      "size": [
+        2.5,
+        1.6,
+        1.2
+      ],
+      "color": "#302f34",
+      "emissive": "#4b1010",
+      "components": {
+        "Collider": {
+          "enabled": true
+        },
+        "Interactable": {
+          "enabled": true,
+          "prompt": "E • Read AUX GRID"
+        },
+        "Clearance": {
+          "level": 1
+        },
+        "Script": {
+          "name": "console.status"
+        }
+      }
+    }
+  ]
+}

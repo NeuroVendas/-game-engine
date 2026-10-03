@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Forge =] Engine v0.4</title>
+    <script type="module" crossorigin src="./assets/index-BvdfhO6P.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/style-BM-q5FWy.css">
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="brand">FORGE <span>=]</span><small>v0.4 dev</small></div>
+        <div class="toolbar">
+          <button id="tool-move" title="Move (W)">Move</button>
+          <button id="tool-rotate" title="Rotate (E)">Rotate</button>
+          <button id="tool-scale" title="Scale (R)">Scale</button>
+          <button id="snap-toggle" class="active" title="Toggle transform snapping">Snap On</button>
+          <select id="snap-size" title="Move snap size">
+            <option value="0.25">0.25u</option>
+            <option value="0.5">0.5u</option>
+            <option value="1" selected>1u</option>
+            <option value="2">2u</option>
+          </select>
+          <span class="separator"></span>
+          <button id="undo" title="Undo (Ctrl+Z)">↶ Undo</button>
+          <button id="redo" title="Redo (Ctrl+Y / Ctrl+Shift+Z)">↷ Redo</button>
+          <button id="duplicate-selected" title="Duplicate (Ctrl+D)">Duplicate</button>
+          <button id="delete-selected" title="Delete">Delete</button>
+          <span class="separator"></span>
+          <button id="play" class="play">▶ Play</button>
+          <button id="stop" disabled>■ Stop</button>
+          <button id="save-local" title="Save in this browser">Save</button>
+          <button id="load-local" title="Load last browser save">Load</button>
+          <button id="import-scene" title="Import .forge.json">Import</button>
+          <button id="export-scene">Export</button>
+          <input id="scene-file-input" type="file" accept=".json,.forge.json,application/json" hidden />
+        </div>
+      </header>
+
+      <main class="workspace">
+        <aside class="panel explorer">
+          <h2>Create</h2>
+          <div class="create-palette">
+            <button data-primitive="box">▣ Block</button>
+            <button data-primitive="wedge">◩ Wedge</button>
+            <button data-primitive="cylinder">● Cylinder</button>
+            <button data-primitive="sphere">● Sphere</button>
+            <button data-primitive="capsule">⬭ Capsule</button>
+            <button data-primitive="ground">▱ Ground</button>
+            <div class="palette-label">Industrial Prefabs</div>
+            <button data-prefab="blast-door">▥ Blast Door</button>
+            <button data-prefab="console">▰ Console</button>
+            <button data-prefab="catwalk">═ Catwalk</button>
+            <button data-prefab="coolant-pump">◉ Pump</button>
+          </div>
+
+          <h2>Explorer</h2>
+          <div class="service-tree">
+            <div class="service">▾ Workspace</div>
+            <div id="scene-tree" class="scene-tree"></div>
+            <div class="service muted">Players</div>
+            <div class="service muted">Lighting</div>
+            <div class="service muted">Sound</div>
+            <div class="service muted">UI</div>
+            <div class="service muted">Scripts</div>
+          </div>
+        </aside>
+
+        <section class="viewport-wrap">
+          <canvas id="viewport"></canvas>
+          <div id="mode-badge" class="mode-badge">EDITOR</div>
+          <div id="interaction-prompt" class="interaction-prompt" hidden></div>
+          <div class="viewport-tip">
+            <strong>Editor</strong>
+            Right mouse + WASD move camera • mouse drag orbit • wheel zoom • F focus
+          </div>
+          <div class="help">W/E/R tools • Ctrl+D duplicate • Ctrl+Z undo • Play: WASD / Shift / Space / E / C</div>
+        </section>
+
+        <aside class="panel inspector">
+          <h2>Properties</h2>
+          <div id="inspector-empty" class="empty">Select an object</div>
+          <div id="inspector-fields" hidden>
+            <label>Name<input id="prop-name" type="text" /></label>
+            <fieldset>
+              <legend>Position</legend>
+              <div class="triplet">
+                <input id="pos-x" type="number" step="0.1" />
+                <input id="pos-y" type="number" step="0.1" />
+                <input id="pos-z" type="number" step="0.1" />
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>Rotation °</legend>
+              <div class="triplet">
+                <input id="rot-x" type="number" step="1" />
+                <input id="rot-y" type="number" step="1" />
+                <input id="rot-z" type="number" step="1" />
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>Scale</legend>
+              <div class="triplet">
+                <input id="scale-x" type="number" step="0.1" />
+                <input id="scale-y" type="number" step="0.1" />
+                <input id="scale-z" type="number" step="0.1" />
+              </div>
+            </fieldset>
+            <div id="component-list" class="components"></div>
+            <div class="component-add">
+              <select id="component-type" title="Component type">
+                <option value="Collider">Collider</option>
+                <option value="Interactable">Interactable</option>
+                <option value="Door">Door</option>
+                <option value="Clearance">Clearance</option>
+                <option value="PowerConsumer">Power Consumer</option>
+                <option value="Reactor">Reactor</option>
+                <option value="Script">Script</option>
+              </select>
+              <button id="add-component">+ Component</button>
+            </div>
+          </div>
+        </aside>
+      </main>
+
+      <footer class="output">
+        <div><strong>Output</strong> <span id="status">Forge ready.</span></div>
+        <div id="history-state">Undo 0 • Redo 0</div>
+        <div id="fps">0 FPS</div>
+      </footer>
+    </div>
+  </body>
+</html>
