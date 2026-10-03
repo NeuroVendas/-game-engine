@@ -7,6 +7,7 @@ import {
 import type { ForgeComponents, ForgeEntity, ForgePrimitive, ForgeSceneDocument } from "../types";
 import { ForgeEngine } from "../engine/ForgeEngine";
 import { registerDefaultScripts } from "../engine/defaultScripts";
+import type { ForgePrefabName } from "../engine/prefabs";
 import { PlayerController } from "../player/PlayerController";
 import { HistoryManager } from "./HistoryManager";
 
@@ -149,6 +150,15 @@ export class EditorApp {
         const kind = button.dataset.primitive as ForgePrimitive | undefined;
         if (!kind) return;
         this.createPrimitive(kind);
+      });
+    });
+
+    document.querySelectorAll<HTMLButtonElement>("[data-prefab]").forEach((button) => {
+      button.addEventListener("click", () => {
+        if (this.mode !== "editor") return;
+        const prefab = button.dataset.prefab as ForgePrefabName | undefined;
+        if (!prefab) return;
+        this.createPrefab(prefab);
       });
     });
 
@@ -356,6 +366,14 @@ export class EditorApp {
     this.renderTree();
     this.selectEntity(entity.id);
     this.log(`Created ${entity.name}`);
+  }
+
+  private createPrefab(prefab: ForgePrefabName): void {
+    this.checkpoint();
+    const entity = this.forge.createPrefab(prefab);
+    this.renderTree();
+    this.selectEntity(entity.id);
+    this.log(`Created prefab: ${entity.name}`);
   }
 
   private duplicateSelected(): void {
