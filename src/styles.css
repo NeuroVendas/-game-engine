@@ -97,6 +97,16 @@ select {
   border-color: #70804a;
   background: #222c24;
 }
+.palette-label {
+  grid-column: 1 / -1;
+  margin-top: 3px;
+  padding-top: 8px;
+  border-top: 1px solid #2a3239;
+  color: #778590;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
 
 .service-tree { padding: 8px; font-size: 13px; }
 .service { padding: 6px; color: #b9c2ca; }
