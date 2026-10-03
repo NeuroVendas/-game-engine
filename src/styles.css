@@ -48,6 +48,15 @@ button:disabled { opacity: .45; cursor: default; }
 button.active { border-color: #b7f34a; box-shadow: inset 0 0 0 1px #b7f34a33; }
 button.play { color: #caff72; }
 
+select {
+  border: 1px solid #343d46;
+  color: #dfe7ed;
+  background: #20272f;
+  border-radius: 5px;
+  padding: 6px 8px;
+  cursor: pointer;
+}
+
 .workspace {
   min-height: 0;
   display: grid;
