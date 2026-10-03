@@ -4,10 +4,11 @@ import {
   PointerEventTypes,
   Vector3
 } from "@babylonjs/core";
-import type { ForgeEntity, ForgeSceneDocument } from "../types";
+import type { ForgePrimitive, ForgeSceneDocument } from "../types";
 import { ForgeEngine } from "../engine/ForgeEngine";
 import { registerDefaultScripts } from "../engine/defaultScripts";
 import { PlayerController } from "../player/PlayerController";
+import { HistoryManager } from "./HistoryManager";
 
 type ToolMode = "move" | "rotate" | "scale";
 type AppMode = "editor" | "play";
@@ -31,15 +32,20 @@ export class EditorApp {
 
   private readonly editorCamera: ArcRotateCamera;
   private readonly gizmos: GizmoManager;
+  private readonly history = new HistoryManager(60);
+  private readonly editorNavKeys = new Set<string>();
+
   private player: PlayerController | null = null;
   private mode: AppMode = "editor";
   private tool: ToolMode = "move";
   private selectedId: string | null = null;
   private playSnapshot: ForgeSceneDocument | null = null;
+  private rightMouseNavigation = false;
 
   private readonly tree = must<HTMLDivElement>("scene-tree");
   private readonly status = must<HTMLSpanElement>("status");
   private readonly fps = must<HTMLDivElement>("fps");
+  private readonly historyState = must<HTMLDivElement>("history-state");
   private readonly modeBadge = must<HTMLDivElement>("mode-badge");
   private readonly inspectorEmpty = must<HTMLDivElement>("inspector-empty");
   private readonly inspectorFields = must<HTMLDivElement>("inspector-fields");
@@ -71,15 +77,21 @@ export class EditorApp {
     this.bindUI();
     this.bindScenePicking();
     this.bindKeyboard();
+    this.bindEditorNavigation();
+    this.setTool("move");
+    this.updateHistoryUI();
   }
 
   async init(): Promise<void> {
     const response = await fetch("/scenes/project-helios.forge.json");
     if (!response.ok) throw new Error(`Failed to load Project Helios scene: ${response.status}`);
 
-    const document = await response.json() as ForgeSceneDocument;
-    this.forge.loadDocument(document);
+    const sceneDocument = await response.json() as ForgeSceneDocument;
+    this.forge.loadDocument(sceneDocument);
+    this.history.clear();
     this.renderTree();
+    this.renderInspector();
+    this.updateHistoryUI();
     this.startLoop();
   }
 
@@ -94,8 +106,11 @@ export class EditorApp {
       if (this.mode === "play") {
         this.player?.update(dt);
         this.forge.scripts.tick(dt);
-      } else if (this.selectedId) {
-        this.forge.syncEntityFromMesh(this.selectedId);
+      } else {
+        this.updateEditorCamera(dt);
+        if (this.selectedId) {
+          this.forge.syncEntityFromMesh(this.selectedId);
+        }
       }
 
       this.forge.scene.render();
@@ -110,24 +125,19 @@ export class EditorApp {
     must<HTMLButtonElement>("tool-rotate").addEventListener("click", () => this.setTool("rotate"));
     must<HTMLButtonElement>("tool-scale").addEventListener("click", () => this.setTool("scale"));
 
-    must<HTMLButtonElement>("add-box").addEventListener("click", () => {
-      if (this.mode !== "editor") return;
-      const entity = this.forge.addBox();
-      this.renderTree();
-      this.selectEntity(entity.id);
-      this.log(`Created ${entity.name}`);
+    document.querySelectorAll<HTMLButtonElement>("[data-primitive]").forEach((button) => {
+      button.addEventListener("click", () => {
+        if (this.mode !== "editor") return;
+        const kind = button.dataset.primitive as ForgePrimitive | undefined;
+        if (!kind) return;
+        this.createPrimitive(kind);
+      });
     });
 
-    must<HTMLButtonElement>("delete-selected").addEventListener("click", () => {
-      if (this.mode !== "editor" || !this.selectedId) return;
-      const entity = this.forge.getEntity(this.selectedId);
-      this.forge.deleteEntity(this.selectedId);
-      this.selectedId = null;
-      this.gizmos.attachToMesh(null);
-      this.renderTree();
-      this.renderInspector();
-      this.log(`Deleted ${entity?.name ?? "entity"}`);
-    });
+    must<HTMLButtonElement>("duplicate-selected").addEventListener("click", () => this.duplicateSelected());
+    must<HTMLButtonElement>("delete-selected").addEventListener("click", () => this.deleteSelected());
+    must<HTMLButtonElement>("undo").addEventListener("click", () => this.undo());
+    must<HTMLButtonElement>("redo").addEventListener("click", () => this.redo());
 
     must<HTMLButtonElement>("play").addEventListener("click", () => this.enterPlayMode());
     must<HTMLButtonElement>("stop").addEventListener("click", () => this.exitPlayMode());
@@ -140,20 +150,29 @@ export class EditorApp {
     ];
 
     for (const id of transformInputs) {
-      must<HTMLInputElement>(id).addEventListener("change", () => this.applyInspectorTransform());
+      must<HTMLInputElement>(id).addEventListener("change", () => {
+        this.checkpoint();
+        this.applyInspectorTransform();
+      });
     }
 
     must<HTMLInputElement>("prop-name").addEventListener("change", (event) => {
       if (!this.selectedId) return;
       const entity = this.forge.getEntity(this.selectedId);
       if (!entity) return;
+
+      this.checkpoint();
       entity.name = (event.target as HTMLInputElement).value.trim() || entity.name;
       this.renderTree();
       this.renderInspector();
+      this.log(`Renamed to ${entity.name}`);
     });
 
     window.addEventListener("pointerup", () => {
-      if (this.mode === "editor" && this.selectedId) this.renderInspector();
+      if (this.mode === "editor" && this.selectedId) {
+        this.forge.syncEntityFromMesh(this.selectedId);
+        this.renderInspector();
+      }
     });
   }
 
@@ -164,29 +183,110 @@ export class EditorApp {
       const id = picked?.metadata?.forgeEntityId as string | undefined;
       if (id) this.selectEntity(id);
     });
+
+    this.canvas.addEventListener("pointerdown", (event) => {
+      if (this.mode === "editor" && event.button === 0 && this.selectedId) {
+        this.checkpoint();
+      }
+    });
   }
 
   private bindKeyboard(): void {
     window.addEventListener("keydown", (event) => {
-      if (this.mode !== "editor") return;
       if (event.target instanceof HTMLInputElement) return;
 
-      if (event.code === "KeyW") this.setTool("move");
-      if (event.code === "KeyE") this.setTool("rotate");
-      if (event.code === "KeyR") this.setTool("scale");
+      if (this.mode === "editor") {
+        this.editorNavKeys.add(event.code);
 
-      if (event.code === "Delete" && this.selectedId) {
-        must<HTMLButtonElement>("delete-selected").click();
-      }
+        const control = event.ctrlKey || event.metaKey;
+        if (control && event.code === "KeyZ" && event.shiftKey) {
+          event.preventDefault();
+          this.redo();
+          return;
+        }
+        if (control && event.code === "KeyZ") {
+          event.preventDefault();
+          this.undo();
+          return;
+        }
+        if (control && event.code === "KeyY") {
+          event.preventDefault();
+          this.redo();
+          return;
+        }
+        if (control && event.code === "KeyD") {
+          event.preventDefault();
+          this.duplicateSelected();
+          return;
+        }
 
-      if (event.code === "KeyF" && this.selectedId) {
-        const mesh = this.forge.getMesh(this.selectedId);
-        if (mesh) {
-          this.editorCamera.setTarget(mesh.getAbsolutePosition());
-          this.editorCamera.radius = Math.max(4, mesh.getBoundingInfo().boundingSphere.radiusWorld * 5);
+        if (!this.rightMouseNavigation) {
+          if (event.code === "KeyW") this.setTool("move");
+          if (event.code === "KeyE") this.setTool("rotate");
+          if (event.code === "KeyR") this.setTool("scale");
+        }
+
+        if (event.code === "Delete") {
+          this.deleteSelected();
+          return;
+        }
+
+        if (event.code === "KeyF" && this.selectedId) {
+          this.focusSelected();
         }
       }
     });
+
+    window.addEventListener("keyup", (event) => {
+      this.editorNavKeys.delete(event.code);
+    });
+
+    window.addEventListener("blur", () => {
+      this.editorNavKeys.clear();
+      this.rightMouseNavigation = false;
+    });
+  }
+
+  private bindEditorNavigation(): void {
+    this.canvas.addEventListener("contextmenu", (event) => event.preventDefault());
+
+    this.canvas.addEventListener("pointerdown", (event) => {
+      if (event.button === 2 && this.mode === "editor") {
+        this.rightMouseNavigation = true;
+        this.canvas.setPointerCapture?.(event.pointerId);
+      }
+    });
+
+    window.addEventListener("pointerup", (event) => {
+      if (event.button === 2) {
+        this.rightMouseNavigation = false;
+      }
+    });
+  }
+
+  private updateEditorCamera(dt: number): void {
+    if (!this.rightMouseNavigation) return;
+
+    const forward = this.editorCamera.getForwardRay().direction.clone();
+    forward.y = 0;
+    if (forward.lengthSquared() < 0.0001) return;
+    forward.normalize();
+
+    const right = new Vector3(forward.z, 0, -forward.x);
+    const move = Vector3.Zero();
+
+    if (this.editorNavKeys.has("KeyW")) move.addInPlace(forward);
+    if (this.editorNavKeys.has("KeyS")) move.subtractInPlace(forward);
+    if (this.editorNavKeys.has("KeyD")) move.addInPlace(right);
+    if (this.editorNavKeys.has("KeyA")) move.subtractInPlace(right);
+    if (this.editorNavKeys.has("Space")) move.y += 1;
+    if (this.editorNavKeys.has("ControlLeft") || this.editorNavKeys.has("ControlRight")) move.y -= 1;
+
+    if (move.lengthSquared() === 0) return;
+
+    move.normalize();
+    const speed = this.editorNavKeys.has("ShiftLeft") || this.editorNavKeys.has("ShiftRight") ? 24 : 11;
+    this.editorCamera.target.addInPlace(move.scale(speed * dt));
   }
 
   private setTool(tool: ToolMode): void {
@@ -201,15 +301,82 @@ export class EditorApp {
     }
   }
 
-  private selectEntity(id: string): void {
-    if (this.mode !== "editor") return;
-    const mesh = this.forge.getMesh(id);
-    if (!mesh) return;
+  private createPrimitive(kind: ForgePrimitive): void {
+    this.checkpoint();
+    const entity = this.forge.createPrimitive(kind);
+    this.renderTree();
+    this.selectEntity(entity.id);
+    this.log(`Created ${entity.name}`);
+  }
 
-    this.selectedId = id;
-    this.gizmos.attachToMesh(mesh);
+  private duplicateSelected(): void {
+    if (this.mode !== "editor" || !this.selectedId) return;
+
+    this.forge.syncEntityFromMesh(this.selectedId);
+    this.checkpoint();
+
+    const copy = this.forge.duplicateEntity(this.selectedId);
+    if (!copy) return;
+
+    this.renderTree();
+    this.selectEntity(copy.id);
+    this.log(`Duplicated ${copy.name}`);
+  }
+
+  private deleteSelected(): void {
+    if (this.mode !== "editor" || !this.selectedId) return;
+
+    const entity = this.forge.getEntity(this.selectedId);
+    if (!entity) return;
+
+    this.checkpoint();
+    this.setSelection(null);
+    this.forge.deleteEntity(entity.id);
     this.renderTree();
     this.renderInspector();
+    this.log(`Deleted ${entity.name}`);
+  }
+
+  private selectEntity(id: string): void {
+    if (this.mode !== "editor") return;
+    if (!this.forge.getMesh(id)) return;
+    this.setSelection(id);
+    this.renderTree();
+    this.renderInspector();
+  }
+
+  private setSelection(id: string | null): void {
+    if (this.selectedId) {
+      const previous = this.forge.getMesh(this.selectedId);
+      if (previous) previous.showBoundingBox = false;
+    }
+
+    this.selectedId = id;
+
+    if (!id) {
+      this.gizmos.attachToMesh(null);
+      return;
+    }
+
+    const mesh = this.forge.getMesh(id);
+    if (!mesh) {
+      this.selectedId = null;
+      this.gizmos.attachToMesh(null);
+      return;
+    }
+
+    mesh.showBoundingBox = true;
+    this.gizmos.attachToMesh(mesh);
+  }
+
+  private focusSelected(): void {
+    if (!this.selectedId) return;
+    const mesh = this.forge.getMesh(this.selectedId);
+    if (!mesh) return;
+
+    this.editorCamera.setTarget(mesh.getAbsolutePosition());
+    this.editorCamera.radius = Math.max(4, mesh.getBoundingInfo().boundingSphere.radiusWorld * 5);
+    this.log(`Focused ${this.forge.getEntity(this.selectedId)?.name ?? this.selectedId}`);
   }
 
   private renderTree(): void {
@@ -286,6 +453,62 @@ export class EditorApp {
     );
 
     this.forge.syncEntityFromMesh(this.selectedId);
+    this.renderInspector();
+    this.log("Transform updated.");
+  }
+
+  private checkpoint(): void {
+    if (this.mode !== "editor") return;
+    const snapshot = this.forge.exportDocument();
+    this.history.checkpoint(snapshot);
+    this.updateHistoryUI();
+  }
+
+  private undo(): void {
+    if (this.mode !== "editor") return;
+    const current = this.forge.exportDocument();
+    const previous = this.history.undo(current);
+    if (!previous) {
+      this.log("Nothing to undo.");
+      return;
+    }
+
+    this.restoreDocument(previous, "Undo");
+  }
+
+  private redo(): void {
+    if (this.mode !== "editor") return;
+    const current = this.forge.exportDocument();
+    const next = this.history.redo(current);
+    if (!next) {
+      this.log("Nothing to redo.");
+      return;
+    }
+
+    this.restoreDocument(next, "Redo");
+  }
+
+  private restoreDocument(sceneDocument: ForgeSceneDocument, action: string): void {
+    const wantedSelection = this.selectedId;
+    this.setSelection(null);
+    this.forge.loadDocument(sceneDocument);
+
+    if (wantedSelection && this.forge.getEntity(wantedSelection)) {
+      this.setSelection(wantedSelection);
+    }
+
+    this.renderTree();
+    this.renderInspector();
+    this.updateHistoryUI();
+    this.log(`${action} complete.`);
+  }
+
+  private updateHistoryUI(): void {
+    const undoButton = must<HTMLButtonElement>("undo");
+    const redoButton = must<HTMLButtonElement>("redo");
+    undoButton.disabled = this.mode !== "editor" || !this.history.canUndo;
+    redoButton.disabled = this.mode !== "editor" || !this.history.canRedo;
+    this.historyState.textContent = `Undo ${this.history.undoCount} • Redo ${this.history.redoCount}`;
   }
 
   private enterPlayMode(): void {
@@ -293,12 +516,13 @@ export class EditorApp {
 
     this.playSnapshot = this.forge.exportDocument();
     this.mode = "play";
-    this.selectedId = null;
-    this.gizmos.attachToMesh(null);
+    this.setSelection(null);
     this.gizmos.positionGizmoEnabled = false;
     this.gizmos.rotationGizmoEnabled = false;
     this.gizmos.scaleGizmoEnabled = false;
     this.editorCamera.detachControl();
+    this.editorNavKeys.clear();
+    this.rightMouseNavigation = false;
 
     const spawn = this.forge.document.playerSpawn ?? [0, 1.1, 20];
     this.player = new PlayerController(this.forge, spawn, (message) => this.log(message));
@@ -309,6 +533,7 @@ export class EditorApp {
     this.modeBadge.classList.add("playing");
     this.renderTree();
     this.renderInspector();
+    this.updateHistoryUI();
   }
 
   private exitPlayMode(): void {
@@ -333,6 +558,7 @@ export class EditorApp {
     this.modeBadge.classList.remove("playing");
     this.renderTree();
     this.renderInspector();
+    this.updateHistoryUI();
     this.log("Returned to editor. Runtime changes reverted.");
   }
 
