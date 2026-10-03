@@ -138,6 +138,31 @@ select {
   letter-spacing: .12em;
 }
 .mode-badge.playing { color: #b7f34a; border-color: #668c30; }
+
+.interaction-prompt {
+  position: absolute;
+  left: 50%;
+  bottom: 58px;
+  transform: translateX(-50%);
+  min-width: 180px;
+  max-width: 520px;
+  text-align: center;
+  padding: 9px 14px;
+  border-radius: 6px;
+  border: 1px solid #71804b;
+  background: #10160ee8;
+  color: #dfffb0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  pointer-events: none;
+}
+.interaction-prompt.locked {
+  border-color: #8a4242;
+  background: #1c1010e8;
+  color: #ffb0b0;
+}
+
 .viewport-tip {
   position: absolute;
   top: 10px;
