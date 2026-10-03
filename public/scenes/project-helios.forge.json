@@ -580,12 +580,12 @@
       "name": "Classified Bulkhead Left",
       "kind": "box",
       "position": [
-        -9,
+        -17,
         3.5,
         3
       ],
       "size": [
-        10,
+        26,
         7,
         1
       ],
@@ -601,12 +601,12 @@
       "name": "Classified Bulkhead Right",
       "kind": "box",
       "position": [
-        9,
+        17,
         3.5,
         3
       ],
       "size": [
-        10,
+        26,
         7,
         1
       ],
