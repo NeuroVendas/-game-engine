@@ -41,6 +41,8 @@ export class EditorApp {
   private selectedId: string | null = null;
   private playSnapshot: ForgeSceneDocument | null = null;
   private rightMouseNavigation = false;
+  private snapEnabled = true;
+  private moveSnap = 1;
 
   private readonly tree = must<HTMLDivElement>("scene-tree");
   private readonly status = must<HTMLSpanElement>("status");
@@ -124,6 +126,21 @@ export class EditorApp {
     must<HTMLButtonElement>("tool-move").addEventListener("click", () => this.setTool("move"));
     must<HTMLButtonElement>("tool-rotate").addEventListener("click", () => this.setTool("rotate"));
     must<HTMLButtonElement>("tool-scale").addEventListener("click", () => this.setTool("scale"));
+
+    must<HTMLButtonElement>("snap-toggle").addEventListener("click", () => {
+      this.snapEnabled = !this.snapEnabled;
+      this.applySnapSettings();
+      this.log(this.snapEnabled ? `Snap enabled at ${this.moveSnap}u / 15°.` : "Snap disabled.");
+    });
+
+    must<HTMLSelectElement>("snap-size").addEventListener("change", (event) => {
+      const next = Number((event.target as HTMLSelectElement).value);
+      if (Number.isFinite(next) && next > 0) {
+        this.moveSnap = next;
+        this.applySnapSettings();
+        this.log(`Move snap: ${this.moveSnap}u.`);
+      }
+    });
 
     document.querySelectorAll<HTMLButtonElement>("[data-primitive]").forEach((button) => {
       button.addEventListener("click", () => {
@@ -307,6 +324,28 @@ export class EditorApp {
     for (const name of ["move", "rotate", "scale"] as const) {
       must<HTMLButtonElement>(`tool-${name}`).classList.toggle("active", name === tool);
     }
+
+    this.applySnapSettings();
+  }
+
+  private applySnapSettings(): void {
+    const moveDistance = this.snapEnabled ? this.moveSnap : 0;
+    const rotationDistance = this.snapEnabled ? radians(15) : 0;
+    const scaleDistance = this.snapEnabled ? 0.1 : 0;
+
+    if (this.gizmos.gizmos.positionGizmo) {
+      this.gizmos.gizmos.positionGizmo.snapDistance = moveDistance;
+    }
+    if (this.gizmos.gizmos.rotationGizmo) {
+      this.gizmos.gizmos.rotationGizmo.snapDistance = rotationDistance;
+    }
+    if (this.gizmos.gizmos.scaleGizmo) {
+      this.gizmos.gizmos.scaleGizmo.snapDistance = scaleDistance;
+    }
+
+    const toggle = must<HTMLButtonElement>("snap-toggle");
+    toggle.classList.toggle("active", this.snapEnabled);
+    toggle.textContent = this.snapEnabled ? "Snap On" : "Snap Off";
   }
 
   private createPrimitive(kind: ForgePrimitive): void {
