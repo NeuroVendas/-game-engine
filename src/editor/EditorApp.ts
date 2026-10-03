@@ -76,6 +76,9 @@ export class EditorApp {
     this.gizmos = new GizmoManager(this.forge.scene);
     this.gizmos.usePointerToAttachGizmos = false;
     this.gizmos.positionGizmoEnabled = true;
+    if (this.gizmos.gizmos.positionGizmo) {
+      this.gizmos.gizmos.positionGizmo.planarGizmoEnabled = true;
+    }
 
     this.bindUI();
     this.bindScenePicking();
@@ -328,6 +331,10 @@ export class EditorApp {
     this.gizmos.positionGizmoEnabled = tool === "move";
     this.gizmos.rotationGizmoEnabled = tool === "rotate";
     this.gizmos.scaleGizmoEnabled = tool === "scale";
+
+    if (tool === "move" && this.gizmos.gizmos.positionGizmo) {
+      this.gizmos.gizmos.positionGizmo.planarGizmoEnabled = true;
+    }
 
     for (const name of ["move", "rotate", "scale"] as const) {
       must<HTMLButtonElement>(`tool-${name}`).classList.toggle("active", name === tool);
@@ -832,6 +839,7 @@ export class EditorApp {
       (message) => this.log(message),
       (text, locked) => this.setInteractionPrompt(text, locked)
     );
+    this.player.captureMouse();
 
     must<HTMLButtonElement>("play").disabled = true;
     must<HTMLButtonElement>("stop").disabled = false;

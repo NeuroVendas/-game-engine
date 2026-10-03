@@ -68,6 +68,25 @@ select {
   background: #12171c;
   overflow: auto;
 }
+.panel {
+  scrollbar-width: thin;
+  scrollbar-color: #3a4650 #10151a;
+}
+.panel::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.panel::-webkit-scrollbar-track {
+  background: #10151a;
+}
+.panel::-webkit-scrollbar-thumb {
+  background: #3a4650;
+  border: 2px solid #10151a;
+  border-radius: 999px;
+}
+.panel::-webkit-scrollbar-thumb:hover {
+  background: #52616d;
+}
 .panel h2 {
   margin: 0;
   padding: 10px 12px;

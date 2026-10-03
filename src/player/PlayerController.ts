@@ -21,6 +21,7 @@ export class PlayerController {
   private interactPressed = false;
   private walkTime = 0;
   private clearanceLevel = 1;
+  private readonly mouseSensitivity = 0.0025;
 
   private readonly onKeyDown = (event: KeyboardEvent) => {
     this.keys.add(event.code);
@@ -39,6 +40,39 @@ export class PlayerController {
 
   private readonly onKeyUp = (event: KeyboardEvent) => {
     this.keys.delete(event.code);
+  };
+
+  private readonly onMouseMove = (event: MouseEvent) => {
+    if (document.pointerLockElement !== this.forge.canvas) return;
+
+    this.camera.alpha += event.movementX * this.mouseSensitivity;
+    this.camera.beta = Math.min(
+      Math.PI - 0.35,
+      Math.max(0.35, this.camera.beta + event.movementY * this.mouseSensitivity)
+    );
+  };
+
+  private readonly onCanvasClick = () => {
+    this.captureMouse();
+  };
+
+  private readonly onWheel = (event: WheelEvent) => {
+    if (this.firstPerson) return;
+    event.preventDefault();
+    this.camera.radius = Math.min(10, Math.max(2.5, this.camera.radius + event.deltaY * 0.005));
+  };
+
+  private readonly onPointerLockChange = () => {
+    if (document.pointerLockElement === this.forge.canvas) {
+      this.log("Mouse captured • WASD move • mouse look • Esc releases mouse");
+    } else {
+      this.keys.clear();
+      this.log("Mouse released • click the game view to resume");
+    }
+  };
+
+  private readonly onWindowBlur = () => {
+    this.keys.clear();
   };
 
   constructor(
@@ -93,13 +127,19 @@ export class PlayerController {
     this.camera.upperRadiusLimit = 10;
     this.camera.wheelPrecision = 18;
     this.camera.panningSensibility = 0;
-    this.camera.attachControl(forge.canvas, true);
+    this.camera.checkCollisions = true;
+    this.camera.collisionRadius = new Vector3(0.25, 0.25, 0.25);
     scene.activeCamera = this.camera;
 
     window.addEventListener("keydown", this.onKeyDown);
     window.addEventListener("keyup", this.onKeyUp);
+    window.addEventListener("blur", this.onWindowBlur);
+    document.addEventListener("mousemove", this.onMouseMove);
+    document.addEventListener("pointerlockchange", this.onPointerLockChange);
+    forge.canvas.addEventListener("click", this.onCanvasClick);
+    forge.canvas.addEventListener("wheel", this.onWheel, { passive: false });
 
-    this.log("Play: WASD move • Shift run • Space jump • E interact • C camera");
+    this.log("Play: WASD move • mouse look • Shift run • Space jump • E interact • C camera");
   }
 
   update(dt: number): void {
@@ -145,10 +185,31 @@ export class PlayerController {
     }
   }
 
+  captureMouse(): void {
+    if (document.pointerLockElement === this.forge.canvas) return;
+    try {
+      const result = this.forge.canvas.requestPointerLock();
+      if (result && typeof (result as Promise<void>).catch === "function") {
+        void (result as Promise<void>).catch(() => {
+          this.log("Click the game view to control the camera.");
+        });
+      }
+    } catch {
+      this.log("Click the game view to control the camera.");
+    }
+  }
+
   dispose(): void {
     window.removeEventListener("keydown", this.onKeyDown);
     window.removeEventListener("keyup", this.onKeyUp);
-    this.camera.detachControl();
+    window.removeEventListener("blur", this.onWindowBlur);
+    document.removeEventListener("mousemove", this.onMouseMove);
+    document.removeEventListener("pointerlockchange", this.onPointerLockChange);
+    this.forge.canvas.removeEventListener("click", this.onCanvasClick);
+    this.forge.canvas.removeEventListener("wheel", this.onWheel);
+    if (document.pointerLockElement === this.forge.canvas) {
+      document.exitPointerLock();
+    }
     this.camera.dispose();
     this.setPrompt(null, false);
 
