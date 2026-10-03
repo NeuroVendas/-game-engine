@@ -61,21 +61,25 @@ Example batch:
 ]
 ```
 
-Supported in v0.3:
+Supported in the current v0.4 development branch:
 
 - `create_box`
+- `place_prefab`
+- `set_components`
+- `rename`
 - `move`
 - `rotate`
 - `scale`
 - `delete`
 
-Future operations will include:
+The first semantic prefab library includes blast doors, control consoles, catwalks, and coolant pumps.
+
+Future operations should include:
 
 - `create_room`
 - `create_corridor`
-- `place_prefab`
 - `connect_rooms`
-- `add_component`
+- `remove_component`
 - `attach_script`
 - `set_material`
 - `set_lighting`
