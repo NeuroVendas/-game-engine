@@ -1,4 +1,3 @@
-import "@babylonjs/core/Engines/engine";
 import "./styles.css";
 import { EditorApp } from "./editor/EditorApp";
 
