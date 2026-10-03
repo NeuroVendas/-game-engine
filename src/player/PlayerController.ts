@@ -22,6 +22,7 @@ export class PlayerController {
   private firstPerson = false;
   private interactPressed = false;
   private walkTime = 0;
+  private clearanceLevel = 1;
 
   private readonly onKeyDown = (event: KeyboardEvent) => {
     this.keys.add(event.code);
@@ -224,6 +225,13 @@ export class PlayerController {
 
     if (!nearestId) {
       this.log("Nothing interactable nearby.");
+      return;
+    }
+
+    const entity = this.forge.getEntity(nearestId);
+    const requiredClearance = entity?.components?.Clearance?.level ?? 0;
+    if (requiredClearance > this.clearanceLevel) {
+      this.log(`ACCESS DENIED • Clearance ${requiredClearance} required • You have ${this.clearanceLevel}`);
       return;
     }
 
