@@ -115,3 +115,21 @@ See `docs/AI_CONTRACT.md`.
 - v0.8: accounts + profiles + friends
 - v0.9: game publishing
 - v1.0: Forge Platform
+
+
+## Project documentation
+
+Forge's product and engineering direction is recorded in the repository so future contributors and AI agents work from the same source of truth.
+
+- docs/VISION.md — product identity and long-term goal
+- docs/PRODUCT_PRINCIPLES.md — creator and UX principles
+- docs/ARCHITECTURE.md — current technical architecture
+- docs/ROADMAP.md — milestone direction from v0.3 to v1.0
+- docs/STYLE_GUIDE.md — Forge visual and editor identity
+- docs/AI_CONTRACT.md — rules for AI-editable worlds
+- docs/PROJECT_HELIOS.md — benchmark game direction
+- docs/DECISIONS.md — accepted product/architecture decisions
+- CONTRIBUTING.md — contributor workflow
+- AGENTS.md — instructions for AI coding agents
+
+For major changes, read the relevant documents before writing code.
