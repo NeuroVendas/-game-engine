@@ -8,6 +8,7 @@ import { registerDefaultScripts } from "../engine/defaultScripts";
 import type { ForgePrefabName } from "../engine/prefabs";
 import { PlayerController } from "../player/PlayerController";
 import { HistoryManager } from "./HistoryManager";
+import heliosScene from "../../public/scenes/project-helios.forge.json";
 
 type ToolMode = "move" | "rotate" | "scale";
 type AppMode = "editor" | "play";
@@ -85,10 +86,7 @@ export class EditorApp {
   }
 
   async init(): Promise<void> {
-    const response = await fetch("./scenes/project-helios.forge.json");
-    if (!response.ok) throw new Error(`Failed to load Project Helios scene: ${response.status}`);
-
-    const sceneDocument = await response.json() as ForgeSceneDocument;
+    const sceneDocument = structuredClone(heliosScene) as ForgeSceneDocument;
     this.forge.loadDocument(sceneDocument);
     this.history.clear();
     this.renderTree();
