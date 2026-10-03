@@ -1,12 +1,11 @@
-import {
-  ArcRotateCamera,
-  Color3,
-  Mesh,
-  MeshBuilder,
-  Ray,
-  StandardMaterial,
-  Vector3
-} from "@babylonjs/core";
+import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
+import { Color3 } from "@babylonjs/core/Maths/math.color";
+import { Mesh } from "@babylonjs/core/Meshes/mesh";
+import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
+import { Ray } from "@babylonjs/core/Culling/ray";
+import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
+import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import type { ForgeEngine } from "../engine/ForgeEngine";
 import type { ForgeEngine } from "../engine/ForgeEngine";
 
 export class PlayerController {
