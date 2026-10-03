@@ -6,7 +6,6 @@ import { Ray } from "@babylonjs/core/Culling/ray";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { ForgeEngine } from "../engine/ForgeEngine";
-import type { ForgeEngine } from "../engine/ForgeEngine";
 
 export class PlayerController {
   readonly body: Mesh;
