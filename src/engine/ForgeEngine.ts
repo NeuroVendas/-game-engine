@@ -1,0 +1,184 @@
+import {
+  Color3,
+  Color4,
+  DirectionalLight,
+  Engine,
+  HemisphericLight,
+  Mesh,
+  MeshBuilder,
+  PointLight,
+  Scene,
+  StandardMaterial,
+  Vector3
+} from "@babylonjs/core";
+import type { ForgeEntity, ForgeSceneDocument } from "../types";
+import { ScriptRuntime } from "./ScriptRuntime";
+
+function vec3(value: [number, number, number] | undefined, fallback: [number, number, number]): Vector3 {
+  const v = value ?? fallback;
+  return new Vector3(v[0], v[1], v[2]);
+}
+
+export class ForgeEngine {
+  readonly engine: Engine;
+  readonly scene: Scene;
+  readonly scripts: ScriptRuntime;
+  document!: ForgeSceneDocument;
+
+  private entityMeshes = new Map<string, Mesh>();
+
+  constructor(
+    readonly canvas: HTMLCanvasElement,
+    private readonly log: (message: string) => void
+  ) {
+    this.engine = new Engine(canvas, true, {
+      preserveDrawingBuffer: false,
+      stencil: true
+    });
+
+    this.scene = new Scene(this.engine);
+    this.scene.clearColor = new Color4(0.025, 0.035, 0.045, 1);
+    this.scene.collisionsEnabled = true;
+
+    const hemi = new HemisphericLight("forge-hemi", new Vector3(0, 1, 0), this.scene);
+    hemi.intensity = 0.7;
+    hemi.diffuse = new Color3(0.7, 0.8, 0.95);
+
+    const key = new DirectionalLight("forge-key", new Vector3(-0.6, -1, 0.35), this.scene);
+    key.position = new Vector3(14, 26, -12);
+    key.intensity = 0.85;
+
+    const reactorLight = new PointLight("reactor-light", new Vector3(0, 8, -8), this.scene);
+    reactorLight.diffuse = new Color3(0.25, 0.8, 1);
+    reactorLight.intensity = 1.8;
+    reactorLight.range = 28;
+
+    this.scripts = new ScriptRuntime(this.scene, log);
+  }
+
+  loadDocument(document: ForgeSceneDocument): void {
+    for (const mesh of this.entityMeshes.values()) {
+      mesh.dispose();
+    }
+    this.entityMeshes.clear();
+
+    this.document = structuredClone(document);
+    for (const entity of this.document.entities) {
+      this.createEntityMesh(entity);
+    }
+
+    this.log(`Loaded ${this.document.name} • ${this.document.entities.length} entities`);
+  }
+
+  createEntity(entity: ForgeEntity): Mesh {
+    this.document.entities.push(entity);
+    return this.createEntityMesh(entity);
+  }
+
+  addBox(): ForgeEntity {
+    const id = `Box_${Date.now().toString(36)}`;
+    const entity: ForgeEntity = {
+      id,
+      name: id,
+      kind: "box",
+      position: [0, 1, 0],
+      size: [2, 2, 2],
+      color: "#6f7d88",
+      components: { Collider: { enabled: true } }
+    };
+    this.createEntity(entity);
+    return entity;
+  }
+
+  deleteEntity(id: string): void {
+    this.scripts.detach(id);
+    this.entityMeshes.get(id)?.dispose();
+    this.entityMeshes.delete(id);
+    this.document.entities = this.document.entities.filter((entity) => entity.id !== id);
+  }
+
+  getEntity(id: string): ForgeEntity | undefined {
+    return this.document.entities.find((entity) => entity.id === id);
+  }
+
+  getMesh(id: string): Mesh | undefined {
+    return this.entityMeshes.get(id);
+  }
+
+  syncEntityFromMesh(id: string): void {
+    const entity = this.getEntity(id);
+    const mesh = this.getMesh(id);
+    if (!entity || !mesh) return;
+
+    entity.position = [mesh.position.x, mesh.position.y, mesh.position.z];
+    entity.rotation = [
+      mesh.rotation.x * 180 / Math.PI,
+      mesh.rotation.y * 180 / Math.PI,
+      mesh.rotation.z * 180 / Math.PI
+    ];
+    entity.scale = [mesh.scaling.x, mesh.scaling.y, mesh.scaling.z];
+  }
+
+  exportDocument(): ForgeSceneDocument {
+    for (const entity of this.document.entities) {
+      this.syncEntityFromMesh(entity.id);
+    }
+    return structuredClone(this.document);
+  }
+
+  resize(): void {
+    this.engine.resize();
+  }
+
+  private createEntityMesh(entity: ForgeEntity): Mesh {
+    const size = entity.size ?? [1, 1, 1];
+    let mesh: Mesh;
+
+    if (entity.kind === "sphere") {
+      mesh = MeshBuilder.CreateSphere(entity.id, {
+        diameterX: size[0],
+        diameterY: size[1] || size[0],
+        diameterZ: size[2] || size[0],
+        segments: 24
+      }, this.scene);
+    } else if (entity.kind === "capsule") {
+      mesh = MeshBuilder.CreateCapsule(entity.id, {
+        radius: size[0] / 2,
+        height: size[1],
+        subdivisions: 16
+      }, this.scene);
+    } else if (entity.kind === "ground") {
+      mesh = MeshBuilder.CreateGround(entity.id, {
+        width: size[0],
+        height: size[2] || size[0],
+        subdivisions: 2
+      }, this.scene);
+    } else {
+      mesh = MeshBuilder.CreateBox(entity.id, {
+        width: size[0],
+        height: size[1],
+        depth: size[2]
+      }, this.scene);
+    }
+
+    mesh.position = vec3(entity.position, [0, 0, 0]);
+    mesh.rotation = vec3(entity.rotation, [0, 0, 0]).scale(Math.PI / 180);
+    mesh.scaling = vec3(entity.scale, [1, 1, 1]);
+    mesh.metadata = { forgeEntityId: entity.id };
+    mesh.checkCollisions = entity.components?.Collider?.enabled ?? false;
+    mesh.isPickable = true;
+
+    const material = new StandardMaterial(`${entity.id}-mat`, this.scene);
+    material.diffuseColor = Color3.FromHexString(entity.color ?? "#697781");
+    material.roughness = 0.78;
+    material.specularColor = new Color3(0.18, 0.2, 0.22);
+    if (entity.emissive) {
+      material.emissiveColor = Color3.FromHexString(entity.emissive);
+    }
+    mesh.material = material;
+
+    this.entityMeshes.set(entity.id, mesh);
+    this.scripts.attach(entity, mesh);
+    return mesh;
+  }
+}
