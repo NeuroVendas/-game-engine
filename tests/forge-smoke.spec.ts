@@ -5,7 +5,7 @@ test("launcher opens first and Helios enters a working Play mode", async ({ page
 
   await expect(page.locator("#launcher")).toBeVisible();
   await expect(page.locator("#app")).toBeHidden();
-  await expect(page.getByText("My Places")).toBeVisible();
+  await expect(page.locator(".launcher-heading h1")).toHaveText("My Places");
 
   await page.locator("[data-open-helios]").first().click();
 
