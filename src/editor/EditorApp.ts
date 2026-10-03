@@ -8,12 +8,6 @@ import { registerDefaultScripts } from "../engine/defaultScripts";
 import type { ForgePrefabName } from "../engine/prefabs";
 import { PlayerController } from "../player/PlayerController";
 import { HistoryManager } from "./HistoryManager";
-import type { ForgeComponents, ForgeEntity, ForgePrimitive, ForgeSceneDocument } from "../types";
-import { ForgeEngine } from "../engine/ForgeEngine";
-import { registerDefaultScripts } from "../engine/defaultScripts";
-import type { ForgePrefabName } from "../engine/prefabs";
-import { PlayerController } from "../player/PlayerController";
-import { HistoryManager } from "./HistoryManager";
 
 type ToolMode = "move" | "rotate" | "scale";
 type AppMode = "editor" | "play";
