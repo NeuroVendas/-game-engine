@@ -57,6 +57,9 @@ export class ForgeEngine {
   }
 
   loadDocument(document: ForgeSceneDocument): void {
+    for (const entityId of this.entityMeshes.keys()) {
+      this.scripts.detach(entityId);
+    }
     for (const mesh of this.entityMeshes.values()) {
       mesh.dispose();
     }
