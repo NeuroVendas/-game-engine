@@ -337,10 +337,10 @@ export class EditorApp {
   }
 
   private exportScene(): void {
-    const document = this.forge.exportDocument();
-    const blob = new Blob([JSON.stringify(document, null, 2)], { type: "application/json" });
+    const sceneDocument = this.forge.exportDocument();
+    const blob = new Blob([JSON.stringify(sceneDocument, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
+    const anchor = window.document.createElement("a");
     anchor.href = url;
     anchor.download = `${this.forge.document.name.toLowerCase().replaceAll(" ", "-")}.forge.json`;
     anchor.click();
