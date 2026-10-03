@@ -21,7 +21,11 @@
           <span class="separator"></span>
           <button id="play" class="play">▶ Play</button>
           <button id="stop" disabled>■ Stop</button>
-          <button id="export-scene">Export Scene</button>
+          <button id="save-local" title="Save in this browser">Save</button>
+          <button id="load-local" title="Load last browser save">Load</button>
+          <button id="import-scene" title="Import .forge.json">Import</button>
+          <button id="export-scene">Export</button>
+          <input id="scene-file-input" type="file" accept=".json,.forge.json,application/json" hidden />
         </div>
       </header>
 
