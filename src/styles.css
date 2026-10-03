@@ -71,6 +71,24 @@ button.play { color: #caff72; }
 .explorer { border-right: 1px solid #262e35; }
 .inspector { border-left: 1px solid #262e35; }
 
+.create-palette {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 9px;
+  border-bottom: 1px solid #262e35;
+}
+.create-palette button {
+  min-height: 34px;
+  text-align: left;
+  font-size: 12px;
+  background: #1b2229;
+}
+.create-palette button:hover {
+  border-color: #70804a;
+  background: #222c24;
+}
+
 .service-tree { padding: 8px; font-size: 13px; }
 .service { padding: 6px; color: #b9c2ca; }
 .service.muted { color: #626e78; }
@@ -111,6 +129,24 @@ button.play { color: #caff72; }
   letter-spacing: .12em;
 }
 .mode-badge.playing { color: #b7f34a; border-color: #668c30; }
+.viewport-tip {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  max-width: 360px;
+  background: #0c1115d9;
+  border: 1px solid #2f3942;
+  color: #94a0aa;
+  border-radius: 5px;
+  font-size: 11px;
+  padding: 7px 9px;
+  pointer-events: none;
+}
+.viewport-tip strong {
+  color: #d5dce1;
+  margin-right: 5px;
+}
+
 .help {
   position: absolute;
   bottom: 10px;
@@ -176,4 +212,5 @@ legend { color: #778590; font-size: 11px; padding: 0 5px; }
   font-size: 11px;
 }
 .output strong { color: #b4bec6; margin-right: 8px; }
-#fps { color: #b7f34a; }
+#history-state { color: #7e8b95; margin-left: auto; margin-right: 12px; }
+#fps { color: #b7f34a; min-width: 48px; text-align: right; }
