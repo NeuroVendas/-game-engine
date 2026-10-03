@@ -4,7 +4,7 @@ import {
   PointerEventTypes,
   Vector3
 } from "@babylonjs/core";
-import type { ForgePrimitive, ForgeSceneDocument } from "../types";
+import type { ForgeComponents, ForgeEntity, ForgePrimitive, ForgeSceneDocument } from "../types";
 import { ForgeEngine } from "../engine/ForgeEngine";
 import { registerDefaultScripts } from "../engine/defaultScripts";
 import { PlayerController } from "../player/PlayerController";
@@ -153,6 +153,7 @@ export class EditorApp {
 
     must<HTMLButtonElement>("duplicate-selected").addEventListener("click", () => this.duplicateSelected());
     must<HTMLButtonElement>("delete-selected").addEventListener("click", () => this.deleteSelected());
+    must<HTMLButtonElement>("add-component").addEventListener("click", () => this.addSelectedComponent());
     must<HTMLButtonElement>("undo").addEventListener("click", () => this.undo());
     must<HTMLButtonElement>("redo").addEventListener("click", () => this.redo());
 
@@ -459,7 +460,56 @@ export class EditorApp {
     must<HTMLInputElement>("scale-y").value = mesh.scaling.y.toFixed(2);
     must<HTMLInputElement>("scale-z").value = mesh.scaling.z.toFixed(2);
 
+    this.renderComponents(entity);
+  }
+
+  private addSelectedComponent(): void {
+    if (this.mode !== "editor" || !this.selectedId) return;
+
+    const entity = this.forge.getEntity(this.selectedId);
+    if (!entity) return;
+
+    const type = must<HTMLSelectElement>("component-type").value as keyof ForgeComponents;
+    const components = entity.components ?? (entity.components = {});
+
+    if (components[type] !== undefined) {
+      this.log(`${type} already exists on ${entity.name}.`);
+      return;
+    }
+
+    this.checkpoint();
+
+    switch (type) {
+      case "Collider":
+        components.Collider = { enabled: true };
+        break;
+      case "Interactable":
+        components.Interactable = { enabled: true, prompt: "E • Interact" };
+        break;
+      case "Door":
+        components.Door = { openHeight: 4 };
+        break;
+      case "Clearance":
+        components.Clearance = { level: 1 };
+        break;
+      case "PowerConsumer":
+        components.PowerConsumer = { bus: "MAIN", draw: 1, required: true };
+        break;
+      case "Reactor":
+        components.Reactor = { power: 0, temperature: 20 };
+        break;
+      case "Script":
+        components.Script = { name: "console.status" };
+        break;
+    }
+
+    this.renderInspector();
+    this.log(`Added ${type} to ${entity.name}.`);
+  }
+
+  private renderComponents(entity: ForgeEntity): void {
     this.componentList.replaceChildren();
+
     const title = document.createElement("div");
     title.textContent = "Components";
     title.style.marginBottom = "7px";
@@ -467,15 +517,203 @@ export class EditorApp {
     this.componentList.appendChild(title);
 
     const components = entity.components ?? {};
-    const names = Object.keys(components);
-    if (names.length === 0) names.push("Transform", "Mesh");
+    const names = Object.keys(components) as Array<keyof ForgeComponents>;
+
+    if (names.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "empty";
+      empty.style.padding = "6px 0";
+      empty.textContent = "No gameplay components.";
+      this.componentList.appendChild(empty);
+      return;
+    }
 
     for (const componentName of names) {
-      const row = document.createElement("div");
-      row.className = "component";
-      row.textContent = `✓ ${componentName}`;
-      this.componentList.appendChild(row);
+      const card = document.createElement("div");
+      card.className = "component";
+
+      const head = document.createElement("div");
+      head.className = "component-head";
+
+      const name = document.createElement("span");
+      name.textContent = componentName;
+
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.textContent = "Remove";
+      remove.addEventListener("click", () => {
+        this.checkpoint();
+        if (entity.components) delete entity.components[componentName];
+        this.renderInspector();
+        this.log(`Removed ${componentName} from ${entity.name}.`);
+      });
+
+      head.append(name, remove);
+      card.appendChild(head);
+
+      const fields = document.createElement("div");
+      fields.className = "component-fields";
+      this.renderComponentFields(entity, componentName, fields);
+      card.appendChild(fields);
+
+      this.componentList.appendChild(card);
     }
+  }
+
+  private renderComponentFields(
+    entity: ForgeEntity,
+    componentName: keyof ForgeComponents,
+    container: HTMLDivElement
+  ): void {
+    const components = entity.components;
+    if (!components) return;
+
+    switch (componentName) {
+      case "Collider": {
+        const component = components.Collider;
+        if (!component) return;
+        this.appendCheckboxField(container, "Enabled", component.enabled, (value) => {
+          component.enabled = value;
+        });
+        break;
+      }
+      case "Interactable": {
+        const component = components.Interactable;
+        if (!component) return;
+        this.appendCheckboxField(container, "Enabled", component.enabled, (value) => {
+          component.enabled = value;
+        });
+        this.appendTextField(container, "Prompt", component.prompt ?? "", (value) => {
+          component.prompt = value;
+        });
+        break;
+      }
+      case "Door": {
+        const component = components.Door;
+        if (!component) return;
+        this.appendNumberField(container, "Open height", component.openHeight ?? 4, 0.25, (value) => {
+          component.openHeight = value;
+        });
+        break;
+      }
+      case "Clearance": {
+        const component = components.Clearance;
+        if (!component) return;
+        this.appendNumberField(container, "Level", component.level, 1, (value) => {
+          component.level = Math.max(0, Math.round(value));
+        });
+        break;
+      }
+      case "PowerConsumer": {
+        const component = components.PowerConsumer;
+        if (!component) return;
+        this.appendTextField(container, "Power bus", component.bus, (value) => {
+          component.bus = value || "MAIN";
+        });
+        this.appendNumberField(container, "Draw", component.draw ?? 0, 0.1, (value) => {
+          component.draw = Math.max(0, value);
+        });
+        this.appendCheckboxField(container, "Power required", component.required ?? true, (value) => {
+          component.required = value;
+        });
+        break;
+      }
+      case "Reactor": {
+        const component = components.Reactor;
+        if (!component) return;
+        this.appendNumberField(container, "Power", component.power ?? 0, 0.01, (value) => {
+          component.power = value;
+        });
+        this.appendNumberField(container, "Temperature", component.temperature ?? 20, 1, (value) => {
+          component.temperature = value;
+        });
+        break;
+      }
+      case "Script": {
+        const component = components.Script;
+        if (!component) return;
+        this.appendTextField(container, "Script name", component.name, (value) => {
+          component.name = value;
+        });
+        break;
+      }
+    }
+  }
+
+  private appendTextField(
+    container: HTMLDivElement,
+    labelText: string,
+    value: string,
+    apply: (value: string) => void
+  ): void {
+    const label = document.createElement("label");
+    label.textContent = labelText;
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.value = value;
+    input.addEventListener("change", () => {
+      this.checkpoint();
+      apply(input.value.trim());
+      this.renderInspector();
+      this.log(`${labelText} updated.`);
+    });
+
+    label.appendChild(input);
+    container.appendChild(label);
+  }
+
+  private appendNumberField(
+    container: HTMLDivElement,
+    labelText: string,
+    value: number,
+    step: number,
+    apply: (value: number) => void
+  ): void {
+    const label = document.createElement("label");
+    label.textContent = labelText;
+
+    const input = document.createElement("input");
+    input.type = "number";
+    input.step = String(step);
+    input.value = String(value);
+    input.addEventListener("change", () => {
+      const next = Number(input.value);
+      if (!Number.isFinite(next)) {
+        input.value = String(value);
+        return;
+      }
+      this.checkpoint();
+      apply(next);
+      this.renderInspector();
+      this.log(`${labelText} updated.`);
+    });
+
+    label.appendChild(input);
+    container.appendChild(label);
+  }
+
+  private appendCheckboxField(
+    container: HTMLDivElement,
+    labelText: string,
+    value: boolean,
+    apply: (value: boolean) => void
+  ): void {
+    const label = document.createElement("label");
+    label.textContent = labelText;
+
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = value;
+    input.addEventListener("change", () => {
+      this.checkpoint();
+      apply(input.checked);
+      this.renderInspector();
+      this.log(`${labelText} updated.`);
+    });
+
+    label.appendChild(input);
+    container.appendChild(label);
   }
 
   private applyInspectorTransform(): void {
@@ -562,8 +800,9 @@ export class EditorApp {
     if (this.mode === "play") return;
 
     this.playSnapshot = this.forge.exportDocument();
-    this.mode = "play";
     this.setSelection(null);
+    this.forge.loadDocument(this.playSnapshot);
+    this.mode = "play";
     this.gizmos.positionGizmoEnabled = false;
     this.gizmos.rotationGizmoEnabled = false;
     this.gizmos.scaleGizmoEnabled = false;
