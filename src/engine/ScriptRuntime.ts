@@ -125,6 +125,7 @@ interface CompileResult {
 export class ScriptRuntime {
   private readonly factories = new Map<string, ForgeScriptFactory>();
   private readonly active = new Map<string, ForgeScript>();
+  private readonly childScripts = new Map<string, Set<string>>();
   private readonly modules = new Map<string, unknown>();
   private readonly events = new Map<string, Set<ScriptCallback>>();
   private readonly keys = new Set<string>();
@@ -221,6 +222,13 @@ export class ScriptRuntime {
     }
 
     this.active.set(entity.id, script);
+
+    if (entity.parentId) {
+      const bucket = this.childScripts.get(entity.parentId) ?? new Set<string>();
+      bucket.add(entity.id);
+      this.childScripts.set(entity.parentId, bucket);
+    }
+
     this.safeCall(entity.name, "onStart", () => script?.onStart?.());
   }
 
@@ -228,6 +236,10 @@ export class ScriptRuntime {
     const script = this.active.get(entityId);
     if (script) this.safeCall(entityId, "onDestroy", () => script.onDestroy?.());
     this.active.delete(entityId);
+    for (const [parentId, ids] of this.childScripts) {
+      ids.delete(entityId);
+      if (ids.size === 0) this.childScripts.delete(parentId);
+    }
   }
 
   stopAll(): void {
@@ -235,6 +247,7 @@ export class ScriptRuntime {
       this.safeCall(entityId, "onDestroy", () => script.onDestroy?.());
     }
     this.active.clear();
+    this.childScripts.clear();
     this.modules.clear();
     this.events.clear();
     this.keys.clear();
@@ -247,15 +260,26 @@ export class ScriptRuntime {
   }
 
   interact(entityId: string, actor: AbstractMesh): void {
-    const script = this.active.get(entityId);
-    if (!script) return;
-    this.safeCall(entityId, "onInteract", () => script.onInteract?.(actor));
+    for (const scriptId of this.eventScriptIds(entityId)) {
+      const script = this.active.get(scriptId);
+      if (!script) continue;
+      this.safeCall(scriptId, "onInteract", () => script.onInteract?.(actor));
+    }
   }
 
   uiClick(entityId: string): void {
-    const script = this.active.get(entityId);
-    if (!script) return;
-    this.safeCall(entityId, "onClick", () => script.onClick?.());
+    for (const scriptId of this.eventScriptIds(entityId)) {
+      const script = this.active.get(scriptId);
+      if (!script) continue;
+      this.safeCall(scriptId, "onClick", () => script.onClick?.());
+    }
+  }
+
+  private eventScriptIds(entityId: string): string[] {
+    return [
+      ...(this.active.has(entityId) ? [entityId] : []),
+      ...(this.childScripts.get(entityId) ?? [])
+    ];
   }
 
   private compileUserScript(entity: ForgeEntity, node: AbstractMesh, source: string): CompileResult | null {
