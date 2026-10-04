@@ -8,6 +8,7 @@ import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
 import { DirectionalLight } from "@babylonjs/core/Lights/directionalLight";
 import { PointLight } from "@babylonjs/core/Lights/pointLight";
 import { SpotLight } from "@babylonjs/core/Lights/spotLight";
+import { ShadowGenerator } from "@babylonjs/core/Lights/Shadows/shadowGenerator";
 import type { Light } from "@babylonjs/core/Lights/light";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
@@ -44,6 +45,7 @@ export class ForgeEngine {
   private readonly entitySounds = new Map<string, Sound>();
   private readonly hemi: HemisphericLight;
   private readonly key: DirectionalLight;
+  private readonly shadowGenerator: ShadowGenerator;
   private sky: Mesh;
   private skyMaterial: StandardMaterial;
   private skyTexture: DynamicTexture;
@@ -65,7 +67,14 @@ export class ForgeEngine {
 
     this.hemi = new HemisphericLight("forge-hemi", new Vector3(0, 1, 0), this.scene);
     this.key = new DirectionalLight("forge-key", new Vector3(-0.6, -1, 0.35), this.scene);
-    this.key.position = new Vector3(14, 26, -12);
+    this.key.position = new Vector3(18, 32, -18);
+    this.key.shadowMinZ = 1;
+    this.key.shadowMaxZ = 160;
+
+    this.shadowGenerator = new ShadowGenerator(2048, this.key);
+    this.shadowGenerator.usePercentageCloserFiltering = true;
+    this.shadowGenerator.bias = 0.0008;
+    this.shadowGenerator.normalBias = 0.03;
 
     this.sky = MeshBuilder.CreateSphere("__forge-sky", {
       diameter: 1800,
@@ -262,7 +271,9 @@ export class ForgeEngine {
     this.entitySounds.get(id)?.dispose();
     this.entitySounds.delete(id);
 
-    this.entityMeshes.get(id)?.dispose(false, true);
+    const oldMesh = this.entityMeshes.get(id);
+    if (oldMesh) this.unregisterShadowCaster(oldMesh, true);
+    oldMesh?.dispose(false, true);
     this.entityMeshes.delete(id);
     this.document.entities = this.document.entities.filter((entity) => entity.id !== id);
     this.refreshUI();
@@ -301,6 +312,16 @@ export class ForgeEngine {
     this.engine.resize();
   }
 
+  registerShadowCaster(mesh: Mesh, descendants = true): void {
+    if (mesh.name === "__forge-sky") return;
+    mesh.receiveShadows = true;
+    this.shadowGenerator.addShadowCaster(mesh, descendants);
+  }
+
+  unregisterShadowCaster(mesh: Mesh, descendants = true): void {
+    this.shadowGenerator.removeShadowCaster(mesh, descendants);
+  }
+
   rebuildEntity(id: string): void {
     const entity = this.getEntity(id);
     if (!entity) return;
@@ -318,7 +339,9 @@ export class ForgeEngine {
 
     for (const childMesh of forgeChildren) childMesh.parent = null;
 
-    this.entityMeshes.get(id)?.dispose(false, true);
+    const oldMesh = this.entityMeshes.get(id);
+    if (oldMesh) this.unregisterShadowCaster(oldMesh, true);
+    oldMesh?.dispose(false, true);
     this.entityMeshes.delete(id);
 
     const mesh = this.createEntityMesh(entity, this.runtimeMode);
@@ -572,6 +595,11 @@ export class ForgeEngine {
 
     this.entityMeshes.set(entity.id, mesh);
 
+    if (entity.kind !== "empty" && entity.kind !== "model") {
+      mesh.receiveShadows = true;
+      if (entity.kind !== "ground") this.registerShadowCaster(mesh, false);
+    }
+
     this.createLight(entity, mesh);
     this.createSound(entity, mesh);
 
@@ -661,6 +689,8 @@ export class ForgeEngine {
         };
         imported.isPickable = true;
         imported.checkCollisions = entity.components?.Collider?.enabled ?? false;
+        imported.receiveShadows = true;
+        this.registerShadowCaster(imported, false);
         if (!imported.parent) imported.parent = root;
       }
 
