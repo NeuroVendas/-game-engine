@@ -42,6 +42,7 @@ export class EditorApp {
   private rightMouseNavigation = false;
   private editorOrbitLastX = 0;
   private editorOrbitLastY = 0;
+  private draggedEntityId: string | null = null;
   private snapEnabled = true;
   private moveSnap = 1;
 
@@ -342,7 +343,8 @@ export class EditorApp {
     const workspaceRoot = must<HTMLDivElement>("workspace-root");
     workspaceRoot.addEventListener("dragover", (event) => {
       const draggedId = event.dataTransfer?.getData("application/x-forge-entity")
-        || event.dataTransfer?.getData("text/plain");
+        || event.dataTransfer?.getData("text/plain")
+        || this.draggedEntityId;
       if (!draggedId) return;
       event.preventDefault();
       workspaceRoot.classList.add("drop-target");
@@ -352,7 +354,8 @@ export class EditorApp {
       event.preventDefault();
       workspaceRoot.classList.remove("drop-target");
       const draggedId = event.dataTransfer?.getData("application/x-forge-entity")
-        || event.dataTransfer?.getData("text/plain");
+        || event.dataTransfer?.getData("text/plain")
+        || this.draggedEntityId;
       if (draggedId) this.reparentEntity(draggedId);
     });
 
@@ -923,15 +926,20 @@ export class EditorApp {
         if (entity.components?.Script) this.openScriptEditor(entity.id);
       });
       button.addEventListener("dragstart", (event) => {
+        this.draggedEntityId = entity.id;
         event.dataTransfer?.setData("application/x-forge-entity", entity.id);
         event.dataTransfer?.setData("text/plain", entity.id);
         if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
         button.classList.add("dragging");
       });
-      button.addEventListener("dragend", () => button.classList.remove("dragging"));
+      button.addEventListener("dragend", () => {
+        this.draggedEntityId = null;
+        button.classList.remove("dragging");
+      });
       button.addEventListener("dragover", (event) => {
         const draggedId = event.dataTransfer?.getData("application/x-forge-entity")
-          || event.dataTransfer?.getData("text/plain");
+          || event.dataTransfer?.getData("text/plain")
+          || this.draggedEntityId;
         if (!draggedId || draggedId === entity.id || this.wouldCreateParentCycle(draggedId, entity.id)) return;
         event.preventDefault();
         button.classList.add("drop-target");
@@ -941,7 +949,8 @@ export class EditorApp {
         event.preventDefault();
         button.classList.remove("drop-target");
         const draggedId = event.dataTransfer?.getData("application/x-forge-entity")
-          || event.dataTransfer?.getData("text/plain");
+          || event.dataTransfer?.getData("text/plain")
+          || this.draggedEntityId;
         if (!draggedId || draggedId === entity.id) return;
         this.reparentEntity(draggedId, entity.id);
       });
