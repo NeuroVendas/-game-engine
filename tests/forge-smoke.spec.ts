@@ -206,3 +206,50 @@ Forge.onClick(() => {
 
   expect(await canvas.getAttribute("data-runtime-error")).toBeNull();
 });
+
+
+test("ModuleScript libraries can be required by gameplay scripts", async ({ page }) => {
+  await page.goto("/");
+  await page.locator("[data-launch-tab='develop']").click();
+  await page.locator("#new-place").click();
+  await page.locator("#new-place-name").fill("Module Script Place");
+  await page.locator("#confirm-create-place").click();
+
+  await page.locator(".scene-item", { hasText: "Baseplate" }).click();
+  await page.locator("[data-object='modulescript']").click();
+  await page.locator("#code-selected").click();
+  await expect(page.locator("#script-kind")).toHaveValue("ModuleScript");
+  await page.locator("#script-name").fill("math.utils");
+  await page.locator("#script-source").fill(`
+Forge.module({
+  answer: 42,
+  double(value) {
+    return value * 2;
+  }
+});
+`);
+  await page.locator("#script-check").click();
+  await expect(page.locator("#status")).toContainText("syntax OK");
+  await page.locator("#script-save").click();
+  await page.locator("#script-close").click();
+
+  await page.locator(".scene-item", { hasText: "Baseplate" }).click();
+  await page.locator("[data-object='script']").click();
+  await page.locator("#code-selected").click();
+  await page.locator("#script-name").fill("module.consumer");
+  await page.locator("#script-source").fill(`
+const math = Forge.require("math.utils");
+
+Forge.onStart(() => {
+  Forge.log("MODULE_OK:" + math.double(math.answer));
+});
+`);
+  await page.locator("#script-check").click();
+  await expect(page.locator("#status")).toContainText("syntax OK");
+  await page.locator("#script-save").click();
+  await page.locator("#script-close").click();
+
+  await page.locator("#play").click();
+  await expect.poll(async () => page.locator("#status").textContent()).toContain("MODULE_OK:84");
+  expect(await page.locator("#viewport").getAttribute("data-runtime-error")).toBeNull();
+});
