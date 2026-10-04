@@ -170,7 +170,7 @@ export class ForgeEngine {
     this.applyEnvironment();
   }
 
-  loadDocument(document: ForgeSceneDocument, runtimeMode = false): void {
+  loadDocument(document: ForgeSceneDocument, runtimeMode = false, startScripts = true): void {
     this.scripts.stopAll();
     this.runtimeMode = runtimeMode;
 
@@ -199,18 +199,28 @@ export class ForgeEngine {
 
     this.applyHierarchy();
 
-    if (this.runtimeMode) {
-      const modules = this.document.entities.filter((entity) => entity.components?.Script?.kind === "ModuleScript");
-      const runnable = this.document.entities.filter((entity) => entity.components?.Script?.kind !== "ModuleScript");
-
-      for (const entity of [...modules, ...runnable]) {
-        const mesh = this.entityMeshes.get(entity.id);
-        if (mesh) this.scripts.attach(entity, mesh);
-      }
+    if (this.runtimeMode && startScripts) {
+      this.startRuntimeScripts();
     }
 
     this.refreshUI();
     this.log(`Loaded ${this.document.name} • ${this.document.entities.length} objects`);
+  }
+
+  startRuntimeScripts(): void {
+    if (!this.runtimeMode) return;
+
+    const modules = this.document.entities.filter(
+      (entity) => entity.components?.Script?.kind === "ModuleScript"
+    );
+    const runnable = this.document.entities.filter(
+      (entity) => entity.components?.Script?.kind !== "ModuleScript"
+    );
+
+    for (const entity of [...modules, ...runnable]) {
+      const mesh = this.entityMeshes.get(entity.id);
+      if (mesh) this.scripts.attach(entity, mesh);
+    }
   }
 
   createEntity(entity: ForgeEntity): Mesh {
