@@ -212,6 +212,41 @@
       </footer>
     </section>
 
+    <dialog id="game-details-dialog" class="game-details-dialog">
+      <div class="game-details-window">
+        <div class="dialog-title game-details-titlebar">
+          <span>Place Details</span>
+          <button id="game-detail-close" type="button">×</button>
+        </div>
+        <div class="game-details-body">
+          <div id="game-detail-thumb" class="game-detail-thumb"></div>
+          <div class="game-detail-copy">
+            <h2 id="game-detail-title">Place</h2>
+            <div class="game-detail-byline">By <strong id="game-detail-creator">Forge</strong></div>
+            <div id="game-detail-meta" class="game-detail-meta">Private</div>
+            <label>Description
+              <textarea id="game-detail-description" maxlength="500" rows="6"></textarea>
+            </label>
+            <label id="game-detail-visibility-row">Visibility
+              <select id="game-detail-visibility">
+                <option value="private">Private</option>
+                <option value="unlisted">Unlisted</option>
+                <option value="public">Public</option>
+              </select>
+            </label>
+            <div id="game-detail-note" class="dialog-note"></div>
+          </div>
+        </div>
+        <div class="game-details-actions">
+          <button id="game-detail-favorite" type="button">☆ Favorite</button>
+          <span class="dialog-spacer"></span>
+          <button id="game-detail-save" type="button">Save Details</button>
+          <button id="game-detail-edit" type="button">Edit</button>
+          <button id="game-detail-play" type="button" class="primary-classic">Play</button>
+        </div>
+      </div>
+    </dialog>
+
     <dialog id="auth-dialog" class="create-dialog auth-dialog">
       <form method="dialog" id="auth-form">
         <div class="dialog-title">Forge Account</div>

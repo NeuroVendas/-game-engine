@@ -44,6 +44,7 @@ const launcher = must<HTMLElement>("launcher");
 const studio = must<HTMLElement>("app");
 const canvas = must<HTMLCanvasElement>("viewport");
 const createDialog = must<HTMLDialogElement>("create-place-dialog");
+const gameDetailsDialog = must<HTMLDialogElement>("game-details-dialog");
 const profileDialog = must<HTMLDialogElement>("profile-dialog");
 const authDialog = must<HTMLDialogElement>("auth-dialog");
 const renameDialog = must<HTMLDialogElement>("rename-place-dialog");
@@ -67,6 +68,7 @@ let cloudBusy = false;
 let currentPage: LauncherPage = "home";
 let currentGameFilter: GameFilter = "all";
 let renamingProjectId: string | null = null;
+let detailsSceneId: string | null = null;
 let openCardMenuId: string | null = null;
 let sessionMode: "edit" | "play" | null = null;
 
@@ -280,6 +282,14 @@ function clearCloudAccountState(): void {
   cloudSession = null;
   cloudProfile = null;
   friendConnections = [];
+
+  // Never expose cached private projects from a previous account after sign-out.
+  projects = projects.filter((scene) => !scene.platform?.cloudId);
+  state.favorites = state.favorites.filter((id) => !id.startsWith("cloud:"));
+  state.recent = state.recent.filter((id) => !id.startsWith("cloud:"));
+  saveProjects(projects);
+  savePlatformState(state);
+
   setCloudStatus(cloudOnline ? "Forge Cloud Online • Guest" : "Forge Cloud Offline", !cloudOnline);
   renderAll();
 }
@@ -385,7 +395,7 @@ function projectCard(scene: ForgeSceneDocument, context: "game" | "develop"): HT
 
   const title = escapeHtml(scene.name);
   const thumbClass = official ? "helios-thumb" : "user-thumb";
-  const subtitle = official ? "Industrial reactor benchmark" : "Forge place";
+  const subtitle = official ? "Industrial reactor benchmark" : sceneDescription(scene);
   const favorite = isFavorite(scene);
   const visibility = scene.platform?.visibility ?? "private";
 
@@ -418,7 +428,10 @@ function projectCard(scene: ForgeSceneDocument, context: "game" | "develop"): HT
   card.addEventListener("click", (event) => {
     const target = event.target as HTMLElement;
     const action = target.closest<HTMLButtonElement>("[data-action]")?.dataset.action;
-    if (!action) return;
+    if (!action) {
+      openGameDetails(scene);
+      return;
+    }
     event.stopPropagation();
 
     if (action === "favorite") void toggleFavorite(scene);
@@ -464,6 +477,82 @@ function projectCard(scene: ForgeSceneDocument, context: "game" | "develop"): HT
   });
 
   return card;
+}
+
+function creatorLabel(scene: ForgeSceneDocument): string {
+  if (isOfficial(scene)) return "Forge";
+  if (canEdit(scene)) return cloudProfile?.username ? `@${cloudProfile.username}` : "You";
+  if (scene.platform?.ownerUsername) return `@${scene.platform.ownerUsername}`;
+  return scene.platform?.ownerDisplayName || "Community Creator";
+}
+
+function sceneDescription(scene: ForgeSceneDocument): string {
+  if (scene.platform?.description?.trim()) return scene.platform.description.trim();
+  if (isOfficial(scene)) return "Industrial reactor simulation and the official benchmark place used to develop Forge.";
+  return "A Forge place.";
+}
+
+function openGameDetails(scene: ForgeSceneDocument): void {
+  detailsSceneId = projectId(scene);
+  const editable = canEdit(scene);
+  const favorite = isFavorite(scene);
+  const official = isOfficial(scene);
+
+  must<HTMLElement>("game-detail-title").textContent = scene.name;
+  must<HTMLElement>("game-detail-creator").textContent = creatorLabel(scene);
+  must<HTMLElement>("game-detail-meta").textContent = metaLabel(scene);
+
+  const thumb = must<HTMLElement>("game-detail-thumb");
+  thumb.className = `game-detail-thumb ${official ? "helios-thumb" : "user-thumb"}`;
+  thumb.innerHTML = official ? '<div class="reactor-ring"></div><span>PROJECT HELIOS</span>' : '<span>=]</span>';
+
+  const description = must<HTMLTextAreaElement>("game-detail-description");
+  description.value = sceneDescription(scene);
+  description.readOnly = !editable;
+
+  const visibility = must<HTMLSelectElement>("game-detail-visibility");
+  visibility.value = scene.platform?.visibility ?? "private";
+  visibility.disabled = !editable || !cloudSession;
+
+  must<HTMLElement>("game-detail-visibility-row").hidden = official;
+  must<HTMLButtonElement>("game-detail-favorite").textContent = favorite ? "★ Favorited" : "☆ Favorite";
+  must<HTMLButtonElement>("game-detail-save").hidden = !editable;
+  must<HTMLButtonElement>("game-detail-edit").textContent = official ? "Remix" : "Edit";
+  must<HTMLButtonElement>("game-detail-edit").hidden = !official && !editable;
+
+  const note = must<HTMLElement>("game-detail-note");
+  if (official) {
+    note.textContent = "Official Forge sample. Remix it to make your own editable copy.";
+  } else if (editable && !cloudSession) {
+    note.textContent = "Saved locally. Sign in to Forge Cloud to publish and sync this place.";
+  } else if (editable) {
+    note.textContent = "Description and visibility sync with Forge Cloud.";
+  } else {
+    const updated = scene.platform?.updatedAt
+      ? new Date(scene.platform.updatedAt).toLocaleDateString()
+      : "recently";
+    note.textContent = `Public Forge place • updated ${updated}.`;
+  }
+
+  gameDetailsDialog.showModal();
+}
+
+async function saveGameDetails(): Promise<void> {
+  if (!detailsSceneId) return;
+  const scene = sceneById(detailsSceneId);
+  if (!scene || !canEdit(scene) || isOfficial(scene)) return;
+
+  const oldId = projectId(scene);
+  const platform = scene.platform ?? (scene.platform = {});
+  platform.description = must<HTMLTextAreaElement>("game-detail-description").value.trim();
+
+  const visibility = must<HTMLSelectElement>("game-detail-visibility").value as "private" | "unlisted" | "public";
+  if (cloudSession) platform.visibility = visibility;
+  else platform.visibility = "private";
+
+  const saved = await saveScene(scene, oldId);
+  detailsSceneId = projectId(saved);
+  openGameDetails(saved);
 }
 
 function homePlaceCard(scene: ForgeSceneDocument): HTMLElement {
@@ -987,6 +1076,33 @@ must<HTMLInputElement>("friend-username").addEventListener("keydown", (event) =>
     void sendFriendRequestFromUI();
   }
 });
+
+must<HTMLButtonElement>("game-detail-close").addEventListener("click", () => gameDetailsDialog.close());
+must<HTMLButtonElement>("game-detail-favorite").addEventListener("click", () => {
+  if (!detailsSceneId) return;
+  const scene = sceneById(detailsSceneId);
+  if (!scene) return;
+  void (async () => {
+    await toggleFavorite(scene);
+    openGameDetails(sceneById(detailsSceneId!) ?? scene);
+  })();
+});
+must<HTMLButtonElement>("game-detail-play").addEventListener("click", () => {
+  if (!detailsSceneId) return;
+  const scene = sceneById(detailsSceneId);
+  if (!scene) return;
+  gameDetailsDialog.close();
+  void playPlace(scene);
+});
+must<HTMLButtonElement>("game-detail-edit").addEventListener("click", () => {
+  if (!detailsSceneId) return;
+  const scene = sceneById(detailsSceneId);
+  if (!scene) return;
+  gameDetailsDialog.close();
+  if (isOfficial(scene)) void remixPlace(scene);
+  else void editPlace(scene);
+});
+must<HTMLButtonElement>("game-detail-save").addEventListener("click", () => void saveGameDetails());
 
 must<HTMLButtonElement>("account-button").addEventListener("click", () => {
   if (cloudSession) openProfile();

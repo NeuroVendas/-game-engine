@@ -14,6 +14,12 @@ export interface CloudProfile {
   avatar_style: string;
 }
 
+interface ProjectOwner {
+  id: string;
+  username: string;
+  display_name: string;
+}
+
 interface ProjectRow {
   id: string;
   owner_id: string | null;
@@ -106,7 +112,7 @@ export async function updateMyProfile(
   return data as CloudProfile;
 }
 
-export function rowToScene(row: ProjectRow): ForgeSceneDocument {
+export function rowToScene(row: ProjectRow, owner?: ProjectOwner): ForgeSceneDocument {
   const scene = structuredClone(row.scene_json);
   scene.name = row.name;
   scene.platform = {
@@ -114,9 +120,37 @@ export function rowToScene(row: ProjectRow): ForgeSceneDocument {
     slug: row.slug,
     visibility: row.visibility,
     ownerId: row.owner_id ?? undefined,
+    ownerUsername: owner?.username,
+    ownerDisplayName: owner?.display_name,
+    description: row.description,
+    updatedAt: row.updated_at,
+    playCount: row.play_count,
+    thumbnailKind: row.thumbnail_kind,
     isOfficial: row.is_official
   };
   return scene;
+}
+
+async function rowsToScenes(rows: ProjectRow[]): Promise<ForgeSceneDocument[]> {
+  const ownerIds = [...new Set(rows.map((row) => row.owner_id).filter((id): id is string => Boolean(id)))];
+
+  if (ownerIds.length === 0) return rows.map((row) => rowToScene(row));
+
+  const { data: owners, error } = await supabase
+    .from("profiles")
+    .select("id,username,display_name")
+    .in("id", ownerIds);
+
+  if (error) throw error;
+
+  const ownerMap = new Map(
+    (owners ?? []).map((owner) => [owner.id, owner as ProjectOwner])
+  );
+
+  return rows.map((row) => rowToScene(
+    row,
+    row.owner_id ? ownerMap.get(row.owner_id) : undefined
+  ));
 }
 
 export async function loadPublicProjects(): Promise<ForgeSceneDocument[]> {
@@ -128,7 +162,7 @@ export async function loadPublicProjects(): Promise<ForgeSceneDocument[]> {
     .limit(60);
 
   if (error) throw error;
-  return (data as ProjectRow[]).map(rowToScene);
+  return rowsToScenes(data as ProjectRow[]);
 }
 
 export async function loadMyProjects(userId: string): Promise<ForgeSceneDocument[]> {
@@ -139,7 +173,7 @@ export async function loadMyProjects(userId: string): Promise<ForgeSceneDocument
     .order("updated_at", { ascending: false });
 
   if (error) throw error;
-  return (data as ProjectRow[]).map(rowToScene);
+  return rowsToScenes(data as ProjectRow[]);
 }
 
 function cleanSceneForCloud(scene: ForgeSceneDocument): ForgeSceneDocument {
@@ -169,6 +203,7 @@ export async function upsertCloudProject(
       .from("projects")
       .update({
         name: scene.name,
+        description: scene.platform?.description?.trim() ?? "",
         visibility,
         scene_json: clean
       })
@@ -188,6 +223,7 @@ export async function upsertCloudProject(
       owner_id: userId,
       slug,
       name: scene.name,
+      description: scene.platform?.description?.trim() ?? "",
       visibility,
       scene_json: clean,
       thumbnail_kind: "classic",

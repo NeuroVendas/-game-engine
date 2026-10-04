@@ -27,6 +27,12 @@ test("platform home, games, favorites, profile and direct play work", async ({ p
   await expect(page.locator("#games-grid .place-card")).toHaveCount(1);
 
   const heliosCard = page.locator("#games-grid .place-card").first();
+  await heliosCard.click({ position: { x: 50, y: 40 } });
+  await expect(page.locator("#game-details-dialog")).toBeVisible();
+  await expect(page.locator("#game-detail-title")).toHaveText("Project Helios");
+  await expect(page.locator("#game-detail-creator")).toHaveText("Forge");
+  await page.locator("#game-detail-close").click();
+
   await heliosCard.locator("[data-action='favorite']").click();
   await expect(page.locator("#favorite-count")).toHaveText("1");
 
@@ -71,6 +77,13 @@ test("develop can create, edit, duplicate, rename, delete and persist a place", 
 
   const card = page.locator("#game-grid .place-card[data-place-name='Menu Test Place']");
   await expect(card).toHaveCount(1);
+
+  await card.click({ position: { x: 55, y: 45 } });
+  await expect(page.locator("#game-details-dialog")).toBeVisible();
+  await page.locator("#game-detail-description").fill("A local menu smoke-test place.");
+  await page.locator("#game-detail-save").click();
+  await expect(page.locator("#game-detail-description")).toHaveValue("A local menu smoke-test place.");
+  await page.locator("#game-detail-close").click();
 
   await card.locator("[data-action='more']").click();
   await card.locator("[data-action='duplicate']").click();

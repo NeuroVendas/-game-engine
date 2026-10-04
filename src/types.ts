@@ -56,6 +56,12 @@ export interface ForgeSceneDocument {
     slug?: string;
     visibility?: "private" | "unlisted" | "public";
     ownerId?: string;
+    ownerUsername?: string;
+    ownerDisplayName?: string;
+    description?: string;
+    updatedAt?: string;
+    playCount?: number;
+    thumbnailKind?: string;
     isOfficial?: boolean;
   };
 }
