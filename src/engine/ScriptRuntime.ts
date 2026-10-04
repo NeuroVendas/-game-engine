@@ -3,7 +3,7 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import type { Scene } from "@babylonjs/core/scene";
-import type { ForgeEntity, ForgeScriptKind } from "../types";
+import type { ForgeEntity, ForgePrimitive, ForgeScriptKind } from "../types";
 
 export interface ForgeScriptContext {
   entity: ForgeEntity;
@@ -70,6 +70,9 @@ interface ForgeUserAPI {
     get(idOrName: string): ForgeNodeAPI | null;
     find(name: string): ForgeNodeAPI | null;
     all(): ForgeNodeAPI[];
+    create(kind: ForgePrimitive, name?: string): ForgeNodeAPI | null;
+    clone(idOrName: string): ForgeNodeAPI | null;
+    destroy(idOrName: string): boolean;
   };
   readonly input: {
     isDown(code: string): boolean;
@@ -99,6 +102,12 @@ interface ForgeUserAPI {
   require(name: string): unknown;
 }
 
+interface RuntimeWorldMutationAPI {
+  create(kind: ForgePrimitive, name?: string): string | null;
+  clone(idOrName: string): string | null;
+  destroy(idOrName: string): boolean;
+}
+
 interface CompileResult {
   script: ForgeScript;
   moduleValue: unknown;
@@ -119,6 +128,11 @@ export class ScriptRuntime {
   private uiApi: RuntimeUIAPI = {
     setText: () => false,
     show: () => false
+  };
+  private worldMutationApi: RuntimeWorldMutationAPI = {
+    create: () => null,
+    clone: () => null,
+    destroy: () => false
   };
 
   constructor(
@@ -152,6 +166,10 @@ export class ScriptRuntime {
 
   setUIAPI(api: RuntimeUIAPI): void {
     this.uiApi = api;
+  }
+
+  setWorldMutationAPI(api: RuntimeWorldMutationAPI): void {
+    this.worldMutationApi = api;
   }
 
   attach(entity: ForgeEntity, node: AbstractMesh): void {
@@ -262,7 +280,16 @@ export class ScriptRuntime {
             nodes.push(this.createNodeAPI(mesh));
           }
           return nodes;
-        }
+        },
+        create: (kind: ForgePrimitive, name?: string) => {
+          const id = this.worldMutationApi.create(kind, name);
+          return id ? this.findNode(id) : null;
+        },
+        clone: (idOrName: string) => {
+          const id = this.worldMutationApi.clone(idOrName);
+          return id ? this.findNode(id) : null;
+        },
+        destroy: (idOrName: string) => this.worldMutationApi.destroy(idOrName)
       },
       input: {
         isDown: (code: string) => this.keys.has(code)
