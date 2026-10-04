@@ -456,3 +456,62 @@ Core Relay is not decorative sample content. It is an engine acceptance test: if
 - #10 — Professional transform workflow
 - #11 — complete mini-game acceptance test
 - PR #12 — Forge v0.5: Creator Experience
+
+
+## 17. Forge v0.5 — Particle VFX and real Core Relay completion coverage
+
+The first authorable VFX layer was added as a canonical `Particle` component rather than a separate editor-only effect path.
+
+### Particle VFX
+
+Studio creators can insert **Particle VFX** objects or add the Particle component to an existing entity.
+
+Current authoring supports:
+
+- Energy / Sparks / Smoke presets
+- enabled/autoplay
+- two colors
+- emit rate
+- capacity
+- lifetime
+- size
+- speed
+- live editor preview
+
+Runtime scripts gained:
+
+- `Forge.vfx.play(idOrName)`
+- `Forge.vfx.stop(idOrName)`
+- `Forge.vfx.restart(idOrName)`
+
+The implementation owns Babylon particle lifecycles alongside lights/sounds/meshes so load, rebuild, delete and Play transitions dispose/recreate effects predictably.
+
+### Core Relay victory VFX
+
+Core Relay now contains `CoreVictoryVFX`, authored in the same `forge.scene` document. It is non-autoplay in Play mode and the game controller restarts it only when all three relays are online.
+
+### Full gameplay acceptance test
+
+Issue #11's largest verification gap was removed: Browser Smoke no longer stops after checking that Core Relay boots.
+
+The test now:
+
+1. enters the Core Relay Develop template,
+2. starts Play,
+3. calibrates the current player movement axes,
+4. traverses open floor using WASD/sprint,
+5. waits for the real interaction prompt for Relay A, B and C,
+6. presses E on each,
+7. verifies 1/3 -> 2/3 -> 3/3,
+8. requires `CORE ONLINE • YOU WIN`,
+9. requires `CORE_RELAY_WIN`,
+10. requires the victory VFX restart action,
+11. stops/starts Play again to regression-check resource lifecycle.
+
+The first coordinate-microstep version timed out in headless Chromium. It was deliberately replaced with prompt-driven navigation: the acceptance test now uses the same interaction feedback a player sees instead of brittle precision steering.
+
+Verification for code commit `5a26dfe1`:
+
+- Forge CI: success
+- Forge Cloud Smoke: success
+- Forge Browser Smoke: success (7/7)
