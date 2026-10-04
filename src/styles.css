@@ -1289,3 +1289,13 @@ input, textarea { cursor: text; }
 .output-line { white-space: pre-wrap; }
 .output-line.warn { color: #e8c779; }
 .output-line.error { color: #f09a94; }
+
+.scene-item[draggable="true"] { cursor: grab; }
+.scene-item.dragging { opacity: .45; }
+.scene-item.drop-target,
+.workspace-root.drop-target {
+  outline: 1px solid #b7f34a;
+  background: #344527 !important;
+  color: #e8ffd0 !important;
+}
+.workspace-root { user-select: none; }

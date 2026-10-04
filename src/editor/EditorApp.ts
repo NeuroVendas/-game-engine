@@ -339,6 +339,23 @@ export class EditorApp {
       must<HTMLInputElement>(id).addEventListener("change", () => this.applyAppearance());
     }
 
+    const workspaceRoot = must<HTMLDivElement>("workspace-root");
+    workspaceRoot.addEventListener("dragover", (event) => {
+      const draggedId = event.dataTransfer?.getData("application/x-forge-entity")
+        || event.dataTransfer?.getData("text/plain");
+      if (!draggedId) return;
+      event.preventDefault();
+      workspaceRoot.classList.add("drop-target");
+    });
+    workspaceRoot.addEventListener("dragleave", () => workspaceRoot.classList.remove("drop-target"));
+    workspaceRoot.addEventListener("drop", (event) => {
+      event.preventDefault();
+      workspaceRoot.classList.remove("drop-target");
+      const draggedId = event.dataTransfer?.getData("application/x-forge-entity")
+        || event.dataTransfer?.getData("text/plain");
+      if (draggedId) this.reparentEntity(draggedId);
+    });
+
     window.addEventListener("pointerup", () => {
       if (this.mode === "editor" && this.selectedId) {
         this.forge.syncEntityFromMesh(this.selectedId);
@@ -559,6 +576,7 @@ export class EditorApp {
 
     const names: Record<string, string> = {
       empty: "Object",
+      group: "Group",
       light: "Point Light",
       sound: "Sound",
       "ui-text": "Screen Text",
@@ -895,12 +913,37 @@ export class EditorApp {
         : "◆";
 
       button.textContent = `${icon} ${entity.name}`;
+      button.dataset.entityId = entity.id;
+      button.draggable = true;
       button.title = entity.parentId
         ? `${entity.id} • child of ${entity.parentId}`
         : entity.id;
       button.addEventListener("click", () => this.selectEntity(entity.id));
       button.addEventListener("dblclick", () => {
         if (entity.components?.Script) this.openScriptEditor(entity.id);
+      });
+      button.addEventListener("dragstart", (event) => {
+        event.dataTransfer?.setData("application/x-forge-entity", entity.id);
+        event.dataTransfer?.setData("text/plain", entity.id);
+        if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
+        button.classList.add("dragging");
+      });
+      button.addEventListener("dragend", () => button.classList.remove("dragging"));
+      button.addEventListener("dragover", (event) => {
+        const draggedId = event.dataTransfer?.getData("application/x-forge-entity")
+          || event.dataTransfer?.getData("text/plain");
+        if (!draggedId || draggedId === entity.id || this.wouldCreateParentCycle(draggedId, entity.id)) return;
+        event.preventDefault();
+        button.classList.add("drop-target");
+      });
+      button.addEventListener("dragleave", () => button.classList.remove("drop-target"));
+      button.addEventListener("drop", (event) => {
+        event.preventDefault();
+        button.classList.remove("drop-target");
+        const draggedId = event.dataTransfer?.getData("application/x-forge-entity")
+          || event.dataTransfer?.getData("text/plain");
+        if (!draggedId || draggedId === entity.id) return;
+        this.reparentEntity(draggedId, entity.id);
       });
       this.tree.appendChild(button);
 
@@ -1579,12 +1622,25 @@ Forge.onUpdate((dt) => {
       return;
     }
 
+    this.reparentEntity(entity.id, selectedParent);
+  }
+
+  private reparentEntity(entityId: string, parentId?: string): void {
+    const entity = this.forge.getEntity(entityId);
+    if (!entity) return;
+
+    if (parentId && this.wouldCreateParentCycle(entityId, parentId)) {
+      this.log("Parenting blocked: that would create a hierarchy cycle.");
+      return;
+    }
+
     this.checkpoint();
-    this.forge.setEntityParent(entity.id, selectedParent);
+    if (!this.forge.setEntityParent(entityId, parentId)) return;
+
     this.renderTree();
-    this.renderInspector();
-    this.log(selectedParent
-      ? `${entity.name} parented to ${this.forge.getEntity(selectedParent)?.name ?? selectedParent}.`
+    if (this.selectedId === entityId) this.renderInspector();
+    this.log(parentId
+      ? `${entity.name} moved inside ${this.forge.getEntity(parentId)?.name ?? parentId}.`
       : `${entity.name} moved to Workspace.`);
   }
 

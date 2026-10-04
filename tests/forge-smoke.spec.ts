@@ -212,6 +212,16 @@ test("studio v0.5 supports resize, sky, UI, typed scripts, sound and lights", as
   await page.locator("#prop-parent").selectOption("");
   await expect(page.locator("#prop-parent")).toHaveValue("");
 
+  await page.locator("[data-object='group']").click();
+  await expect(page.locator("#scene-tree")).toContainText("Group");
+  await page.locator("#prop-parent").selectOption("");
+
+  const blockRow = page.locator(".scene-item", { hasText: "Block" }).first();
+  const groupRow = page.locator(".scene-item", { hasText: "Group" }).first();
+  await blockRow.dragTo(groupRow);
+  await blockRow.click();
+  await expect(page.locator("#prop-parent")).not.toHaveValue("");
+
   await page.locator(".scene-item", { hasText: "Block" }).click();
   await page.locator("#size-x").fill("6");
   await page.locator("#size-x").dispatchEvent("change");

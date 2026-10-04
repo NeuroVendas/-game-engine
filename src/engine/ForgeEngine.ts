@@ -347,7 +347,8 @@ export class ForgeEngine {
 
     if (!parentId) {
       entity.parentId = undefined;
-      mesh.parent = null;
+      mesh.setParent(null, true);
+      this.syncEntityFromMesh(id);
       return true;
     }
 
@@ -355,7 +356,8 @@ export class ForgeEngine {
     if (!parent || parentId === id) return false;
 
     entity.parentId = parentId;
-    mesh.parent = parent;
+    mesh.setParent(parent, true);
+    this.syncEntityFromMesh(id);
     return true;
   }
 
