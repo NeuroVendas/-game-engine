@@ -1,6 +1,8 @@
 export type Vec3 = [number, number, number];
 
-export type ForgePrimitive = "box" | "wedge" | "sphere" | "capsule" | "cylinder" | "ground";
+export type ForgePrimitive = "box" | "wedge" | "sphere" | "capsule" | "cylinder" | "ground" | "empty" | "model";
+
+export type ForgeScriptKind = "Script" | "LocalScript" | "ModuleScript";
 
 export interface ForgeComponents {
   Collider?: {
@@ -27,8 +29,41 @@ export interface ForgeComponents {
   };
   Script?: {
     name: string;
+    kind?: ForgeScriptKind;
     enabled?: boolean;
     source?: string;
+  };
+  Light?: {
+    type: "point" | "spot";
+    color?: string;
+    intensity?: number;
+    range?: number;
+    angle?: number;
+  };
+  Sound?: {
+    src: string;
+    volume?: number;
+    loop?: boolean;
+    autoplay?: boolean;
+    spatial?: boolean;
+    maxDistance?: number;
+  };
+  UI?: {
+    type: "text" | "button" | "panel";
+    text?: string;
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+    fontSize?: number;
+    color?: string;
+    background?: string;
+    visible?: boolean;
+    anchor?: "top-left" | "top-center" | "center" | "bottom-center";
+  };
+  Model?: {
+    src: string;
+    fileName?: string;
   };
 }
 
@@ -43,6 +78,7 @@ export interface ForgeEntity {
   color?: string;
   emissive?: string;
   components?: ForgeComponents;
+  parentId?: string;
 }
 
 export interface ForgeSceneDocument {
@@ -50,6 +86,12 @@ export interface ForgeSceneDocument {
   version: 1;
   name: string;
   playerSpawn?: Vec3;
+  environment?: {
+    skyColor?: string;
+    ambientColor?: string;
+    fogColor?: string;
+    fogDensity?: number;
+  };
   entities: ForgeEntity[];
   platform?: {
     cloudId?: string;
