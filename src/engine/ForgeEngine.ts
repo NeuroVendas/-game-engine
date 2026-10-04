@@ -679,10 +679,35 @@ export class ForgeEngine {
     if (entity.kind !== "empty" && entity.kind !== "model") {
       mesh.isPickable = true;
       const material = new StandardMaterial(`${entity.id}-mat`, this.scene);
-      material.diffuseColor = safeColor(entity.color, "#8796a3");
-      material.roughness = 0.72;
-      material.specularColor = new Color3(0.12, 0.14, 0.16);
+      const baseColor = safeColor(entity.color, "#8796a3");
+      const preset = entity.material ?? "plastic";
+
+      material.diffuseColor = baseColor;
       material.alpha = 1 - Math.min(1, Math.max(0, entity.transparency ?? 0));
+
+      if (preset === "matte") {
+        material.roughness = 1;
+        material.specularColor = Color3.Black();
+        material.specularPower = 8;
+      } else if (preset === "metal") {
+        material.roughness = 0.18;
+        material.specularColor = new Color3(0.82, 0.84, 0.86);
+        material.specularPower = 128;
+      } else if (preset === "glass") {
+        material.roughness = 0.12;
+        material.specularColor = new Color3(0.92, 0.95, 1);
+        material.specularPower = 160;
+        material.alpha = Math.min(material.alpha, 0.42);
+      } else if (preset === "neon") {
+        material.roughness = 1;
+        material.specularColor = Color3.Black();
+        material.emissiveColor = baseColor;
+      } else {
+        material.roughness = 0.58;
+        material.specularColor = new Color3(0.18, 0.20, 0.22);
+        material.specularPower = 48;
+      }
+
       if (entity.emissive) material.emissiveColor = safeColor(entity.emissive, "#000000");
       if (entity.texture?.trim()) {
         try {
