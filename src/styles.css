@@ -1047,3 +1047,102 @@ input, textarea { cursor: text; }
   .game-details-body { grid-template-columns: 1fr; }
   .game-detail-thumb { min-height: 160px; }
 }
+
+/* ===== Creator profiles ===== */
+.creator-link {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #315d7e;
+  font-weight: 700;
+  text-decoration: underline;
+}
+.creator-link:disabled {
+  color: #425f73;
+  text-decoration: none;
+  cursor: default;
+}
+.creator-profile-dialog {
+  width: min(650px, 86vw);
+  padding: 0;
+  border: 1px solid #667987;
+  background: #d8e0e6;
+  box-shadow: 0 12px 38px #1b2d3b77;
+}
+.creator-profile-dialog::backdrop { background: #17263188; }
+.creator-profile-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0;
+}
+.creator-profile-titlebar button {
+  width: 27px;
+  height: 23px;
+  border: 1px solid #5e2e2e;
+  background: linear-gradient(#efb0ae,#c46762);
+  color: #4c1515;
+  font-weight: 900;
+}
+.creator-profile-head {
+  display: grid;
+  grid-template-columns: 82px 1fr;
+  gap: 14px;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid #a5b1ba;
+  background: #f7f9fb;
+}
+.creator-avatar {
+  width: 78px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #8b7541;
+  background: #d6b15d;
+  color: #202a31;
+  font-size: 24px;
+  font-weight: 900;
+}
+.creator-profile-head h2 { margin: 0 0 3px; color: #315774; }
+#creator-profile-username { color: #687984; font-size: 11px; }
+#creator-profile-bio { margin: 8px 0 0; color: #596a75; font-size: 11px; line-height: 1.4; }
+.creator-profile-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 12px;
+  background: #e7edf1;
+  border-bottom: 1px solid #a5b1ba;
+}
+.creator-profile-actions button {
+  padding: 6px 11px;
+  border: 1px solid #6d881f;
+  background: linear-gradient(#dfff75,#a9d532);
+  color: #26330e;
+  font-weight: 700;
+}
+.creator-games-section { margin: 12px; }
+.creator-profile-games { display: grid; }
+.creator-game-row {
+  display: grid;
+  grid-template-columns: 42px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  padding: 8px;
+  border: 0;
+  border-bottom: 1px solid #d1d9df;
+  background: white;
+  text-align: left;
+  color: #315774;
+}
+.creator-game-row:hover { background: #edf5fa; }
+.creator-game-icon {
+  width: 40px; height: 36px;
+  display: grid; place-items: center;
+  background: #688b55;
+  color: white;
+  font-weight: 900;
+}
+.creator-game-row b, .creator-game-row small { display: block; }
+.creator-game-row small { margin-top: 2px; color: #7a8790; font-size: 9px; }

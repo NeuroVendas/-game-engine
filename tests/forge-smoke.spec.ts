@@ -55,6 +55,8 @@ test("platform home, games, favorites, profile and direct play work", async ({ p
   await expect(page.locator("#launcher-page-games")).toBeVisible();
   await expect(page.locator("#app")).toBeHidden();
 
+  await page.reload();
+  await expect.poll(async () => page.locator("#cloud-status").textContent()).toContain("Forge Cloud Online");
   await page.locator("[data-launch-tab='favorites']").click();
   await expect(page.locator("#favorites-grid .place-card")).toHaveCount(1);
 });
@@ -73,6 +75,10 @@ test("develop can create, edit, duplicate, rename, delete and persist a place", 
   await expect(page.locator("#scene-tree")).toContainText("Baseplate");
 
   await page.locator("#home-button").click();
+  await expect(page.locator("#launcher-page-develop")).toBeVisible();
+
+  await page.reload();
+  await page.locator("[data-launch-tab='develop']").click();
   await expect(page.locator("#launcher-page-develop")).toBeVisible();
 
   const card = page.locator("#game-grid .place-card[data-place-name='Menu Test Place']");

@@ -10,6 +10,7 @@ import {
   loadFriendConnections,
   loadMyProfile,
   loadMyProjects,
+  loadPublicProfile,
   loadPublicProjects,
   markCloudRecent,
   onAuthChange,
@@ -45,6 +46,7 @@ const studio = must<HTMLElement>("app");
 const canvas = must<HTMLCanvasElement>("viewport");
 const createDialog = must<HTMLDialogElement>("create-place-dialog");
 const gameDetailsDialog = must<HTMLDialogElement>("game-details-dialog");
+const creatorProfileDialog = must<HTMLDialogElement>("creator-profile-dialog");
 const profileDialog = must<HTMLDialogElement>("profile-dialog");
 const authDialog = must<HTMLDialogElement>("auth-dialog");
 const renameDialog = must<HTMLDialogElement>("rename-place-dialog");
@@ -69,6 +71,8 @@ let currentPage: LauncherPage = "home";
 let currentGameFilter: GameFilter = "all";
 let renamingProjectId: string | null = null;
 let detailsSceneId: string | null = null;
+let creatorProfileUserId: string | null = null;
+let creatorProfileUsername: string | null = null;
 let openCardMenuId: string | null = null;
 let sessionMode: "edit" | "play" | null = null;
 
@@ -499,7 +503,9 @@ function openGameDetails(scene: ForgeSceneDocument): void {
   const official = isOfficial(scene);
 
   must<HTMLElement>("game-detail-title").textContent = scene.name;
-  must<HTMLElement>("game-detail-creator").textContent = creatorLabel(scene);
+  const creatorButton = must<HTMLButtonElement>("game-detail-creator");
+  creatorButton.textContent = creatorLabel(scene);
+  creatorButton.disabled = !scene.platform?.ownerId || isOfficial(scene);
   must<HTMLElement>("game-detail-meta").textContent = metaLabel(scene);
 
   const thumb = must<HTMLElement>("game-detail-thumb");
@@ -535,6 +541,71 @@ function openGameDetails(scene: ForgeSceneDocument): void {
   }
 
   gameDetailsDialog.showModal();
+}
+
+async function openCreatorProfile(scene: ForgeSceneDocument): Promise<void> {
+  const ownerId = scene.platform?.ownerId;
+  if (!ownerId || isOfficial(scene)) return;
+
+  creatorProfileUserId = ownerId;
+  creatorProfileUsername = scene.platform?.ownerUsername ?? null;
+
+  must<HTMLElement>("creator-profile-name").textContent =
+    scene.platform?.ownerDisplayName || "Forge Creator";
+  must<HTMLElement>("creator-profile-username").textContent =
+    scene.platform?.ownerUsername ? `@${scene.platform.ownerUsername}` : "Forge account";
+  must<HTMLElement>("creator-profile-bio").textContent = "Loading profile...";
+
+  const friendButton = must<HTMLButtonElement>("creator-profile-friend");
+  const isSelf = cloudSession?.user.id === ownerId;
+  friendButton.hidden = isSelf;
+  friendButton.textContent = cloudSession ? "Add Friend" : "Sign In to Add Friend";
+
+  renderCreatorGames(ownerId);
+  creatorProfileDialog.showModal();
+
+  try {
+    const profile = await loadPublicProfile(ownerId);
+    if (!profile || creatorProfileUserId !== ownerId) return;
+    creatorProfileUsername = profile.username;
+    must<HTMLElement>("creator-profile-name").textContent = profile.display_name;
+    must<HTMLElement>("creator-profile-username").textContent = `@${profile.username}`;
+    must<HTMLElement>("creator-profile-bio").textContent = profile.bio || "Forge creator.";
+  } catch (error) {
+    must<HTMLElement>("creator-profile-bio").textContent =
+      error instanceof Error ? error.message : String(error);
+  }
+}
+
+function renderCreatorGames(ownerId: string): void {
+  const container = must<HTMLElement>("creator-profile-games");
+  container.replaceChildren();
+
+  const creatorGames = publicCloudProjects.filter((scene) => scene.platform?.ownerId === ownerId);
+
+  if (!creatorGames.length) {
+    const empty = document.createElement("div");
+    empty.className = "people-empty";
+    empty.textContent = "No public places yet.";
+    container.appendChild(empty);
+    return;
+  }
+
+  for (const scene of creatorGames) {
+    const row = document.createElement("button");
+    row.className = "creator-game-row";
+    row.type = "button";
+    row.innerHTML = `
+      <span class="creator-game-icon">=]</span>
+      <span><b>${escapeHtml(scene.name)}</b><small>${escapeHtml(sceneDescription(scene))}</small></span>
+      <span>View »</span>
+    `;
+    row.addEventListener("click", () => {
+      creatorProfileDialog.close();
+      openGameDetails(scene);
+    });
+    container.appendChild(row);
+  }
 }
 
 async function saveGameDetails(): Promise<void> {
@@ -1078,6 +1149,35 @@ must<HTMLInputElement>("friend-username").addEventListener("keydown", (event) =>
 });
 
 must<HTMLButtonElement>("game-detail-close").addEventListener("click", () => gameDetailsDialog.close());
+must<HTMLButtonElement>("game-detail-creator").addEventListener("click", () => {
+  if (!detailsSceneId) return;
+  const scene = sceneById(detailsSceneId);
+  if (!scene) return;
+  gameDetailsDialog.close();
+  void openCreatorProfile(scene);
+});
+must<HTMLButtonElement>("creator-profile-close").addEventListener("click", () => creatorProfileDialog.close());
+must<HTMLButtonElement>("creator-profile-friend").addEventListener("click", () => {
+  if (!creatorProfileUserId) return;
+  if (!cloudSession) {
+    creatorProfileDialog.close();
+    openAuth("Sign in to add this creator as a friend.");
+    return;
+  }
+  if (!creatorProfileUsername) return;
+
+  void (async () => {
+    try {
+      const result = await requestFriendByUsername(creatorProfileUsername!);
+      must<HTMLButtonElement>("creator-profile-friend").textContent =
+        result === "accepted" ? "Friends" : "Request Sent";
+      await refreshFriends();
+    } catch (error) {
+      must<HTMLButtonElement>("creator-profile-friend").textContent =
+        error instanceof Error ? error.message : "Request failed";
+    }
+  })();
+});
 must<HTMLButtonElement>("game-detail-favorite").addEventListener("click", () => {
   if (!detailsSceneId) return;
   const scene = sceneById(detailsSceneId);

@@ -222,7 +222,7 @@
           <div id="game-detail-thumb" class="game-detail-thumb"></div>
           <div class="game-detail-copy">
             <h2 id="game-detail-title">Place</h2>
-            <div class="game-detail-byline">By <strong id="game-detail-creator">Forge</strong></div>
+            <div class="game-detail-byline">By <button id="game-detail-creator" class="creator-link" type="button">Forge</button></div>
             <div id="game-detail-meta" class="game-detail-meta">Private</div>
             <label>Description
               <textarea id="game-detail-description" maxlength="500" rows="6"></textarea>
@@ -244,6 +244,30 @@
           <button id="game-detail-edit" type="button">Edit</button>
           <button id="game-detail-play" type="button" class="primary-classic">Play</button>
         </div>
+      </div>
+    </dialog>
+
+    <dialog id="creator-profile-dialog" class="creator-profile-dialog">
+      <div class="creator-profile-window">
+        <div class="dialog-title creator-profile-titlebar">
+          <span>Creator Profile</span>
+          <button id="creator-profile-close" type="button">×</button>
+        </div>
+        <div class="creator-profile-head">
+          <div class="creator-avatar">=]</div>
+          <div>
+            <h2 id="creator-profile-name">Creator</h2>
+            <div id="creator-profile-username">@username</div>
+            <p id="creator-profile-bio">Forge creator.</p>
+          </div>
+        </div>
+        <div class="creator-profile-actions">
+          <button id="creator-profile-friend" type="button">Add Friend</button>
+        </div>
+        <section class="classic-section creator-games-section">
+          <div class="section-heading"><h2>Public Places</h2></div>
+          <div id="creator-profile-games" class="creator-profile-games"></div>
+        </section>
       </div>
     </dialog>
 

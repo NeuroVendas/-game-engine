@@ -82,6 +82,17 @@ export async function signOut(): Promise<void> {
   if (error) throw error;
 }
 
+export async function loadPublicProfile(userId: string): Promise<CloudProfile | null> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id,username,display_name,bio,avatar_style")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data as CloudProfile | null;
+}
+
 export async function loadMyProfile(userId: string): Promise<CloudProfile | null> {
   const { data, error } = await supabase
     .from("profiles")
