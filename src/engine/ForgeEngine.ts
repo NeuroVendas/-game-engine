@@ -396,8 +396,7 @@ export class ForgeEngine {
     this.scripts.detach(id);
     this.entityLights.get(id)?.dispose();
     this.entityLights.delete(id);
-    this.entitySounds.get(id)?.dispose();
-    this.entitySounds.delete(id);
+    this.disposeEntitySound(id);
 
     const forgeChildren = this.document.entities
       .filter((candidate) => candidate.parentId === id)
