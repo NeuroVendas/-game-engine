@@ -300,7 +300,10 @@ export class PlayerController {
     delete this.forge.canvas.dataset.avatarShape;
     delete this.forge.canvas.dataset.avatarAnimation;
 
-    for (const part of this.avatarParts) part.dispose();
+    for (const part of this.avatarParts) {
+      this.forge.unregisterShadowCaster(part, false);
+      part.dispose();
+    }
     for (const node of this.avatarNodes.slice().reverse()) {
       if (!node.isDisposed()) node.dispose();
     }
@@ -337,6 +340,8 @@ export class PlayerController {
     head.material = material;
     head.checkCollisions = false;
     head.isPickable = false;
+    head.receiveShadows = true;
+    this.forge.registerShadowCaster(head, false);
     this.avatarParts.push(head);
     return head;
   }
@@ -359,6 +364,8 @@ export class PlayerController {
     part.material = material;
     part.checkCollisions = false;
     part.isPickable = false;
+    part.receiveShadows = true;
+    this.forge.registerShadowCaster(part, false);
     this.avatarParts.push(part);
     return part;
   }
