@@ -237,6 +237,21 @@ export class EditorApp {
     must<HTMLButtonElement>("import-audio").addEventListener("click", () => {
       must<HTMLInputElement>("audio-file-input").click();
     });
+    must<HTMLButtonElement>("import-sky").addEventListener("click", () => {
+      must<HTMLInputElement>("sky-file-input").click();
+    });
+    must<HTMLInputElement>("sky-file-input").addEventListener("change", (event) => {
+      void this.importSkyFile(event);
+    });
+    must<HTMLButtonElement>("clear-sky").addEventListener("click", () => {
+      if (!this.forge.document.environment) this.forge.document.environment = {};
+      this.checkpoint();
+      this.forge.document.environment.skyTexture = undefined;
+      this.forge.document.environment.skyTextureFileName = undefined;
+      this.forge.applyEnvironment(this.forge.document.environment);
+      this.syncEnvironmentInputs();
+      this.log("Sky image cleared. Using color sky.");
+    });
     must<HTMLInputElement>("audio-file-input").addEventListener("change", (event) => {
       void this.importAudioFile(event);
     });
@@ -752,6 +767,39 @@ export class EditorApp {
       this.log(`Applied texture ${file.name} to ${entity.name}.`);
     } catch (error) {
       this.log(`Texture import failed: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      input.value = "";
+    }
+  }
+
+  private async importSkyFile(event: Event): Promise<void> {
+    if (this.mode !== "editor") return;
+
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    try {
+      if (file.size > 6 * 1024 * 1024) {
+        throw new Error("Sky image is larger than 6 MB. Use a smaller JPG/WebP image.");
+      }
+
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(reader.error ?? new Error("Could not read sky image."));
+        reader.onload = () => resolve(String(reader.result));
+        reader.readAsDataURL(file);
+      });
+
+      this.checkpoint();
+      const environment = this.forge.document.environment ?? (this.forge.document.environment = {});
+      environment.skyTexture = dataUrl;
+      environment.skyTextureFileName = file.name;
+      this.forge.applyEnvironment(environment);
+      this.syncEnvironmentInputs();
+      this.log(`Sky image applied: ${file.name}`);
+    } catch (error) {
+      this.log(`Sky import failed: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       input.value = "";
     }
@@ -1709,6 +1757,8 @@ Forge.onUpdate((dt) => {
     must<HTMLInputElement>("env-ambient").value = environment.ambientColor ?? "#d9e8f4";
     must<HTMLInputElement>("env-fog").value = environment.fogColor ?? "#9fc6df";
     must<HTMLInputElement>("env-fog-density").value = String(environment.fogDensity ?? 0);
+    must<HTMLDivElement>("sky-file-label").textContent =
+      environment.skyTextureFileName ? `Sky: ${environment.skyTextureFileName}` : "Color sky";
   }
 
   private applyEnvironmentInputs(): void {
