@@ -1,5 +1,26 @@
 import "./styles.css";
+import type { Session } from "@supabase/supabase-js";
 import { EditorApp } from "./editor/EditorApp";
+import {
+  deleteCloudProject,
+  getSession,
+  loadCloudFavoriteIds,
+  loadCloudRecentIds,
+  loadMyProfile,
+  loadMyProjects,
+  loadPublicProjects,
+  markCloudRecent,
+  onAuthChange,
+  pingCloud,
+  setCloudFavorite,
+  setCloudVisibility,
+  signIn,
+  signOut,
+  signUp,
+  updateMyProfile,
+  upsertCloudProject,
+  type CloudProfile
+} from "./platform/CloudStore";
 import {
   loadPlatformState,
   loadProjects,
@@ -9,7 +30,7 @@ import {
   type PlatformState
 } from "./platform/PlatformStore";
 import type { ForgeSceneDocument } from "./types";
-import heliosScene from "../public/scenes/project-helios.forge.json";
+import heliosFallback from "../public/scenes/project-helios.forge.json";
 
 type LauncherPage = "home" | "games" | "favorites" | "friends" | "develop";
 type GameFilter = "all" | "favorites" | "recent";
@@ -19,6 +40,7 @@ const studio = must<HTMLElement>("app");
 const canvas = must<HTMLCanvasElement>("viewport");
 const createDialog = must<HTMLDialogElement>("create-place-dialog");
 const profileDialog = must<HTMLDialogElement>("profile-dialog");
+const authDialog = must<HTMLDialogElement>("auth-dialog");
 const renameDialog = must<HTMLDialogElement>("rename-place-dialog");
 const projectName = must<HTMLSpanElement>("studio-project-name");
 const launcherSearch = must<HTMLInputElement>("launcher-search");
@@ -31,6 +53,11 @@ const recentList = must<HTMLDivElement>("recent-list");
 let editor: EditorApp | null = null;
 let state: PlatformState = loadPlatformState();
 let projects = loadProjects();
+let publicCloudProjects: ForgeSceneDocument[] = [];
+let cloudSession: Session | null = null;
+let cloudProfile: CloudProfile | null = null;
+let cloudOnline = false;
+let cloudBusy = false;
 let currentPage: LauncherPage = "home";
 let currentGameFilter: GameFilter = "all";
 let renamingProjectId: string | null = null;
@@ -62,12 +89,49 @@ function blankScene(name: string, industrial = false): ForgeSceneDocument {
   };
 }
 
-function allPlaces(): ForgeSceneDocument[] {
-  return [heliosScene as ForgeSceneDocument, ...projects];
+function isOfficial(scene: ForgeSceneDocument): boolean {
+  return Boolean(scene.platform?.isOfficial) || scene.name === "Project Helios";
+}
+
+function officialScene(): ForgeSceneDocument {
+  return publicCloudProjects.find((scene) => scene.platform?.isOfficial)
+    ?? structuredClone(heliosFallback as ForgeSceneDocument);
+}
+
+function sceneKey(scene: ForgeSceneDocument): string {
+  if (scene.platform?.isOfficial) return "official:helios";
+  if (scene.platform?.cloudId) return `cloud:${scene.platform.cloudId}`;
+  return `local:${scene.name.toLowerCase()}`;
+}
+
+function dedupeScenes(scenes: ForgeSceneDocument[]): ForgeSceneDocument[] {
+  const seen = new Set<string>();
+  const result: ForgeSceneDocument[] = [];
+
+  for (const scene of scenes) {
+    const key = sceneKey(scene);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(scene);
+  }
+
+  return result;
+}
+
+function catalogPlaces(): ForgeSceneDocument[] {
+  return dedupeScenes([
+    officialScene(),
+    ...projects,
+    ...publicCloudProjects.filter((scene) => !scene.platform?.isOfficial)
+  ]);
+}
+
+function developPlaces(): ForgeSceneDocument[] {
+  return dedupeScenes([officialScene(), ...projects]);
 }
 
 function sceneById(id: string): ForgeSceneDocument | null {
-  return allPlaces().find((scene) => projectId(scene) === id) ?? null;
+  return catalogPlaces().find((scene) => projectId(scene) === id || sceneKey(scene) === id) ?? null;
 }
 
 function uniqueProjectName(base: string): string {
@@ -80,49 +144,231 @@ function uniqueProjectName(base: string): string {
   return `${clean} ${index}`;
 }
 
-function saveLocalScene(scene: ForgeSceneDocument): void {
-  if (projectId(scene) === "official:helios") return;
+function canEdit(scene: ForgeSceneDocument): boolean {
+  if (isOfficial(scene)) return false;
+  if (!scene.platform?.cloudId) return true;
+  return Boolean(cloudSession?.user.id && scene.platform.ownerId === cloudSession.user.id);
+}
 
-  const existing = projects.findIndex((item) => projectId(item) === projectId(scene));
-  if (existing >= 0) projects[existing] = structuredClone(scene);
+function replaceProject(scene: ForgeSceneDocument, previousId?: string): void {
+  const id = previousId ?? projectId(scene);
+  const index = projects.findIndex((item) =>
+    projectId(item) === id
+    || (scene.platform?.cloudId && item.platform?.cloudId === scene.platform.cloudId)
+    || (!scene.platform?.cloudId && item.name === scene.name)
+  );
+
+  if (index >= 0) projects[index] = structuredClone(scene);
   else projects.unshift(structuredClone(scene));
 
   saveProjects(projects);
+}
+
+async function saveScene(scene: ForgeSceneDocument, previousId?: string): Promise<ForgeSceneDocument> {
+  if (isOfficial(scene)) return scene;
+
+  replaceProject(scene, previousId);
+
+  if (!cloudSession || !cloudOnline) {
+    renderAll();
+    return scene;
+  }
+
+  try {
+    const cloudScene = await upsertCloudProject(cloudSession.user.id, scene);
+    replaceProject(cloudScene, previousId ?? projectId(scene));
+    await refreshPublicCloud();
+    renderAll();
+    return cloudScene;
+  } catch (error) {
+    console.error("Cloud save failed", error);
+    setCloudStatus("Forge Cloud save failed — local copy is safe.", true);
+    renderAll();
+    return scene;
+  }
+}
+
+async function refreshPublicCloud(): Promise<void> {
+  if (!cloudOnline) return;
+  try {
+    publicCloudProjects = await loadPublicProjects();
+  } catch (error) {
+    console.error("Public catalog failed", error);
+    setCloudStatus("Forge Cloud catalog unavailable — local mode active.", true);
+  }
+}
+
+async function syncLocalProjectsToCloud(): Promise<void> {
+  if (!cloudSession || !cloudOnline || cloudBusy) return;
+  cloudBusy = true;
+
+  try {
+    const userId = cloudSession.user.id;
+    const next: ForgeSceneDocument[] = [];
+
+    for (const scene of projects) {
+      if (scene.platform?.cloudId) {
+        next.push(scene);
+        continue;
+      }
+
+      try {
+        next.push(await upsertCloudProject(userId, scene));
+      } catch (error) {
+        console.error("Project sync failed", scene.name, error);
+        next.push(scene);
+      }
+    }
+
+    projects = dedupeScenes(next);
+    saveProjects(projects);
+    await refreshPublicCloud();
+  } finally {
+    cloudBusy = false;
+  }
+}
+
+async function hydrateAccount(session: Session): Promise<void> {
+  cloudSession = session;
+
+  try {
+    const [profile, myProjects, favoriteIds, recentIds] = await Promise.all([
+      loadMyProfile(session.user.id),
+      loadMyProjects(session.user.id),
+      loadCloudFavoriteIds(session.user.id),
+      loadCloudRecentIds(session.user.id)
+    ]);
+
+    cloudProfile = profile;
+    if (profile?.display_name) state.profile.displayName = profile.display_name;
+
+    const localOnly = projects.filter((scene) => !scene.platform?.cloudId);
+    projects = dedupeScenes([...myProjects, ...localOnly]);
+    saveProjects(projects);
+
+    state.favorites = [...new Set([...state.favorites, ...favoriteIds])];
+    state.recent = [...new Set([...recentIds, ...state.recent])].slice(0, 12);
+    savePlatformState(state);
+
+    await syncLocalProjectsToCloud();
+    setCloudStatus(`Forge Cloud Online • @${cloudProfile?.username ?? "account"}`);
+  } catch (error) {
+    console.error("Account hydration failed", error);
+    setCloudStatus("Signed in, but cloud data could not fully load.", true);
+  }
+
   renderAll();
 }
 
-function markRecent(scene: ForgeSceneDocument): void {
+function clearCloudAccountState(): void {
+  cloudSession = null;
+  cloudProfile = null;
+  setCloudStatus(cloudOnline ? "Forge Cloud Online • Guest" : "Forge Cloud Offline", !cloudOnline);
+  renderAll();
+}
+
+function setCloudStatus(message: string, error = false): void {
+  const status = must<HTMLElement>("cloud-status");
+  status.textContent = `● ${message}`;
+  status.classList.toggle("cloud-online", !error && cloudOnline);
+  status.classList.toggle("cloud-error", error);
+
+  const dot = must<HTMLElement>("account-dot");
+  dot.classList.toggle("signed-in", Boolean(cloudSession));
+  dot.classList.toggle("guest", !cloudSession);
+}
+
+async function bootstrapCloud(): Promise<void> {
+  try {
+    cloudOnline = await pingCloud();
+
+    if (!cloudOnline) {
+      setCloudStatus("Forge Cloud Offline • Local mode", true);
+      renderAll();
+      return;
+    }
+
+    setCloudStatus("Forge Cloud Online • Guest");
+    await refreshPublicCloud();
+
+    const session = await getSession();
+    if (session) await hydrateAccount(session);
+    else renderAll();
+
+    onAuthChange((nextSession) => {
+      if (nextSession?.user.id === cloudSession?.user.id) return;
+      if (nextSession) void hydrateAccount(nextSession);
+      else clearCloudAccountState();
+    });
+  } catch (error) {
+    console.error("Cloud bootstrap failed", error);
+    cloudOnline = false;
+    setCloudStatus("Forge Cloud Offline • Local mode", true);
+    renderAll();
+  }
+}
+
+async function markRecent(scene: ForgeSceneDocument): Promise<void> {
   const id = projectId(scene);
   state.recent = [id, ...state.recent.filter((item) => item !== id)].slice(0, 12);
   savePlatformState(state);
   renderAll();
+
+  if (cloudSession && scene.platform?.cloudId) {
+    try {
+      await markCloudRecent(cloudSession.user.id, scene);
+    } catch (error) {
+      console.error("Cloud recent failed", error);
+    }
+  }
 }
 
-function toggleFavorite(scene: ForgeSceneDocument): void {
+async function toggleFavorite(scene: ForgeSceneDocument): Promise<void> {
   const id = projectId(scene);
-  state.favorites = state.favorites.includes(id)
-    ? state.favorites.filter((item) => item !== id)
-    : [id, ...state.favorites];
+  const favorite = !state.favorites.includes(id);
+
+  state.favorites = favorite
+    ? [id, ...state.favorites]
+    : state.favorites.filter((item) => item !== id);
 
   savePlatformState(state);
   renderAll();
+
+  if (cloudSession && scene.platform?.cloudId) {
+    try {
+      await setCloudFavorite(cloudSession.user.id, scene, favorite);
+    } catch (error) {
+      console.error("Cloud favorite failed", error);
+      setCloudStatus("Favorite saved locally; cloud sync failed.", true);
+    }
+  }
 }
 
 function isFavorite(scene: ForgeSceneDocument): boolean {
   return state.favorites.includes(projectId(scene));
 }
 
+function metaLabel(scene: ForgeSceneDocument): string {
+  if (isOfficial(scene)) return "Forge official • Public";
+  if (scene.platform?.cloudId) {
+    return `Forge Cloud • ${scene.platform.visibility === "public" ? "Public" : "Private"}`;
+  }
+  return cloudSession ? "Local • syncing to cloud" : "Local only • sign in to sync";
+}
+
 function projectCard(scene: ForgeSceneDocument, context: "game" | "develop"): HTMLElement {
   const id = projectId(scene);
-  const official = id === "official:helios";
+  const official = isOfficial(scene);
+  const editable = canEdit(scene);
   const card = document.createElement("article");
   card.className = "game-card place-card";
   card.dataset.placeId = id;
 
   const title = escapeHtml(scene.name);
   const thumbClass = official ? "helios-thumb" : "user-thumb";
-  const subtitle = official ? "Industrial reactor benchmark" : "Custom Forge place";
+  const subtitle = official ? "Industrial reactor benchmark" : "Forge place";
   const favorite = isFavorite(scene);
+  const visibility = scene.platform?.visibility ?? "private";
 
   card.innerHTML = `
     <div class="game-thumb ${thumbClass}">
@@ -132,18 +378,19 @@ function projectCard(scene: ForgeSceneDocument, context: "game" | "develop"): HT
     <div class="game-info">
       <h3>${title}</h3>
       <p>${subtitle}</p>
-      <div class="game-meta">${official ? "Forge official sample" : "Local project"}</div>
+      <div class="game-meta">${escapeHtml(metaLabel(scene))}</div>
     </div>
     <div class="card-actions">
       <button data-action="favorite" title="Favorite">${favorite ? "★" : "☆"}</button>
       <button data-action="play" class="play-card">Play</button>
-      <button data-action="edit">Edit</button>
-      ${context === "develop" && !official ? '<button data-action="more" class="more-action">More ▾</button>' : ""}
+      ${official ? '<button data-action="remix">Remix</button>' : editable ? '<button data-action="edit">Edit</button>' : ""}
+      ${context === "develop" && editable && !official ? '<button data-action="more" class="more-action">More ▾</button>' : ""}
     </div>
-    ${context === "develop" && !official ? `
+    ${context === "develop" && editable && !official ? `
       <div class="card-menu" hidden>
         <button data-action="duplicate">Duplicate</button>
         <button data-action="rename">Rename</button>
+        <button data-action="publish">${visibility === "public" ? "Make Private" : "Publish"}</button>
         <button data-action="delete" class="danger-action">Delete</button>
       </div>
     ` : ""}
@@ -153,12 +400,12 @@ function projectCard(scene: ForgeSceneDocument, context: "game" | "develop"): HT
     const target = event.target as HTMLElement;
     const action = target.closest<HTMLButtonElement>("[data-action]")?.dataset.action;
     if (!action) return;
-
     event.stopPropagation();
 
-    if (action === "favorite") toggleFavorite(scene);
+    if (action === "favorite") void toggleFavorite(scene);
     if (action === "play") void playPlace(scene);
     if (action === "edit") void editPlace(scene);
+    if (action === "remix") void remixPlace(scene);
 
     if (action === "more") {
       const menu = card.querySelector<HTMLElement>(".card-menu");
@@ -168,6 +415,7 @@ function projectCard(scene: ForgeSceneDocument, context: "game" | "develop"): HT
     if (action === "duplicate") {
       const copy = structuredClone(scene);
       copy.name = uniqueProjectName(`${scene.name} Copy`);
+      delete copy.platform;
       projects.unshift(copy);
       saveProjects(projects);
       renderAll();
@@ -183,15 +431,9 @@ function projectCard(scene: ForgeSceneDocument, context: "game" | "develop"): HT
       requestAnimationFrame(() => input.select());
     }
 
-    if (action === "delete") {
-      if (!confirm(`Delete "${scene.name}" from this browser?`)) return;
-      projects = projects.filter((item) => projectId(item) !== id);
-      state.favorites = state.favorites.filter((item) => item !== id);
-      state.recent = state.recent.filter((item) => item !== id);
-      saveProjects(projects);
-      savePlatformState(state);
-      renderAll();
-    }
+    if (action === "publish") void togglePublish(scene);
+
+    if (action === "delete") void deletePlace(scene);
   });
 
   return card;
@@ -200,7 +442,7 @@ function projectCard(scene: ForgeSceneDocument, context: "game" | "develop"): HT
 function homePlaceCard(scene: ForgeSceneDocument): HTMLElement {
   const card = document.createElement("article");
   card.className = "wide-place-card";
-  const official = projectId(scene) === "official:helios";
+  const official = isOfficial(scene);
 
   card.innerHTML = `
     <div class="wide-thumb ${official ? "helios-thumb" : "user-thumb"}">
@@ -208,17 +450,18 @@ function homePlaceCard(scene: ForgeSceneDocument): HTMLElement {
     </div>
     <div class="wide-info">
       <h3>${escapeHtml(scene.name)}</h3>
-      <p>${official ? "Forge benchmark place" : "Your local place"}</p>
-      <small>${official ? "Official sample" : "Saved in this browser"}</small>
+      <p>${official ? "Forge benchmark place" : "Your place"}</p>
+      <small>${escapeHtml(metaLabel(scene))}</small>
     </div>
     <div class="wide-actions">
       <button data-home-action="play">Play</button>
-      <button data-home-action="edit" class="open-place">Edit</button>
+      <button data-home-action="${official ? "remix" : "edit"}">${official ? "Remix" : "Edit"}</button>
     </div>
   `;
 
   card.querySelector("[data-home-action='play']")?.addEventListener("click", () => void playPlace(scene));
   card.querySelector("[data-home-action='edit']")?.addEventListener("click", () => void editPlace(scene));
+  card.querySelector("[data-home-action='remix']")?.addEventListener("click", () => void remixPlace(scene));
   return card;
 }
 
@@ -226,8 +469,8 @@ function recentRow(scene: ForgeSceneDocument): HTMLElement {
   const row = document.createElement("article");
   row.className = "list-place";
   row.innerHTML = `
-    <div class="tiny-thumb ${projectId(scene) === "official:helios" ? "helios-thumb" : "user-thumb"}"></div>
-    <div><b>${escapeHtml(scene.name)}</b><span>${isFavorite(scene) ? "★ Favorite" : "Forge place"}</span></div>
+    <div class="tiny-thumb ${isOfficial(scene) ? "helios-thumb" : "user-thumb"}"></div>
+    <div><b>${escapeHtml(scene.name)}</b><span>${isFavorite(scene) ? "★ Favorite" : metaLabel(scene)}</span></div>
     <button>Play</button>
   `;
   row.querySelector("button")?.addEventListener("click", () => void playPlace(scene));
@@ -235,23 +478,32 @@ function recentRow(scene: ForgeSceneDocument): HTMLElement {
 }
 
 function renderAll(): void {
+  const displayName = cloudProfile?.display_name || state.profile.displayName || "Builder";
+
   document.querySelectorAll<HTMLElement>("[data-display-name]").forEach((node) => {
-    node.textContent = state.profile.displayName;
+    node.textContent = displayName;
   });
 
-  const all = allPlaces();
-  const recentScenes = state.recent.map(sceneById).filter((scene): scene is ForgeSceneDocument => Boolean(scene));
+  must<HTMLElement>("account-label").textContent = cloudSession
+    ? displayName
+    : "Sign In";
+
+  const all = catalogPlaces();
+  const develop = developPlaces();
+  const recentScenes = state.recent
+    .map(sceneById)
+    .filter((scene): scene is ForgeSceneDocument => Boolean(scene));
   const favoriteScenes = all.filter(isFavorite);
 
   must<HTMLElement>("favorite-count").textContent = String(favoriteScenes.length);
-  must<HTMLElement>("project-count").textContent = String(all.length);
-  must<HTMLElement>("stat-projects").textContent = String(all.length);
+  must<HTMLElement>("project-count").textContent = String(develop.length);
+  must<HTMLElement>("stat-projects").textContent = String(develop.length);
   must<HTMLElement>("stat-favorites").textContent = String(favoriteScenes.length);
   must<HTMLElement>("stat-recent").textContent = String(recentScenes.length);
-  must<HTMLElement>("develop-count").textContent = `${all.length} ${all.length === 1 ? "place" : "places"}`;
+  must<HTMLElement>("develop-count").textContent = `${develop.length} ${develop.length === 1 ? "place" : "places"}`;
 
   homeProjects.replaceChildren();
-  for (const scene of [heliosScene as ForgeSceneDocument, ...projects.slice(0, 2)]) {
+  for (const scene of develop.slice(0, 3)) {
     homeProjects.appendChild(homePlaceCard(scene));
   }
 
@@ -288,8 +540,8 @@ function renderAll(): void {
 
   developGrid.replaceChildren();
   const developScenes = search && currentPage === "develop"
-    ? all.filter((scene) => scene.name.toLowerCase().includes(search))
-    : all;
+    ? develop.filter((scene) => scene.name.toLowerCase().includes(search))
+    : develop;
 
   for (const scene of developScenes) developGrid.appendChild(projectCard(scene, "develop"));
 }
@@ -313,7 +565,7 @@ function setPage(page: LauncherPage): void {
   launcherSearch.placeholder =
     page === "develop" ? "Search my places..."
       : page === "favorites" ? "Search favorites..."
-      : page === "friends" ? "Search unavailable offline..."
+      : page === "friends" ? "Search people..."
       : page === "games" ? "Search games..."
       : "Search Forge...";
 
@@ -334,11 +586,29 @@ async function ensureEditor(scene: ForgeSceneDocument): Promise<void> {
 }
 
 async function editPlace(scene: ForgeSceneDocument): Promise<void> {
+  if (!canEdit(scene)) {
+    if (isOfficial(scene)) {
+      await remixPlace(scene);
+      return;
+    }
+    return;
+  }
+
   sessionMode = "edit";
   launcher.hidden = true;
   studio.hidden = false;
   studio.classList.remove("game-session");
   await ensureEditor(scene);
+}
+
+async function remixPlace(scene: ForgeSceneDocument): Promise<void> {
+  const copy = structuredClone(scene);
+  delete copy.platform;
+  copy.name = uniqueProjectName(`${scene.name} Copy`);
+  projects.unshift(copy);
+  saveProjects(projects);
+  renderAll();
+  await editPlace(copy);
 }
 
 async function playPlace(scene: ForgeSceneDocument): Promise<void> {
@@ -350,13 +620,13 @@ async function playPlace(scene: ForgeSceneDocument): Promise<void> {
 
   await ensureEditor(scene);
   editor?.startPlay();
-  markRecent(scene);
+  await markRecent(scene);
   requestAnimationFrame(() => editor?.forge.resize());
 }
 
-function returnToLauncher(page: LauncherPage = currentPage): void {
+async function returnToLauncher(page: LauncherPage = currentPage): Promise<void> {
   if (sessionMode === "edit" && editor) {
-    saveLocalScene(editor.getDocument());
+    await saveScene(editor.getDocument());
   }
 
   if (editor?.isPlayMode()) editor.stopPlay();
@@ -377,6 +647,116 @@ function openCreateDialog(template?: "baseplate" | "industrial"): void {
   if (template) select.value = template;
   createDialog.showModal();
   requestAnimationFrame(() => name.select());
+}
+
+function openAuth(message?: string): void {
+  const messageBox = must<HTMLElement>("auth-message");
+  messageBox.textContent = message ?? "You can keep using Forge as a guest without signing in.";
+  messageBox.className = "auth-message";
+  must<HTMLInputElement>("auth-display-name").value = state.profile.displayName || "Builder";
+  authDialog.showModal();
+}
+
+function openProfile(): void {
+  if (!cloudSession || !cloudProfile) {
+    openAuth("Sign in to create a cloud profile and sync your Forge account.");
+    return;
+  }
+
+  must<HTMLInputElement>("profile-username").value = cloudProfile.username;
+  must<HTMLInputElement>("profile-display-name").value = cloudProfile.display_name;
+  must<HTMLTextAreaElement>("profile-bio").value = cloudProfile.bio;
+  must<HTMLElement>("profile-email").textContent = cloudSession.user.email ?? "Forge account";
+  must<HTMLElement>("profile-cloud-name").textContent = `@${cloudProfile.username}`;
+  must<HTMLElement>("profile-note").textContent = "Synced with Forge Cloud.";
+  profileDialog.showModal();
+}
+
+async function handleSignIn(): Promise<void> {
+  const email = must<HTMLInputElement>("auth-email").value.trim();
+  const password = must<HTMLInputElement>("auth-password").value;
+  const message = must<HTMLElement>("auth-message");
+
+  message.className = "auth-message";
+  message.textContent = "Signing in...";
+
+  try {
+    const session = await signIn(email, password);
+    await hydrateAccount(session);
+    message.className = "auth-message success";
+    message.textContent = "Signed in. Your Forge Cloud data is loading.";
+    authDialog.close();
+  } catch (error) {
+    message.className = "auth-message error";
+    message.textContent = error instanceof Error ? error.message : String(error);
+  }
+}
+
+async function handleSignUp(): Promise<void> {
+  const email = must<HTMLInputElement>("auth-email").value.trim();
+  const password = must<HTMLInputElement>("auth-password").value;
+  const displayName = must<HTMLInputElement>("auth-display-name").value.trim();
+  const message = must<HTMLElement>("auth-message");
+
+  message.className = "auth-message";
+  message.textContent = "Creating Forge account...";
+
+  try {
+    const result = await signUp(email, password, displayName);
+
+    if (result.session) {
+      await hydrateAccount(result.session);
+      message.className = "auth-message success";
+      message.textContent = "Account created and signed in.";
+      authDialog.close();
+      return;
+    }
+
+    message.className = "auth-message success";
+    message.textContent = "Account created. Check your email to confirm it, then return here and Sign In.";
+  } catch (error) {
+    message.className = "auth-message error";
+    message.textContent = error instanceof Error ? error.message : String(error);
+  }
+}
+
+async function togglePublish(scene: ForgeSceneDocument): Promise<void> {
+  if (!cloudSession) {
+    openAuth("Sign in first. Publishing requires a Forge Cloud account.");
+    return;
+  }
+
+  try {
+    const visibility = scene.platform?.visibility === "public" ? "private" : "public";
+    const cloudScene = await setCloudVisibility(cloudSession.user.id, scene, visibility);
+    replaceProject(cloudScene, projectId(scene));
+    await refreshPublicCloud();
+    renderAll();
+  } catch (error) {
+    alert(error instanceof Error ? error.message : String(error));
+  }
+}
+
+async function deletePlace(scene: ForgeSceneDocument): Promise<void> {
+  if (!confirm(`Delete "${scene.name}"? This cannot be undone.`)) return;
+
+  if (cloudSession && scene.platform?.cloudId) {
+    try {
+      await deleteCloudProject(cloudSession.user.id, scene);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : String(error));
+      return;
+    }
+  }
+
+  const id = projectId(scene);
+  projects = projects.filter((item) => projectId(item) !== id);
+  state.favorites = state.favorites.filter((item) => item !== id);
+  state.recent = state.recent.filter((item) => item !== id);
+  saveProjects(projects);
+  savePlatformState(state);
+  await refreshPublicCloud();
+  renderAll();
 }
 
 function escapeHtml(value: string): string {
@@ -432,30 +812,55 @@ launcherSearch.addEventListener("input", renderAll);
 must<HTMLButtonElement>("launcher-search-button").addEventListener("click", renderAll);
 
 must<HTMLButtonElement>("account-button").addEventListener("click", () => {
-  must<HTMLInputElement>("profile-display-name").value = state.profile.displayName;
-  profileDialog.showModal();
+  if (cloudSession) openProfile();
+  else openAuth();
 });
-
 must<HTMLButtonElement>("profile-card-button").addEventListener("click", () => {
-  must<HTMLInputElement>("profile-display-name").value = state.profile.displayName;
-  profileDialog.showModal();
+  if (cloudSession) openProfile();
+  else openAuth();
+});
+must<HTMLButtonElement>("open-profile").addEventListener("click", () => {
+  if (cloudSession) openProfile();
+  else openAuth();
 });
 
-must<HTMLButtonElement>("open-profile").addEventListener("click", () => {
-  must<HTMLInputElement>("profile-display-name").value = state.profile.displayName;
-  profileDialog.showModal();
-});
+must<HTMLButtonElement>("auth-sign-in").addEventListener("click", () => void handleSignIn());
+must<HTMLButtonElement>("auth-sign-up").addEventListener("click", () => void handleSignUp());
 
 must<HTMLFormElement>("profile-form").addEventListener("submit", (event) => {
   const submitter = (event as SubmitEvent).submitter as HTMLButtonElement | null;
-  if (submitter?.value === "cancel") return;
+  if (submitter?.value === "cancel" || !cloudSession) return;
 
   event.preventDefault();
-  const name = must<HTMLInputElement>("profile-display-name").value.trim().slice(0, 24);
-  state.profile.displayName = name || "Builder";
-  savePlatformState(state);
-  profileDialog.close();
-  renderAll();
+
+  void (async () => {
+    try {
+      cloudProfile = await updateMyProfile(cloudSession.user.id, {
+        username: must<HTMLInputElement>("profile-username").value,
+        display_name: must<HTMLInputElement>("profile-display-name").value,
+        bio: must<HTMLTextAreaElement>("profile-bio").value
+      });
+
+      state.profile.displayName = cloudProfile.display_name;
+      savePlatformState(state);
+      profileDialog.close();
+      renderAll();
+    } catch (error) {
+      must<HTMLElement>("profile-note").textContent = error instanceof Error ? error.message : String(error);
+    }
+  })();
+});
+
+must<HTMLButtonElement>("profile-sign-out").addEventListener("click", () => {
+  void (async () => {
+    try {
+      await signOut();
+      profileDialog.close();
+      clearCloudAccountState();
+    } catch (error) {
+      must<HTMLElement>("profile-note").textContent = error instanceof Error ? error.message : String(error);
+    }
+  })();
 });
 
 must<HTMLFormElement>("create-place-form").addEventListener("submit", (event) => {
@@ -471,6 +876,8 @@ must<HTMLFormElement>("create-place-form").addEventListener("submit", (event) =>
   saveProjects(projects);
   createDialog.close();
   renderAll();
+
+  if (cloudSession) void saveScene(scene);
   void editPlace(scene);
 });
 
@@ -479,13 +886,14 @@ must<HTMLFormElement>("rename-place-form").addEventListener("submit", (event) =>
   if (submitter?.value === "cancel" || !renamingProjectId) return;
 
   event.preventDefault();
+
   const projectIndex = projects.findIndex((scene) => projectId(scene) === renamingProjectId);
   if (projectIndex < 0) return;
 
   const oldId = renamingProjectId;
-  const newName = uniqueProjectName(must<HTMLInputElement>("rename-place-name").value);
-  projects[projectIndex].name = newName;
-  const newId = projectId(projects[projectIndex]);
+  const scene = projects[projectIndex];
+  scene.name = uniqueProjectName(must<HTMLInputElement>("rename-place-name").value);
+  const newId = projectId(scene);
 
   state.favorites = state.favorites.map((id) => id === oldId ? newId : id);
   state.recent = state.recent.map((id) => id === oldId ? newId : id);
@@ -495,16 +903,18 @@ must<HTMLFormElement>("rename-place-form").addEventListener("submit", (event) =>
   renameDialog.close();
   renamingProjectId = null;
   renderAll();
+  void saveScene(scene, oldId);
 });
 
-must<HTMLButtonElement>("home-button").addEventListener("click", () => returnToLauncher("develop"));
-must<HTMLButtonElement>("exit-game").addEventListener("click", () => returnToLauncher("games"));
+must<HTMLButtonElement>("home-button").addEventListener("click", () => void returnToLauncher("develop"));
+must<HTMLButtonElement>("exit-game").addEventListener("click", () => void returnToLauncher("games"));
 
 window.addEventListener("forge:scene-saved", (event) => {
   const scene = (event as CustomEvent<ForgeSceneDocument>).detail;
   if (!scene) return;
-  saveLocalScene(scene);
+  void saveScene(scene);
 });
 
 renderAll();
 setPage("home");
+void bootstrapCloud();
