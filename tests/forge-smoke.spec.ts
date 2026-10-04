@@ -54,11 +54,34 @@ test("platform home, games, favorites, profile and direct play work", async ({ p
   const before = (await canvas.getAttribute("data-player-position"))!;
 
   await page.keyboard.down("KeyW");
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(90);
+  const earlyVelocityRaw = (await canvas.getAttribute("data-player-velocity"))!;
+  const earlyVelocity = Math.hypot(
+    Number(earlyVelocityRaw.split(",")[0]),
+    Number(earlyVelocityRaw.split(",")[2])
+  );
+  expect(earlyVelocity).toBeGreaterThan(0.2);
+  expect(earlyVelocity).toBeLessThan(4.8);
+
+  await page.waitForTimeout(410);
+  const fullVelocityRaw = (await canvas.getAttribute("data-player-velocity"))!;
+  const fullVelocity = Math.hypot(
+    Number(fullVelocityRaw.split(",")[0]),
+    Number(fullVelocityRaw.split(",")[2])
+  );
+  expect(fullVelocity).toBeGreaterThan(earlyVelocity);
+
   await page.keyboard.up("KeyW");
+  await page.waitForTimeout(220);
   const after = (await canvas.getAttribute("data-player-position"))!;
   expect(after).not.toBe(before);
-  await expect(canvas).toHaveAttribute("data-player-velocity", /.+/);
+
+  const stoppedVelocityRaw = (await canvas.getAttribute("data-player-velocity"))!;
+  const stoppedVelocity = Math.hypot(
+    Number(stoppedVelocityRaw.split(",")[0]),
+    Number(stoppedVelocityRaw.split(",")[2])
+  );
+  expect(stoppedVelocity).toBeLessThan(fullVelocity);
 
   await page.keyboard.press("Space");
   await expect.poll(async () => {
