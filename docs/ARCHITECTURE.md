@@ -90,6 +90,7 @@ Current components:
 - Script
 - Light
 - Sound
+- VFX
 - UI
 - Model
 - Spawn
@@ -117,6 +118,7 @@ Babylon.js currently handles:
 - textures
 - emissive/transparency
 - shadows
+- particle/VFX emitters with preset-driven authoring
 
 Optional renderer features must fail gracefully.
 
@@ -133,7 +135,7 @@ Production UGC still needs a proper hosted asset pipeline.
 
 ## Scripting model
 
-Current capabilities include lifecycle, interaction, input/events, UI events, modules/require, world access, runtime create/clone/destroy, audio/UI, player/camera and output logging.
+Current capabilities include lifecycle, interaction, input/events, UI events, modules/require, world access, runtime create/clone/destroy, audio/UI/VFX, player/camera and output logging.
 
 Current creator scripts are trusted code, not a hardened hostile-code sandbox.
 
