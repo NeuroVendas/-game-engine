@@ -49,4 +49,9 @@ if (profileError) {
   throw new Error(`Public profile read failed: ${profileError.message}`);
 }
 
-console.log(`Forge Cloud OK: ${projects.length} public project(s); Helios present; anonymous writes blocked.`);
+const { error: friendRpcError } = await supabase.rpc("friend_connections");
+if (!friendRpcError) {
+  throw new Error("Security regression: anonymous client was able to call authenticated Friends RPC.");
+}
+
+console.log(`Forge Cloud OK: ${projects.length} public project(s); Helios present; anonymous writes and Friends RPC blocked.`);
