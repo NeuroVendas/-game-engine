@@ -227,6 +227,12 @@ export class EditorApp {
     must<HTMLInputElement>("model-file-input").addEventListener("change", (event) => {
       void this.importModelFile(event);
     });
+    must<HTMLButtonElement>("import-texture").addEventListener("click", () => {
+      must<HTMLInputElement>("texture-file-input").click();
+    });
+    must<HTMLInputElement>("texture-file-input").addEventListener("change", (event) => {
+      void this.importTextureFile(event);
+    });
     must<HTMLButtonElement>("import-audio").addEventListener("click", () => {
       must<HTMLInputElement>("audio-file-input").click();
     });
@@ -319,6 +325,14 @@ export class EditorApp {
       this.renderTree();
       this.renderInspector();
       this.log(`Renamed to ${entity.name}`);
+    });
+
+    must<HTMLSelectElement>("prop-parent").addEventListener("change", () => this.applyParentSelection());
+    must<HTMLInputElement>("prop-texture").addEventListener("change", () => this.applyAppearance());
+    must<HTMLButtonElement>("clear-texture").addEventListener("click", () => {
+      if (!this.selectedId) return;
+      must<HTMLInputElement>("prop-texture").value = "";
+      this.applyAppearance();
     });
 
     for (const id of ["prop-color", "prop-emissive", "prop-transparency"]) {
@@ -550,14 +564,26 @@ export class EditorApp {
       "ui-button": "UI Button",
       script: "Script",
       localscript: "LocalScript",
-      modulescript: "ModuleScript"
+      modulescript: "ModuleScript",
+      spawn: "Spawn Location"
     };
 
-    const entity = this.forge.createPrimitive("empty", names[objectType] ?? "Object");
+    const entity = this.forge.createPrimitive(
+      objectType === "spawn" ? "cylinder" : "empty",
+      names[objectType] ?? "Object"
+    );
     entity.parentId = this.selectedId ?? undefined;
     entity.components = {};
 
-    if (objectType === "light") {
+    if (objectType === "spawn") {
+      entity.size = [4, 0.18, 4];
+      entity.position = [0, 0.1, 0];
+      entity.color = "#77b75a";
+      entity.emissive = "#233f19";
+      entity.transparency = 0.2;
+      entity.components.Spawn = { enabled: true };
+      entity.components.Collider = { enabled: false };
+    } else if (objectType === "light") {
       entity.components.Light = {
         type: "point",
         color: "#ffffff",
@@ -856,9 +882,11 @@ export class EditorApp {
     if (!entity || !mesh) return;
 
     must<HTMLInputElement>("prop-name").value = entity.name;
+    this.renderParentOptions(entity);
     must<HTMLInputElement>("prop-color").value = this.safeHex(entity.color, "#8796a3");
     must<HTMLInputElement>("prop-emissive").value = this.safeHex(entity.emissive, "#000000");
     must<HTMLInputElement>("prop-transparency").value = String(entity.transparency ?? 0);
+    must<HTMLInputElement>("prop-texture").value = entity.texture ?? "";
     must<HTMLInputElement>("pos-x").value = mesh.position.x.toFixed(2);
     must<HTMLInputElement>("pos-y").value = mesh.position.y.toFixed(2);
     must<HTMLInputElement>("pos-z").value = mesh.position.z.toFixed(2);
@@ -925,6 +953,9 @@ export class EditorApp {
         break;
       case "Model":
         components.Model = { src: "" };
+        break;
+      case "Spawn":
+        components.Spawn = { enabled: true };
         break;
       case "Script":
         components.Script = {
@@ -1162,6 +1193,14 @@ export class EditorApp {
         });
         this.appendCheckboxField(container, "Visible", component.visible ?? true, (value) => {
           component.visible = value;
+        });
+        break;
+      }
+      case "Spawn": {
+        const component = components.Spawn;
+        if (!component) return;
+        this.appendCheckboxField(container, "Enabled", component.enabled, (value) => {
+          component.enabled = value;
         });
         break;
       }
@@ -1467,6 +1506,8 @@ Forge.onUpdate((dt) => {
       1,
       Math.max(0, Number(must<HTMLInputElement>("prop-transparency").value) || 0)
     );
+    entity.texture = must<HTMLInputElement>("prop-texture").value.trim() || undefined;
+    if (!entity.texture) entity.textureFileName = undefined;
 
     this.forge.rebuildEntity(entity.id);
     this.setSelection(entity.id);
@@ -1619,7 +1660,7 @@ Forge.onUpdate((dt) => {
     this.editorNavKeys.clear();
     this.rightMouseNavigation = false;
 
-    const spawn = this.forge.document.playerSpawn ?? [0, 2.2, 20];
+    const spawn = this.forge.getPlayerSpawn([0, 2.2, 20]);
     this.player = new PlayerController(
       this.forge,
       spawn,
