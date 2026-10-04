@@ -24,6 +24,9 @@ Preserve Forge's own identity.
 
 Before major work, read:
 
+- docs/CURRENT_STATE.md
+- docs/PROJECT_HISTORY.md
+- docs/RECOVERY.md
 - docs/VISION.md
 - docs/PRODUCT_PRINCIPLES.md
 - docs/ARCHITECTURE.md
@@ -43,7 +46,9 @@ Prefer scene JSON, semantic IDs, components, scripts, prefabs, stable APIs, and 
 
 ## Current technology
 
-Current v0.3 direction: TypeScript, Vite, Babylon.js, scene JSON, GitHub Actions.
+Current package version is 0.5.0 while development remains on the historical forge-v0.4 branch.
+
+Current stack: TypeScript, Vite, Babylon.js, Supabase, scene JSON, Playwright, and GitHub Actions.
 
 Do not replace core technology casually.
 
@@ -62,12 +67,19 @@ After meaningful changes:
 1. validate scenes
 2. typecheck
 3. build
-4. inspect failures
-5. fix before reporting completion
+4. run Browser Smoke for Studio/runtime/platform behavior
+5. run Cloud Smoke when cloud/platform behavior is relevant
+6. inspect failures
+7. fix before reporting completion
 
-Use npm run check and npm run build.
+Use:
 
-If browser behavior changed, also perform a real visual/play test when tooling allows it.
+- npm run check
+- npm run build
+- npm run test:browser
+- npm run test:cloud
+
+Do not claim runtime/editor behavior is working merely because TypeScript/build succeeded.
 
 ## Project Helios
 

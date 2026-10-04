@@ -1,93 +1,176 @@
 # Forge =] Architecture
 
-## Architectural goal
+## Goal
 
-Forge must remain easy to edit through the visual editor, ordinary source code, and AI tools.
+Forge has three first-class authoring paths:
 
-The canonical project representation must therefore remain structured, versionable, and human-readable.
+1. visual Studio
+2. creator code
+3. structured AI operations
+
+All converge on the same canonical project representation.
 
 ## Current stack
 
-Forge v0.3 uses TypeScript, Vite, Babylon.js, JSON scene documents, Git/GitHub, and GitHub Actions.
+Package version: `0.5.0`.
 
-Planned platform infrastructure may later include services for accounts, profiles, friends, game metadata, multiplayer sessions, publishing, and persistent storage.
+- TypeScript
+- Vite
+- Babylon.js + loaders
+- Supabase
+- Playwright
+- GitHub Actions
+- `forge.scene` JSON
 
-Infrastructure choices must not leak unnecessary complexity into the creator experience.
+## System boundaries
 
-## Current repository structure
+### Platform shell
 
-src contains ai, editor, engine, player, and shared types.
+`src/main.ts` coordinates launcher/platform and transitions into Studio/Play.
 
-public/scenes contains editable Forge scene documents.
+`src/platform/PlatformStore.ts` owns local browser-first platform state.
 
-scripts contains validation tooling.
+`src/platform/CloudStore.ts` owns Supabase-backed identity, projects, catalog, favorites, recents, profiles and Friends behavior.
 
-docs contains product, architecture, AI, roadmap, and game direction.
+### Studio
+
+`src/editor/EditorApp.ts` owns selection, Explorer, Properties, transform tools, hierarchy, asset import, environment controls, script editor, history, persistence and Play/Stop transition.
+
+### Engine/runtime
+
+`src/engine/ForgeEngine.ts` owns scene instantiation, primitives/models, materials/textures, environment, lights, sound/UI/runtime entities, parenting, collision, shadows and script attachment.
+
+### Scripting
+
+`src/engine/ScriptRuntime.ts` owns creator script execution/lifecycle and Forge APIs.
+
+Script kinds:
+
+- Script
+- LocalScript
+- ModuleScript
+
+### Player
+
+`src/player/PlayerController.ts` owns avatar, movement, camera, jump, interaction and player state.
+
+### AI
+
+`src/ai/ForgeAI.ts` owns structured AI operations. AI should not rely on fake editor mouse automation.
 
 ## Scene documents
 
-Scene files use the forge.scene format.
+Canonical format: `forge.scene v1`.
 
 Goals:
 
-- stable entity IDs
+- stable IDs
 - semantic names
-- simple transforms
 - explicit components
-- versioned schema
+- hierarchy
 - deterministic serialization
-- easy diffs in Git
+- portable data
+- readable diffs
+- AI addressability
 
-## Entity/component direction
+Schema lives in `src/types.ts`.
 
-Forge entities should become lightweight containers of data.
+## Entity/component model
 
-Behavior should come from components and scripts.
+Entities contain transform/size, appearance, optional asset metadata, components and parentId.
 
-Target concepts include Transform, Mesh, Collider, Interactable, Door, PowerConsumer, Clearance, and Script.
+Current components:
 
-The component system should remain inspectable in the editor.
+- Collider
+- Interactable
+- Door
+- Clearance
+- PowerConsumer
+- Reactor
+- Script
+- Light
+- Sound
+- UI
+- Model
+- Spawn
 
-## Scripting direction
+## Hierarchy
 
-The scripting API should favor readable gameplay code.
+Stored through `parentId`.
 
-Target usage should feel like getting an object by semantic name, listening for an interaction, checking player state, and calling a high-level action such as open.
+Rules:
 
-The SDK should provide high-level concepts for common gameplay without forcing creators into engine internals.
+- no cycles
+- reparent preserves world transform
+- Explorer drag/drop edits the same parentId data
+- Group uses the ordinary entity model
+- dropping to Workspace unparents
 
-## AI architecture
+## Rendering
 
-AI operations must operate on structured engine concepts.
+Babylon.js currently handles:
 
-Current primitive operations include create_box, move, rotate, scale, and delete.
+- gradient/custom sky
+- ambient/fog
+- lights
+- material presets
+- textures
+- emissive/transparency
+- shadows
 
-Planned semantic operations include create_room, create_corridor, place_prefab, connect_rooms, add_component, attach_script, set_material, set_lighting, and create_ui.
+Optional renderer features must fail gracefully.
 
-AI changes should eventually produce a reviewable change set with KEEP and UNDO.
+## Imported assets
 
-## Runtime/editor boundary
+Current import path:
 
-Editor state and Play state must remain separate.
+- GLB
+- images/textures
+- audio
+- sky images
 
-When Play begins, snapshot editable scene state, instantiate runtime systems, enable player and gameplay, and allow runtime scripts to modify the running world.
+Production UGC still needs a proper hosted asset pipeline.
 
-When Play ends, destroy runtime-only state and restore editor scene state.
+## Scripting model
 
-Runtime changes should not silently mutate source data.
+Current capabilities include lifecycle, interaction, input/events, UI events, modules/require, world access, runtime create/clone/destroy, audio/UI, player/camera and output logging.
+
+Current creator scripts are trusted code, not a hardened hostile-code sandbox.
+
+## Editor/runtime boundary
+
+Play flow:
+
+1. snapshot authoring scene
+2. instantiate runtime
+3. start player/scripts
+4. allow runtime mutations
+5. Stop destroys runtime-only state
+6. restore authoring state
+
+Runtime changes do not silently mutate source.
+
+## Platform/cloud boundary
+
+Guests remain able to create/play locally.
+
+Cloud adds identity, ownership, sync, publishing and social state.
+
+## Security
+
+Supabase RLS is the platform data boundary. Do not bypass ownership/security assumptions client-side.
 
 ## Validation pipeline
 
-Expected loop:
+```text
+EDIT
+-> VALIDATE
+-> TYPECHECK
+-> BUILD
+-> BROWSER SMOKE
+-> CLOUD SMOKE when relevant
+-> PREVIEW
+-> REVIEW
+```
 
-EDIT -> VALIDATE SCENES -> TYPECHECK -> BUILD -> PREVIEW / PLAYTEST -> REVIEW -> MERGE
-
-CI must catch invalid scene format, duplicate entity IDs, broken TypeScript, and production build failures.
-
-Future validation should include broken references, missing scripts, invalid component combinations, prefab integrity, asset references, and save/load round trips.
-
-## Performance direction
-
-Prefer scalable systems early when they are cheap: instancing for repeated geometry, asset reuse, component data separation, predictable scene serialization, lazy loading for large projects, and clear client/server boundaries before multiplayer.
-
-Do not prematurely optimize systems that do not yet constrain real games.
+Project Helios remains the primary game pressure test.

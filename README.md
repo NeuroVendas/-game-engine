@@ -1,38 +1,57 @@
-# Forge =] Engine
+# Forge =] Engine + Platform
 
-AI-first 3D game engine and editor.
+Forge =] is an AI-first 3D game engine, creator Studio, runtime and social game platform.
+
+It combines approachable classic creation with modern TypeScript/Babylon.js rendering, creator scripting, imported assets, real browser testing and a Supabase-backed platform.
 
 Project Helios is the first benchmark game.
 
-## v0.3
+> Current package version: **0.5.0**
+>
+> Historical active branch: **forge-v0.4**
 
-This branch is the first real modular Forge build.
+## What works now
 
-Current pieces:
+### Platform
 
-- TypeScript + Vite project
-- Babylon.js 3D runtime
-- editor viewport
-- scene explorer
-- property inspector
-- move / rotate / scale gizmos
-- add / delete entities
-- scene export
-- Play / Stop workflow
-- third-person character controller
-- WASD movement
-- sprint + jump
-- first/third-person camera toggle
-- interactable objects
-- scripted blast door
-- scripted reactor pulse
-- script runtime
-- semantic scene JSON
-- Forge AI structured operations
-- Project Helios sample scene
-- automated scene validation
-- TypeScript checking
-- production build CI
+- Home / Games / Favorites / Friends / Develop
+- guest/local-first use
+- accounts/cloud profiles
+- cloud project sync
+- private/unlisted/public projects
+- public catalog
+- favorites/recent plays
+- creator profiles
+- friend requests
+- game details/deep links
+- direct Play
+- project create/edit/duplicate/rename/delete
+
+### Studio
+
+- Explorer hierarchy + drag/drop parenting
+- Properties
+- Move / Rotate / Resize
+- snapping
+- undo/redo
+- primitives + semantic prefabs
+- Groups
+- materials/transparency/textures/emissive
+- Spawn / Light / Sound / UI
+- Script / LocalScript / ModuleScript
+- GLB/image/audio/sky import
+- environment/fog/sky
+- save/load/import/export
+- persistent Output
+
+### Runtime
+
+- Forge Classic avatar
+- improved movement/jump feel
+- environment + shadows with fallback
+- typed scripting/modules
+- UI/audio/player/camera/world APIs
+- runtime create/clone/destroy
 
 ## Run locally
 
@@ -41,27 +60,28 @@ npm install
 npm run dev
 ```
 
-Then open the Vite URL.
-
-## Validation
+## Verify
 
 ```bash
 npm run check
 npm run build
+npm run test:browser
+npm run test:cloud
 ```
 
-Forge CI runs validation and a production build on every push to the v0.3 branch.
+A successful build alone is not considered proof that runtime/editor behavior works.
 
 ## Controls
 
-### Editor
+### Studio
 
-- Click object: select
-- W: Move gizmo
-- E: Rotate gizmo
-- R: Scale gizmo
-- F: focus selected object
-- Delete: delete selected object
+- left click: select/manipulate
+- WASD: move editor camera
+- right mouse drag: orbit/look
+- wheel: zoom
+- F: focus selected
+- Delete: delete
+- toolbar: Select / Move / Resize / Rotate
 
 ### Play
 
@@ -69,67 +89,52 @@ Forge CI runs validation and a production build on every push to the v0.3 branch
 - Shift: run
 - Space: jump
 - E: interact
-- C: toggle first/third-person camera
-- Mouse: orbit camera
-- Mouse wheel: zoom
+- C: first/third-person toggle
+- mouse/wheel: camera
 
 ## Architecture
 
 ```text
 src/
-├── ai/          AI-facing structured world operations
-├── editor/      visual editor
-├── engine/      runtime, scene loader, scripting
-├── player/      character controller
-└── types.ts     Forge scene schema
+├── ai/
+├── editor/
+├── engine/
+├── platform/
+├── player/
+└── types.ts
 
-public/
-└── scenes/      editable .forge.json scene files
-
+public/scenes/
 scripts/
-└── validate-scenes.mjs
-
+tests/
 docs/
-└── AI_CONTRACT.md
 ```
 
-## Core design rule
+## Core rule
 
-A human can use the visual editor.
+Visual editor, creator code and AI all edit the same canonical project.
 
-A developer can use code.
+## Documentation
 
-An AI can use scene JSON + structured Forge operations.
+Start with:
 
-All three edit the same project.
+- `docs/CURRENT_STATE.md` — current capability/limitation inventory
+- `docs/PROJECT_HISTORY.md` — history from repository creation onward
+- `docs/RECOVERY.md` — disaster-recovery/handoff guide
+- `docs/VISION.md`
+- `docs/PRODUCT_PRINCIPLES.md`
+- `docs/ARCHITECTURE.md`
+- `docs/ROADMAP.md`
+- `docs/STYLE_GUIDE.md`
+- `docs/AI_CONTRACT.md`
+- `docs/PROJECT_HELIOS.md`
+- `docs/DECISIONS.md`
+- `CONTRIBUTING.md`
+- `AGENTS.md`
 
-See `docs/AI_CONTRACT.md`.
+## Product loop
 
-## Roadmap
+```text
+CREATE -> SCRIPT -> PLAYTEST -> PUBLISH -> PLAY WITH OTHERS -> ITERATE
+```
 
-- v0.3: editor + player + scene schema + scripting foundation
-- v0.4: real component inspector + script editor + prefabs
-- v0.5: asset browser + UI editor + terrain
-- v0.6: audio + physics expansion + save/load projects
-- v0.7: multiplayer
-- v0.8: accounts + profiles + friends
-- v0.9: game publishing
-- v1.0: Forge Platform
-
-
-## Project documentation
-
-Forge's product and engineering direction is recorded in the repository so future contributors and AI agents work from the same source of truth.
-
-- docs/VISION.md — product identity and long-term goal
-- docs/PRODUCT_PRINCIPLES.md — creator and UX principles
-- docs/ARCHITECTURE.md — current technical architecture
-- docs/ROADMAP.md — milestone direction from v0.3 to v1.0
-- docs/STYLE_GUIDE.md — Forge visual and editor identity
-- docs/AI_CONTRACT.md — rules for AI-editable worlds
-- docs/PROJECT_HELIOS.md — benchmark game direction
-- docs/DECISIONS.md — accepted product/architecture decisions
-- CONTRIBUTING.md — contributor workflow
-- AGENTS.md — instructions for AI coding agents
-
-For major changes, read the relevant documents before writing code.
+Monetization is intentionally not the early focus.
