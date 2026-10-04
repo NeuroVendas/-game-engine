@@ -167,6 +167,13 @@ test("studio scripting and play remain functional", async ({ page }) => {
   await page.locator("#code-selected").click();
   await page.locator("#script-source").fill(`
 let fired = false;
+
+Forge.onStart(() => {
+  const player = Forge.player.get();
+  Forge.camera.setFov(70);
+  if (player) Forge.log("PLAYER_API_OK");
+});
+
 Forge.onUpdate(() => {
   if (fired) return;
   fired = true;
@@ -178,6 +185,7 @@ Forge.onUpdate(() => {
   await page.locator("#play").click();
 
   await expect.poll(async () => page.locator("#status").textContent()).toContain("PLATFORM_SCRIPT_OK");
+  await expect(page.locator("#output-log")).toContainText("PLAYER_API_OK");
   expect(await page.locator("#viewport").getAttribute("data-runtime-error")).toBeNull();
 });
 
