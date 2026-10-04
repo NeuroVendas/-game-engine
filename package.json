@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "validate": "node scripts/validate-scenes.mjs",
     "check": "npm run validate && tsc -b --pretty false",
-    "test:browser": "playwright test"
+    "test:browser": "playwright test",
+    "test:cloud": "node scripts/cloud-smoke.mjs"
   },
   "dependencies": {
     "@babylonjs/core": "^8.0.0",
