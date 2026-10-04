@@ -12,7 +12,8 @@
     "test:browser": "playwright test"
   },
   "dependencies": {
-    "@babylonjs/core": "^8.0.0"
+    "@babylonjs/core": "^8.0.0",
+    "@supabase/supabase-js": "^2.57.4"
   },
   "devDependencies": {
     "typescript": "^5.9.0",

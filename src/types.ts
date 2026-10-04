@@ -51,4 +51,11 @@ export interface ForgeSceneDocument {
   name: string;
   playerSpawn?: Vec3;
   entities: ForgeEntity[];
+  platform?: {
+    cloudId?: string;
+    slug?: string;
+    visibility?: "private" | "unlisted" | "public";
+    ownerId?: string;
+    isOfficial?: boolean;
+  };
 }
