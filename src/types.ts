@@ -42,6 +42,7 @@ export interface ForgeComponents {
   };
   Sound?: {
     src: string;
+    fileName?: string;
     volume?: number;
     loop?: boolean;
     autoplay?: boolean;
@@ -77,6 +78,7 @@ export interface ForgeEntity {
   size?: Vec3;
   color?: string;
   emissive?: string;
+  transparency?: number;
   components?: ForgeComponents;
   parentId?: string;
 }
