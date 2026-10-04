@@ -1,6 +1,6 @@
 # Forge =] Current State
 
-> Living technical inventory through commit `15f41800` on `forge-v0.4`.
+> Living technical inventory for the current v0.5 Creator Experience milestone on `forge-v0.4`.
 >
 > Package version: `0.5.0`.
 >
