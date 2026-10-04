@@ -11,6 +11,7 @@ import { SpotLight } from "@babylonjs/core/Lights/spotLight";
 import { ShadowGenerator } from "@babylonjs/core/Lights/Shadows/shadowGenerator";
 import type { Light } from "@babylonjs/core/Lights/light";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
+import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
@@ -312,13 +313,13 @@ export class ForgeEngine {
     this.engine.resize();
   }
 
-  registerShadowCaster(mesh: Mesh, descendants = true): void {
+  registerShadowCaster(mesh: AbstractMesh, descendants = true): void {
     if (mesh.name === "__forge-sky") return;
     mesh.receiveShadows = true;
     this.shadowGenerator.addShadowCaster(mesh, descendants);
   }
 
-  unregisterShadowCaster(mesh: Mesh, descendants = true): void {
+  unregisterShadowCaster(mesh: AbstractMesh, descendants = true): void {
     this.shadowGenerator.removeShadowCaster(mesh, descendants);
   }
 
