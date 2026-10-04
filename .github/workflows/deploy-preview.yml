@@ -9,6 +9,9 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: forge-preview-v04-controls
+  cancel-in-progress: true
 
 jobs:
   build-and-publish:
