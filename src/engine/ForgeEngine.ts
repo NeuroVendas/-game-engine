@@ -47,7 +47,7 @@ export class ForgeEngine {
   private readonly entitySounds = new Map<string, Sound>();
   private readonly hemi: HemisphericLight;
   private readonly key: DirectionalLight;
-  private readonly shadowGenerator: ShadowGenerator;
+  private readonly shadowGenerator: ShadowGenerator | null;
   private sky: Mesh;
   private skyMaterial: StandardMaterial;
   private skyTexture: DynamicTexture;
@@ -73,10 +73,16 @@ export class ForgeEngine {
     this.key.shadowMinZ = 1;
     this.key.shadowMaxZ = 160;
 
-    this.shadowGenerator = new ShadowGenerator(2048, this.key);
-    this.shadowGenerator.usePercentageCloserFiltering = true;
-    this.shadowGenerator.bias = 0.0008;
-    this.shadowGenerator.normalBias = 0.03;
+    let shadowGenerator: ShadowGenerator | null = null;
+    try {
+      shadowGenerator = new ShadowGenerator(2048, this.key);
+      shadowGenerator.usePercentageCloserFiltering = true;
+      shadowGenerator.bias = 0.0008;
+      shadowGenerator.normalBias = 0.03;
+    } catch (error) {
+      this.log(`Shadows unavailable on this renderer: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    this.shadowGenerator = shadowGenerator;
 
     this.sky = MeshBuilder.CreateSphere("__forge-sky", {
       diameter: 1800,
@@ -365,11 +371,11 @@ export class ForgeEngine {
   registerShadowCaster(mesh: AbstractMesh, descendants = true): void {
     if (mesh.name === "__forge-sky") return;
     mesh.receiveShadows = true;
-    this.shadowGenerator.addShadowCaster(mesh, descendants);
+    this.shadowGenerator?.addShadowCaster(mesh, descendants);
   }
 
   unregisterShadowCaster(mesh: AbstractMesh, descendants = true): void {
-    this.shadowGenerator.removeShadowCaster(mesh, descendants);
+    this.shadowGenerator?.removeShadowCaster(mesh, descendants);
   }
 
   rebuildEntity(id: string): void {
