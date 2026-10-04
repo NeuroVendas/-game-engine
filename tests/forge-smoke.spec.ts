@@ -7,6 +7,8 @@ test("platform home, games, favorites, profile and direct play work", async ({ p
   await expect(page.locator("#app")).toBeHidden();
 
   await expect.poll(async () => page.locator("#cloud-status").textContent()).toContain("Forge Cloud Online");
+  await expect.poll(async () => page.locator("#launcher").getAttribute("data-cloud-catalog-count")).toBe("1");
+  await expect(page.locator("#launcher")).toHaveAttribute("data-cloud-session", "guest");
 
   await page.locator("#account-button").click();
   await expect(page.locator("#auth-dialog")).toBeVisible();
