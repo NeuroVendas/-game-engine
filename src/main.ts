@@ -37,6 +37,7 @@ import {
 } from "./platform/PlatformStore";
 import type { ForgeSceneDocument } from "./types";
 import heliosFallback from "../public/scenes/project-helios.forge.json";
+import coreRelayTemplate from "../public/scenes/core-relay.forge.json";
 
 type LauncherPage = "home" | "games" | "favorites" | "friends" | "develop";
 type GameFilter = "all" | "favorites" | "recent";
@@ -1170,6 +1171,20 @@ document.querySelectorAll<HTMLElement>("[data-template-create]").forEach((node) 
   node.addEventListener("click", () => {
     const template = node.dataset.templateCreate === "industrial" ? "industrial" : "baseplate";
     openCreateDialog(template);
+  });
+});
+
+document.querySelectorAll<HTMLElement>("[data-template-scene]").forEach((node) => {
+  node.addEventListener("click", () => {
+    if (node.dataset.templateScene !== "core-relay") return;
+
+    const scene = structuredClone(coreRelayTemplate as ForgeSceneDocument);
+    delete scene.platform;
+    scene.name = uniqueProjectName("Core Relay");
+    projects.unshift(scene);
+    saveProjects(projects);
+    renderAll();
+    void editPlace(scene);
   });
 });
 
