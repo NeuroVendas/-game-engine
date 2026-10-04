@@ -426,7 +426,7 @@
 
           <div class="classic-panel-title">Explorer</div>
           <div class="service-tree">
-            <div class="service">▾ Workspace</div>
+            <div id="workspace-root" class="service workspace-root">▾ Workspace</div>
             <div id="scene-tree" class="scene-tree"></div>
             <div class="service muted">Players</div>
             <div class="service">▾ Lighting</div>
@@ -559,6 +559,9 @@
           <code>Forge.self.move(x,y,z)</code>
           <code>Forge.self.setPosition(x,y,z)</code>
           <code>Forge.world.get("ObjectId")</code>
+          <code>Forge.world.create("box", "Crate")</code>
+          <code>Forge.world.clone("Crate")</code>
+          <code>Forge.world.destroy("Crate")</code>
           <code>Forge.onStart(fn)</code>
           <code>Forge.onUpdate(fn)</code>
           <code>Forge.onInteract(fn)</code>
