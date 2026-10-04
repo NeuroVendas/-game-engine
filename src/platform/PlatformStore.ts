@@ -56,8 +56,7 @@ export function saveProjects(projects: ForgeSceneDocument[]): void {
 }
 
 export function projectId(scene: ForgeSceneDocument): string {
+  if (scene.platform?.isOfficial || scene.name === "Project Helios") return "official:helios";
   if (scene.platform?.cloudId) return `cloud:${scene.platform.cloudId}`;
-  return scene.name === "Project Helios"
-    ? "official:helios"
-    : `local:${scene.name.toLowerCase()}`;
+  return `local:${scene.name.toLowerCase()}`;
 }
