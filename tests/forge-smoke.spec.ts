@@ -480,3 +480,32 @@ test("Studio imports real GLB and audio assets", async ({ page }) => {
   await expect(page.locator("#component-list")).toContainText("Sound");
   expect(await page.locator("#viewport").getAttribute("data-runtime-error")).toBeNull();
 });
+
+
+test("Core Relay template is a playable complete-game benchmark", async ({ page }) => {
+  await page.goto("/");
+  await page.locator("[data-launch-tab='develop']").click();
+  await page.locator("[data-develop-view='templates']").click();
+
+  const coreRelay = page.locator("[data-template-scene='core-relay']");
+  await expect(coreRelay).toBeVisible();
+  await coreRelay.click();
+
+  await expect(page.locator("#app")).toBeVisible();
+  await expect(page.locator("#studio-project-name")).toContainText("Core Relay");
+  await expect(page.locator("#scene-tree")).toContainText("Game Controller");
+  await expect(page.locator("#scene-tree")).toContainText("Relay A");
+  await expect(page.locator("#scene-tree")).toContainText("Hint Button");
+
+  await page.locator("#play").click();
+  await expect(page.locator("#mode-badge")).toHaveText("PLAY");
+  await expect(page.locator("#forge-ui-root")).toContainText("Activate the 3 relay consoles");
+  await expect(page.locator("#forge-ui-root")).toContainText("Need a hint?");
+  await expect(page.locator("#output-log")).toContainText("CORE_RELAY_READY");
+
+  const hint = page.locator("#forge-ui-root .forge-ui-button");
+  await hint.evaluate((button) => (button as HTMLButtonElement).click());
+  await expect(page.locator("#forge-ui-root")).toContainText("Walk to each metal relay and press E");
+
+  expect(await page.locator("#viewport").getAttribute("data-runtime-error")).toBeNull();
+});
