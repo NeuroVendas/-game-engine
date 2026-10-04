@@ -97,6 +97,58 @@ function makeSilentWav(): Buffer {
 
 import { expect, test } from "@playwright/test";
 
+async function readPlayerXZ(page: any): Promise<[number, number]> {
+  const raw = await page.locator("#viewport").getAttribute("data-player-position");
+  if (!raw) throw new Error("Player position is unavailable.");
+  const [x, , z] = raw.split(",").map(Number);
+  return [x, z];
+}
+
+async function holdMovement(page: any, keys: string[], milliseconds: number): Promise<void> {
+  for (const key of keys) await page.keyboard.down(key);
+  await page.waitForTimeout(milliseconds);
+  for (const key of [...keys].reverse()) await page.keyboard.up(key);
+  await page.waitForTimeout(45);
+}
+
+async function calibratePlayerAxes(page: any): Promise<{ forward: [number, number]; right: [number, number] }> {
+  const before = await readPlayerXZ(page);
+  await holdMovement(page, ["KeyW"], 220);
+  const after = await readPlayerXZ(page);
+  const dx = after[0] - before[0];
+  const dz = after[1] - before[1];
+  const length = Math.hypot(dx, dz);
+  if (length < 0.05) throw new Error("Could not calibrate player movement.");
+
+  const forward: [number, number] = [dx / length, dz / length];
+  const right: [number, number] = [forward[1], -forward[0]];
+  return { forward, right };
+}
+
+async function moveUntilCoordinate(
+  page: any,
+  key: string,
+  reached: (position: [number, number]) => boolean,
+  timeout = 6500
+): Promise<void> {
+  await page.keyboard.down(key);
+  try {
+    await expect.poll(async () => reached(await readPlayerXZ(page)), {
+      timeout,
+      intervals: [50, 60, 70]
+    }).toBe(true);
+  } finally {
+    await page.keyboard.up(key);
+  }
+
+  // Walking deceleration finishes quickly; allow it to settle before the next axis.
+  await page.waitForTimeout(180);
+}
+
+async function expectInteractionPrompt(page: any, promptText: string): Promise<void> {
+  await expect(page.locator("#interaction-prompt")).toContainText(promptText);
+}
+
 test("platform home, games, favorites, profile and direct play work", async ({ page }) => {
   await page.goto("/");
 
@@ -390,6 +442,13 @@ Forge.onClick(() => {
   await page.locator("[data-object='sound']").click();
   await expect(page.locator("#scene-tree")).toContainText("Sound");
 
+  await page.locator(".scene-item", { hasText: "Baseplate" }).click();
+  await page.locator("[data-object='vfx']").click();
+  await expect(page.locator("#scene-tree")).toContainText("Particle VFX");
+  await expect(page.locator("#component-list")).toContainText("Particle");
+  await expect(canvas).toHaveAttribute("data-particle-systems", "1");
+  await expect(canvas).toHaveAttribute("data-particle-presets", "energy");
+
   await page.locator("#play").click();
   await expect(page.locator("#mode-badge")).toHaveText("PLAY");
 
@@ -483,6 +542,7 @@ test("Studio imports real GLB and audio assets", async ({ page }) => {
 
 
 test("Core Relay template is a playable complete-game benchmark", async ({ page }) => {
+  test.setTimeout(70_000);
   await page.goto("/");
   await page.locator("[data-launch-tab='develop']").click();
   await page.locator("[data-develop-view='templates']").click();
@@ -496,6 +556,8 @@ test("Core Relay template is a playable complete-game benchmark", async ({ page 
   await expect(page.locator("#scene-tree")).toContainText("Game Controller");
   await expect(page.locator("#scene-tree")).toContainText("Relay A");
   await expect(page.locator("#scene-tree")).toContainText("Hint Button");
+  await expect(page.locator("#scene-tree")).toContainText("Core Victory VFX");
+  await expect(page.locator("#viewport")).toHaveAttribute("data-particle-systems", "1");
 
   await page.locator("#play").click();
   await expect(page.locator("#mode-badge")).toHaveText("PLAY");
@@ -507,9 +569,41 @@ test("Core Relay template is a playable complete-game benchmark", async ({ page 
   await hint.evaluate((button) => (button as HTMLButtonElement).click());
   await expect(page.locator("#forge-ui-root")).toContainText("Walk to each metal relay and press E");
 
-  expect(await page.locator("#viewport").getAttribute("data-runtime-error")).toBeNull();
+  const canvas = page.locator("#viewport");
+  const axes = await calibratePlayerAxes(page);
+  expect(Math.abs(axes.forward[1])).toBeGreaterThan(0.75);
+  expect(Math.abs(axes.right[0])).toBeGreaterThan(0.75);
 
-  // Real audio resources must survive repeated Editor <-> Play transitions.
+  const xPositive = axes.right[0] >= 0 ? "KeyD" : "KeyA";
+  const xNegative = xPositive === "KeyD" ? "KeyA" : "KeyD";
+  const zNegative = axes.forward[1] >= 0 ? "KeyS" : "KeyW";
+
+  // Relay A: walk laterally first so the central core is never on the route.
+  await moveUntilCoordinate(page, xNegative, ([x]) => x <= -6.6);
+  await moveUntilCoordinate(page, zNegative, ([, z]) => z <= -3.1);
+  await expectInteractionPrompt(page, "Relay A");
+  await page.keyboard.press("KeyE");
+  await expect(page.locator("#forge-ui-root")).toContainText("1 / 3 relays online");
+
+  // Relay B: step away from A, descend the open lower lane, then approach from the west.
+  await moveUntilCoordinate(page, xPositive, ([x]) => x >= -3.8);
+  await moveUntilCoordinate(page, zNegative, ([, z]) => z <= -7.2);
+  await moveUntilCoordinate(page, xPositive, ([x]) => x >= -1.2);
+  await expectInteractionPrompt(page, "Relay B");
+  await page.keyboard.press("KeyE");
+  await expect(page.locator("#forge-ui-root")).toContainText("2 / 3 relays online");
+
+  // Relay C: stay in the lower lane and approach from the west, before its collider face.
+  await moveUntilCoordinate(page, xPositive, ([x]) => x >= 4.4);
+  await expectInteractionPrompt(page, "Relay C");
+  await page.keyboard.press("KeyE");
+  await expect(page.locator("#forge-ui-root")).toContainText("3 / 3 relays online");
+  await expect(page.locator("#forge-ui-root")).toContainText("CORE ONLINE • YOU WIN");
+  await expect(page.locator("#output-log")).toContainText("CORE_RELAY_WIN");
+  await expect(canvas).toHaveAttribute("data-last-vfx-action", "restart:CoreVictoryVFX");
+  expect(await canvas.getAttribute("data-runtime-error")).toBeNull();
+
+  // Real audio and particle resources must survive repeated Editor <-> Play transitions.
   await page.locator("#stop").click();
   await expect(page.locator("#mode-badge")).toHaveText("EDITOR");
   await page.locator("#play").click();

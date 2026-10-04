@@ -1,6 +1,6 @@
 # Forge =] Current State
 
-> Living technical inventory through commit `5c84fbfa` on `forge-v0.5`.
+> Living technical inventory through v0.5 code commit `5a26dfe1` (Particle VFX + full Core Relay acceptance path).
 >
 > Package version: `0.5.0`.
 >
@@ -65,6 +65,7 @@ Current components:
 - Script
 - Light
 - Sound
+- Particle
 - UI
 - Model
 - Spawn
@@ -98,6 +99,7 @@ Implemented:
 - Spawn
 - Light
 - Sound
+- Particle VFX
 - UI
 - Script/LocalScript/ModuleScript
 - GLB import
@@ -127,6 +129,7 @@ Implemented:
 - material presets
 - textures
 - emissive/transparency
+- authorable particle VFX with Energy / Sparks / Smoke presets
 - dynamic shadows when supported
 - avatar/imported-model shadow/collision integration
 
@@ -182,6 +185,7 @@ Major current creator/runtime capabilities:
 - `Forge.require(...)`
 - audio control
 - UI control
+- VFX play/stop/restart control
 - player API
 - camera API
 - logging/output
@@ -210,6 +214,23 @@ Sound supports:
 - autoplay
 - spatial
 - maxDistance
+
+## VFX
+
+Particle emitters currently support:
+
+- enabled/autoplay
+- Energy / Sparks / Smoke presets
+- two author colors
+- emit rate
+- capacity
+- lifetime
+- particle size
+- speed
+- editor preview
+- script control through `Forge.vfx.play/stop/restart`
+
+This is the first authorable VFX layer, not a final node/graph-based effects system.
 
 ## Imports
 
@@ -241,7 +262,9 @@ Still planned: room/corridor/connect-room semantic building, richer component/ma
 
 `Core Relay` is the current small-game acceptance benchmark.
 
-It uses Spawn, collisions, interactables, ModuleScript, Script, LocalScript, HUD UI, Sound, Light, environment controls and a completion/win state. It is available as a playable Develop template.
+It uses Spawn, collisions, interactables, ModuleScript, Script, LocalScript, HUD UI, Sound, Light, Particle VFX, environment controls and a completion/win state. It is available as a playable Develop template.
+
+Browser Smoke now performs the actual gameplay route: it calibrates movement, follows collider-safe axis-aligned world-space gates using real WASD input at walking speed, requires the player-visible interaction prompt at Relay A/B/C, presses E, verifies 3/3, requires `CORE_RELAY_WIN` and confirms the victory VFX restart.
 
 The benchmark exists to expose engine deficiencies through real game construction.
 
@@ -332,7 +355,7 @@ Do not describe these as finished:
 - chat
 - production asset CDN/library
 - full animation asset/controller pipeline
-- particles/effects authoring
+- advanced VFX authoring (custom textures, emitter shapes, bursts/curves and effect graphs)
 - terrain editor
 - mature physics/collision editor
 - moderation

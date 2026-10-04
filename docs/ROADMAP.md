@@ -37,7 +37,8 @@ Already delivered:
 - expanded object/component model
 - true Resize/size editing
 - hierarchy/Groups/drag-drop
-- Spawn/Light/Sound/UI
+- Spawn/Light/Sound/UI/Particle VFX
+- Energy/Sparks/Smoke particle presets + script play/stop/restart
 - GLB/texture/audio/sky import
 - material presets/transparency
 - shadows with fallback
@@ -46,6 +47,7 @@ Already delivered:
 - modules/player/camera/audio/UI/world APIs
 - runtime create/clone/destroy
 - improved movement/jump feel
+- Core Relay full browser-playthrough acceptance: Relay A/B/C -> WIN -> victory VFX
 
 ### Creator Experience acceptance
 
@@ -66,7 +68,7 @@ v0.5 should feel like a usable creator tool, not a prototype editor.
 - practical asset workflow
 - better UI authoring
 - audio mixer/workflow
-- particles/effects
+- advanced VFX workflow: custom particle textures, emitter shapes, bursts/curves and richer composition
 - richer lighting without losing simplicity
 - physics/collision authoring
 - prefab/model workflow
@@ -78,7 +80,7 @@ Exit criterion: an unfamiliar creator can build a small game that does not immed
 
 ## v0.6 — world/game quality
 
-Target animation controller, particles/effects, improved physics tools, collision visualization, audio buses, asset management, decals/environment tools and performance/debugging.
+Target animation controller, advanced particles/effects composition, improved physics tools, collision visualization, audio buses, asset management, decals/environment tools and performance/debugging.
 
 ## v0.7 — multiplayer
 

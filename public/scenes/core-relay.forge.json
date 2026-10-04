@@ -86,6 +86,35 @@
       }
     },
     {
+      "id": "CoreVictoryVFX",
+      "name": "Core Victory VFX",
+      "kind": "empty",
+      "position": [
+        0,
+        3.2,
+        -2
+      ],
+      "size": [
+        1,
+        1,
+        1
+      ],
+      "components": {
+        "Particle": {
+          "enabled": true,
+          "preset": "energy",
+          "color": "#b7f34a",
+          "color2": "#5ed0ff",
+          "emitRate": 120,
+          "capacity": 650,
+          "lifetime": 1.35,
+          "size": 0.38,
+          "speed": 2.4,
+          "autoplay": false
+        }
+      }
+    },
+    {
       "id": "ExitDoor",
       "name": "Exit Door",
       "kind": "box",
@@ -341,7 +370,7 @@
           "name": "core.relay.controller",
           "kind": "Script",
           "enabled": true,
-          "source": "Forge.onStart(() => {\n  Forge.ui.setText(\"ObjectiveText\", \"Activate the 3 relay consoles\");\n  Forge.ui.setText(\"CounterText\", \"0 / 3 relays online\");\n  Forge.log(\"CORE_RELAY_READY\");\n});\n\nForge.on(\"core.complete\", () => {\n  const door = Forge.world.get(\"ExitDoor\");\n  const core = Forge.world.get(\"Core\");\n\n  if (door) door.move(0, 5, 0);\n  if (core) core.setColor(\"#b7f34a\");\n\n  Forge.ui.setText(\"ObjectiveText\", \"CORE ONLINE • YOU WIN\");\n  Forge.ui.setText(\"CounterText\", \"3 / 3 relays online\");\n  Forge.audio.play(\"RelayBeep\");\n  Forge.log(\"CORE_RELAY_WIN\");\n});"
+          "source": "Forge.onStart(() => {\n  Forge.ui.setText(\"ObjectiveText\", \"Activate the 3 relay consoles\");\n  Forge.ui.setText(\"CounterText\", \"0 / 3 relays online\");\n  Forge.log(\"CORE_RELAY_READY\");\n});\n\nForge.on(\"core.complete\", () => {\n  const door = Forge.world.get(\"ExitDoor\");\n  const core = Forge.world.get(\"Core\");\n\n  if (door) door.move(0, 5, 0);\n  if (core) core.setColor(\"#b7f34a\");\n\n  Forge.ui.setText(\"ObjectiveText\", \"CORE ONLINE • YOU WIN\");\n  Forge.ui.setText(\"CounterText\", \"3 / 3 relays online\");\n  Forge.audio.play(\"RelayBeep\");\n  Forge.vfx.restart(\"CoreVictoryVFX\");\n  Forge.log(\"CORE_RELAY_WIN\");\n});"
         }
       }
     },
