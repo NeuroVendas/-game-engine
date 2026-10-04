@@ -10,6 +10,10 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: forge-browser-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   browser-smoke:
     runs-on: ubuntu-latest
