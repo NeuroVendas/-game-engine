@@ -694,6 +694,47 @@ export class EditorApp {
     }
   }
 
+  private async importTextureFile(event: Event): Promise<void> {
+    if (this.mode !== "editor") return;
+
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    try {
+      if (!this.selectedId) {
+        throw new Error("Select a visible object before importing a texture.");
+      }
+      if (file.size > 4 * 1024 * 1024) {
+        throw new Error("Texture is larger than 4 MB. Use a hosted texture URL for larger images.");
+      }
+
+      const entity = this.forge.getEntity(this.selectedId);
+      if (!entity || entity.kind === "empty" || entity.kind === "model") {
+        throw new Error("Textures can be applied to Forge primitive objects.");
+      }
+
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(reader.error ?? new Error("Could not read texture file."));
+        reader.onload = () => resolve(String(reader.result));
+        reader.readAsDataURL(file);
+      });
+
+      this.checkpoint();
+      entity.texture = dataUrl;
+      entity.textureFileName = file.name;
+      this.forge.rebuildEntity(entity.id);
+      this.setSelection(entity.id);
+      this.renderInspector();
+      this.log(`Applied texture ${file.name} to ${entity.name}.`);
+    } catch (error) {
+      this.log(`Texture import failed: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      input.value = "";
+    }
+  }
+
   private async importAudioFile(event: Event): Promise<void> {
     if (this.mode !== "editor") return;
 
@@ -1487,6 +1528,63 @@ Forge.onUpdate((dt) => {
 
     label.appendChild(select);
     container.appendChild(label);
+  }
+
+  private renderParentOptions(entity: ForgeEntity): void {
+    const select = must<HTMLSelectElement>("prop-parent");
+    select.replaceChildren();
+
+    const workspace = document.createElement("option");
+    workspace.value = "";
+    workspace.textContent = "Workspace";
+    select.appendChild(workspace);
+
+    for (const candidate of this.forge.document.entities) {
+      if (candidate.id === entity.id) continue;
+      if (this.wouldCreateParentCycle(entity.id, candidate.id)) continue;
+
+      const option = document.createElement("option");
+      option.value = candidate.id;
+      option.textContent = candidate.name;
+      select.appendChild(option);
+    }
+
+    select.value = entity.parentId ?? "";
+  }
+
+  private wouldCreateParentCycle(entityId: string, parentId: string): boolean {
+    let current: string | undefined = parentId;
+    const visited = new Set<string>();
+
+    while (current) {
+      if (current === entityId) return true;
+      if (visited.has(current)) return true;
+      visited.add(current);
+      current = this.forge.getEntity(current)?.parentId;
+    }
+
+    return false;
+  }
+
+  private applyParentSelection(): void {
+    if (!this.selectedId) return;
+    const entity = this.forge.getEntity(this.selectedId);
+    if (!entity) return;
+
+    const selectedParent = must<HTMLSelectElement>("prop-parent").value || undefined;
+    if (selectedParent && this.wouldCreateParentCycle(entity.id, selectedParent)) {
+      this.renderInspector();
+      this.log("Parenting blocked: that would create a hierarchy cycle.");
+      return;
+    }
+
+    this.checkpoint();
+    this.forge.setEntityParent(entity.id, selectedParent);
+    this.renderTree();
+    this.renderInspector();
+    this.log(selectedParent
+      ? `${entity.name} parented to ${this.forge.getEntity(selectedParent)?.name ?? selectedParent}.`
+      : `${entity.name} moved to Workspace.`);
   }
 
   private safeHex(value: string | undefined, fallback: string): string {
