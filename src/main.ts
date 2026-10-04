@@ -826,6 +826,7 @@ must<HTMLButtonElement>("open-profile").addEventListener("click", () => {
 
 must<HTMLButtonElement>("auth-sign-in").addEventListener("click", () => void handleSignIn());
 must<HTMLButtonElement>("auth-sign-up").addEventListener("click", () => void handleSignUp());
+must<HTMLButtonElement>("auth-guest").addEventListener("click", () => authDialog.close());
 
 must<HTMLFormElement>("profile-form").addEventListener("submit", (event) => {
   const submitter = (event as SubmitEvent).submitter as HTMLButtonElement | null;
