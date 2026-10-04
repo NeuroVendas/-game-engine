@@ -2,7 +2,7 @@
 
 > Historical record reconstructed from the Git history of `NeuroVendas/-game-engine`.
 >
-> Snapshot covered by this document: through commit `15f41800` on branch `forge-v0.4`.
+> Snapshot covered by this document: through the v0.5 Creator Experience / first VFX milestone on branch `forge-v0.4`.
 >
 > This file exists so the project can be recovered even if chat context, local notes, or contributor memory are lost.
 
@@ -408,3 +408,36 @@ After context loss, trust in this order:
 6. old chat descriptions
 
 The repository is canonical.
+
+
+## 16. First-class VFX
+
+The v0.5 Creator Experience added Forge's first creator-facing visual-effects system.
+
+Delivered in this milestone:
+
+- VFX Emitter as an ordinary Forge entity/component
+- presets for sparks, smoke, fire, glow and dust
+- live editor preview
+- emit rate, lifetime, particle size, speed, dual colors and gravity authoring
+- runtime autoplay
+- lifecycle-safe cleanup during scene reload, rebuild and deletion
+- script controls through `Forge.vfx.play(...)`, `Forge.vfx.stop(...)` and `Forge.vfx.setRate(...)`
+- browser regression coverage that authors a VFX object and controls it from creator script code
+
+The system deliberately starts simple. Advanced trails, beams, decals, screen-space/post-processing effects and a node/graph particle editor remain later milestones.
+
+## 17. Documentation/recovery milestone
+
+The repository now carries its own recovery memory instead of depending on chat history.
+
+Canonical recovery documents:
+
+- `docs/PROJECT_HISTORY.md`
+- `docs/CURRENT_STATE.md`
+- `docs/RECOVERY.md`
+- `docs/ARCHITECTURE.md`
+- `docs/DECISIONS.md`
+- `AGENTS.md`
+
+Future agents should reconstruct project state from code + tests + these documents before relying on old conversational summaries.
