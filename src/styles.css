@@ -1259,3 +1259,33 @@ input, textarea { cursor: text; }
 #tool-rotate.active {
   box-shadow: inset 0 0 0 1px #759b31;
 }
+
+.output {
+  height: auto !important;
+  min-height: 28px;
+  max-height: 132px;
+  display: grid !important;
+  grid-template-rows: 28px minmax(0, 1fr);
+  overflow: hidden;
+}
+.output-summary {
+  min-height: 28px;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 14px;
+  align-items: center;
+  padding: 0 8px;
+  border-bottom: 1px solid #333f48;
+}
+.output-log {
+  min-height: 0;
+  max-height: 104px;
+  overflow: auto;
+  padding: 4px 8px 7px;
+  background: #10161b;
+  color: #cbd5dc;
+  font: 10px/1.4 Consolas, "Courier New", monospace;
+}
+.output-line { white-space: pre-wrap; }
+.output-line.warn { color: #e8c779; }
+.output-line.error { color: #f09a94; }

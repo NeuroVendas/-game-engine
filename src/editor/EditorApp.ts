@@ -47,6 +47,7 @@ export class EditorApp {
 
   private readonly tree = must<HTMLDivElement>("scene-tree");
   private readonly status = must<HTMLSpanElement>("status");
+  private readonly outputLog = must<HTMLDivElement>("output-log");
   private readonly fps = must<HTMLDivElement>("fps");
   private readonly historyState = must<HTMLDivElement>("history-state");
   private readonly modeBadge = must<HTMLDivElement>("mode-badge");
@@ -1751,5 +1752,18 @@ Forge.onUpdate((dt) => {
 
   private log(message: string): void {
     this.status.textContent = message;
+
+    const line = document.createElement("div");
+    line.className = message.includes("ERROR") ? "output-line error"
+      : message.includes("WARN") ? "output-line warn"
+      : "output-line";
+    line.textContent = message;
+    this.outputLog.appendChild(line);
+
+    while (this.outputLog.childElementCount > 120) {
+      this.outputLog.firstElementChild?.remove();
+    }
+
+    this.outputLog.scrollTop = this.outputLog.scrollHeight;
   }
 }

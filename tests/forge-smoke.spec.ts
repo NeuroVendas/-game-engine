@@ -273,6 +273,6 @@ Forge.onStart(() => {
   await page.locator("#script-close").click();
 
   await page.locator("#play").click();
-  await expect.poll(async () => page.locator("#status").textContent()).toContain("MODULE_OK:84");
+  await expect(page.locator("#output-log")).toContainText("MODULE_OK:84");
   expect(await page.locator("#viewport").getAttribute("data-runtime-error")).toBeNull();
 });
