@@ -76,6 +76,12 @@ for (const file of files) {
     ) {
       throw new Error(`${file}: ${entity.id} transparency must be between 0 and 1`);
     }
+    if (entity.texture !== undefined && typeof entity.texture !== "string") {
+      throw new Error(`${file}: ${entity.id} texture must be a string`);
+    }
+    if (entity.textureFileName !== undefined && typeof entity.textureFileName !== "string") {
+      throw new Error(`${file}: ${entity.id} textureFileName must be a string`);
+    }
 
     if (entity.parentId !== undefined && typeof entity.parentId !== "string") {
       throw new Error(`${file}: ${entity.id} parentId must be a string`);
@@ -150,6 +156,10 @@ for (const file of files) {
       throw new Error(`${file}: ${entity.id} Model.src must be a string`);
     }
 
+    if (components.Spawn && typeof components.Spawn.enabled !== "boolean") {
+      throw new Error(`${file}: ${entity.id} Spawn.enabled must be boolean`);
+    }
+
     if (components.Script) {
       if (typeof components.Script.name !== "string" || !components.Script.name.trim()) {
         throw new Error(`${file}: ${entity.id} Script.name is required`);
@@ -179,6 +189,20 @@ for (const file of files) {
     }
     if (entity.parentId === entity.id) {
       throw new Error(`${file}: ${entity.id} cannot parent itself`);
+    }
+  }
+
+  const entityById = new Map(document.entities.map((entity) => [entity.id, entity]));
+  for (const entity of document.entities) {
+    const visited = new Set([entity.id]);
+    let parentId = entity.parentId;
+
+    while (parentId) {
+      if (visited.has(parentId)) {
+        throw new Error(`${file}: hierarchy cycle detected at "${entity.id}"`);
+      }
+      visited.add(parentId);
+      parentId = entityById.get(parentId)?.parentId;
     }
   }
 
