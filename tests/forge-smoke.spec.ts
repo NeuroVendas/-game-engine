@@ -184,15 +184,40 @@ test("studio v0.5 supports resize, sky, UI, typed scripts, sound and lights", as
   await expect(canvas).toHaveAttribute("data-skybox", "#7fb9e8");
   await expect(page.locator("#tool-select")).toBeVisible();
   await expect(page.locator("#tool-scale")).toContainText("Resize");
+  await page.locator("#tool-scale").click();
+  await expect(canvas).toHaveAttribute("data-editor-tool", "scale");
+  await page.locator("#tool-move").click();
+  await expect(canvas).toHaveAttribute("data-editor-tool", "move");
 
   await page.locator("#env-sky").fill("#426f9b");
   await page.locator("#env-sky").dispatchEvent("change");
   await expect(canvas).toHaveAttribute("data-skybox", "#426f9b");
 
   await page.locator("[data-primitive='box']").click();
+  await expect(page.locator("#prop-parent")).toHaveValue("");
+
+  await page.locator("[data-object='empty']").click();
+  await expect(page.locator("#scene-tree")).toContainText("Object");
+  await expect(page.locator("#prop-parent")).toHaveValue("Block");
+
+  await page.locator("#prop-parent").selectOption("");
+  await expect(page.locator("#prop-parent")).toHaveValue("");
+
+  await page.locator(".scene-item", { hasText: "Block" }).click();
   await page.locator("#size-x").fill("6");
   await page.locator("#size-x").dispatchEvent("change");
   await expect(page.locator("#size-x")).toHaveValue("6.00");
+
+  const png = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9ZlGQAAAAASUVORK5CYII=",
+    "base64"
+  );
+  await page.locator("#texture-file-input").setInputFiles({
+    name: "pixel.png",
+    mimeType: "image/png",
+    buffer: png
+  });
+  await expect(page.locator("#prop-texture")).toHaveValue(/^data:image\/png;base64,/);
 
   await page.locator("[data-object='ui-button']").click();
   await expect(page.locator("#scene-tree")).toContainText("UI Button");
@@ -209,6 +234,10 @@ Forge.onClick(() => {
 `);
   await page.locator("#script-save").click();
   await page.locator("#script-close").click();
+
+  await page.locator(".scene-item", { hasText: "Baseplate" }).click();
+  await page.locator("[data-object='spawn']").click();
+  await expect(page.locator("#scene-tree")).toContainText("Spawn Location");
 
   await page.locator(".scene-item", { hasText: "Baseplate" }).click();
   await page.locator("[data-object='light']").click();
