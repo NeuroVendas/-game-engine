@@ -16,7 +16,7 @@ In particular, do not modify NeuroVendas/happy-coding or NeuroVendas/evolution-n
 
 Do not develop substantial features directly on main.
 
-Use branches such as forge-v0.4, feature/prefabs, feature/script-editor, or fix/player-camera.
+Current milestone work lives on forge-v0.5. Use focused feature/fix branches where appropriate; forge-v0.4 is retained as historical foundation.
 
 Keep branches focused when possible.
 
@@ -64,11 +64,11 @@ New major systems should answer: Can an AI inspect and modify this system throug
 
 If not, document why and how AI compatibility will be added.
 
-## Project Helios
+## Benchmark games
 
-When possible, add or test systems in Project Helios.
+Use Project Helios for large-system pressure testing.
 
-Helios is the benchmark game for Forge.
+Use Core Relay for v0.5 small-game acceptance and creator-workflow regressions.
 
 ## Merge discipline
 
