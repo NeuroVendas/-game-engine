@@ -39,6 +39,7 @@ Already delivered:
 - hierarchy/Groups/drag-drop
 - Spawn/Light/Sound/UI
 - GLB/texture/audio/sky import
+- VFX emitter presets + runtime script control
 - material presets/transparency
 - shadows with fallback
 - Output console
@@ -54,7 +55,7 @@ Already delivered:
 - practical asset workflow
 - better UI authoring
 - audio mixer/workflow
-- particles/effects
+- richer VFX: trails, beams, decals, post-processing and particle authoring
 - richer lighting without losing simplicity
 - physics/collision authoring
 - prefab/model workflow
@@ -66,7 +67,7 @@ Exit criterion: an unfamiliar creator can build a small game that does not immed
 
 ## v0.6 — world/game quality
 
-Target animation controller, particles/effects, improved physics tools, collision visualization, audio buses, asset management, decals/environment tools and performance/debugging.
+Target animation controller, advanced VFX/trails/beams/post effects, improved physics tools, collision visualization, audio buses, asset management, decals/environment tools and performance/debugging.
 
 ## v0.7 — multiplayer
 
