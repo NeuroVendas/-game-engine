@@ -134,14 +134,37 @@
 
         <section class="launcher-main launcher-page" id="launcher-page-friends" data-page="friends" hidden>
           <div class="launcher-heading">
-            <div><h1>Friends</h1><p>Forge's online social layer will live here.</p></div>
+            <div><h1>Friends</h1><p>Add people by Forge username and manage real friend requests.</p></div>
           </div>
-          <div class="social-empty honest-empty">
+
+          <div id="friends-guest" class="social-empty honest-empty">
             <div class="old-face big">=]</div>
-            <h2>Online accounts are not connected yet</h2>
-            <p>This preview is fully usable for local creation and play. Real friend requests, presence, servers and Join Friend require Forge's online backend, so this page does not fake them.</p>
-            <button class="classic-action" data-go-page="games">Play a Place</button>
-            <button class="primary-classic" data-go-page="develop">Build a Place</button>
+            <h2>Sign in to use Friends</h2>
+            <p>Forge Cloud accounts can send requests and keep their friend list across browsers.</p>
+            <button id="friends-sign-in" class="primary-classic">Sign In</button>
+          </div>
+
+          <div id="friends-app" hidden>
+            <section class="classic-section friend-add-section">
+              <div class="section-heading"><h2>Add Friend</h2></div>
+              <div class="friend-add-row">
+                <input id="friend-username" placeholder="Exact Forge username, e.g. builder_ab12cd34" autocomplete="off" />
+                <button id="friend-add-button" class="primary-classic">Send Request</button>
+              </div>
+              <div id="friend-message" class="friend-message">Enter a Forge username.</div>
+            </section>
+
+            <div class="home-columns friends-columns">
+              <section class="classic-section">
+                <div class="section-heading"><h2>Friends</h2><span id="friends-count" class="count-pill">0</span></div>
+                <div id="friends-list" class="people-list"></div>
+              </section>
+
+              <section class="classic-section">
+                <div class="section-heading"><h2>Requests</h2><span id="requests-count" class="count-pill">0</span></div>
+                <div id="requests-list" class="people-list"></div>
+              </section>
+            </div>
           </div>
         </section>
 
