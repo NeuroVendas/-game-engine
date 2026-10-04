@@ -246,6 +246,30 @@ export class ForgeEngine {
     this.engine.resize();
   }
 
+  rebuildEntity(id: string): void {
+    const entity = this.getEntity(id);
+    if (!entity) return;
+
+    this.scripts.detach(id);
+    this.entityLights.get(id)?.dispose();
+    this.entityLights.delete(id);
+    this.entitySounds.get(id)?.dispose();
+    this.entitySounds.delete(id);
+
+    this.entityMeshes.get(id)?.dispose(false, true);
+    this.entityMeshes.delete(id);
+
+    const mesh = this.createEntityMesh(entity, this.runtimeMode);
+    this.applyParent(entity, mesh);
+
+    for (const child of this.document.entities.filter((candidate) => candidate.parentId === id)) {
+      const childMesh = this.entityMeshes.get(child.id);
+      if (childMesh) this.applyParent(child, childMesh);
+    }
+
+    this.refreshUI();
+  }
+
   applyEnvironment(environment = this.document?.environment): void {
     const next = {
       skyColor: environment?.skyColor ?? "#7fb9e8",
@@ -462,6 +486,7 @@ export class ForgeEngine {
       material.diffuseColor = safeColor(entity.color, "#8796a3");
       material.roughness = 0.72;
       material.specularColor = new Color3(0.12, 0.14, 0.16);
+      material.alpha = 1 - Math.min(1, Math.max(0, entity.transparency ?? 0));
       if (entity.emissive) material.emissiveColor = safeColor(entity.emissive, "#000000");
       mesh.material = material;
     }
