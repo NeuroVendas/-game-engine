@@ -140,6 +140,26 @@ export class ForgeEngine {
         return true;
       }
     });
+    this.scripts.setWorldMutationAPI({
+      create: (kind, name) => {
+        if (!this.runtimeMode) return null;
+        const entity = this.createPrimitive(kind, name);
+        return entity.id;
+      },
+      clone: (idOrName) => {
+        if (!this.runtimeMode) return null;
+        const sourceId = this.resolveEntityId(idOrName);
+        const clone = this.duplicateEntity(sourceId);
+        return clone?.id ?? null;
+      },
+      destroy: (idOrName) => {
+        if (!this.runtimeMode) return false;
+        const id = this.resolveEntityId(idOrName);
+        if (!this.getEntity(id)) return false;
+        this.deleteEntity(id);
+        return true;
+      }
+    });
     this.applyEnvironment();
   }
 
