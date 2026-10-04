@@ -404,6 +404,7 @@
             <div class="palette-label">Objects</div>
             <button data-object="empty">◇ Empty Object</button>
             <button data-object="light">☀ Point Light</button>
+            <button data-object="spawn">⚑ Spawn Location</button>
             <button data-object="sound">♪ Sound</button>
             <button id="import-audio">⇧ Import Audio</button>
             <input id="audio-file-input" type="file" accept="audio/*,.mp3,.wav,.ogg,.m4a" hidden />
@@ -414,6 +415,8 @@
             <button data-object="modulescript">⌘ ModuleScript</button>
             <button id="import-model">⇧ Import GLB</button>
             <input id="model-file-input" type="file" accept=".glb,model/gltf-binary,application/octet-stream" hidden />
+            <button id="import-texture">▧ Import Texture</button>
+            <input id="texture-file-input" type="file" accept="image/png,image/jpeg,image/webp" hidden />
             <div class="palette-label">Industrial</div>
             <button data-prefab="blast-door">▥ Blast Door</button>
             <button data-prefab="console">▰ Console</button>
@@ -458,11 +461,14 @@
           <div id="inspector-empty" class="empty">Select an object</div>
           <div id="inspector-fields" hidden>
             <label>Name<input id="prop-name" type="text" /></label>
+            <label>Parent<select id="prop-parent"><option value="">Workspace</option></select></label>
             <fieldset>
               <legend>Appearance</legend>
               <label>Color<input id="prop-color" type="color" value="#8796a3" /></label>
               <label>Emissive<input id="prop-emissive" type="color" value="#000000" /></label>
               <label>Transparency<input id="prop-transparency" type="number" min="0" max="1" step="0.05" value="0" /></label>
+              <label>Texture URL<input id="prop-texture" type="text" placeholder="https://.../texture.png" /></label>
+              <button id="clear-texture" type="button">Clear Texture</button>
             </fieldset>
             <fieldset>
               <legend>Position</legend>
@@ -509,6 +515,7 @@
                 <option value="Sound">Sound</option>
                 <option value="UI">UI</option>
                 <option value="Model">Model</option>
+                <option value="Spawn">Spawn</option>
                 <option value="Script">Script</option>
               </select>
               <button id="add-component">+ Component</button>

@@ -66,6 +66,9 @@ export interface ForgeComponents {
     src: string;
     fileName?: string;
   };
+  Spawn?: {
+    enabled: boolean;
+  };
 }
 
 export interface ForgeEntity {
@@ -79,6 +82,8 @@ export interface ForgeEntity {
   color?: string;
   emissive?: string;
   transparency?: number;
+  texture?: string;
+  textureFileName?: string;
   components?: ForgeComponents;
   parentId?: string;
 }
