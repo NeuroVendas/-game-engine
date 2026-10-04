@@ -1,6 +1,8 @@
 export type Vec3 = [number, number, number];
 
-export type ForgePrimitive = "box" | "sphere" | "capsule" | "ground";
+export type ForgePrimitive = "box" | "wedge" | "sphere" | "capsule" | "cylinder" | "ground" | "empty" | "model";
+
+export type ForgeScriptKind = "Script" | "LocalScript" | "ModuleScript";
 
 export interface ForgeComponents {
   Collider?: {
@@ -13,12 +15,71 @@ export interface ForgeComponents {
   Door?: {
     openHeight?: number;
   };
+  Clearance?: {
+    level: number;
+  };
+  PowerConsumer?: {
+    bus: string;
+    draw?: number;
+    required?: boolean;
+  };
   Reactor?: {
     power?: number;
     temperature?: number;
   };
   Script?: {
     name: string;
+    kind?: ForgeScriptKind;
+    enabled?: boolean;
+    source?: string;
+  };
+  Light?: {
+    type: "point" | "spot";
+    color?: string;
+    intensity?: number;
+    range?: number;
+    angle?: number;
+  };
+  Sound?: {
+    src: string;
+    fileName?: string;
+    volume?: number;
+    loop?: boolean;
+    autoplay?: boolean;
+    spatial?: boolean;
+    maxDistance?: number;
+  };
+  VFX?: {
+    preset: "sparks" | "smoke" | "fire" | "glow" | "dust";
+    enabled?: boolean;
+    autoplay?: boolean;
+    emitRate?: number;
+    lifetime?: number;
+    size?: number;
+    speed?: number;
+    color?: string;
+    color2?: string;
+    gravity?: Vec3;
+  };
+  UI?: {
+    type: "text" | "button" | "panel";
+    text?: string;
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+    fontSize?: number;
+    color?: string;
+    background?: string;
+    visible?: boolean;
+    anchor?: "top-left" | "top-center" | "center" | "bottom-center";
+  };
+  Model?: {
+    src: string;
+    fileName?: string;
+  };
+  Spawn?: {
+    enabled: boolean;
   };
 }
 
@@ -31,8 +92,13 @@ export interface ForgeEntity {
   scale?: Vec3;
   size?: Vec3;
   color?: string;
+  material?: "plastic" | "matte" | "metal" | "glass" | "neon";
   emissive?: string;
+  transparency?: number;
+  texture?: string;
+  textureFileName?: string;
   components?: ForgeComponents;
+  parentId?: string;
 }
 
 export interface ForgeSceneDocument {
@@ -40,5 +106,26 @@ export interface ForgeSceneDocument {
   version: 1;
   name: string;
   playerSpawn?: Vec3;
+  environment?: {
+    skyColor?: string;
+    skyTexture?: string;
+    skyTextureFileName?: string;
+    ambientColor?: string;
+    fogColor?: string;
+    fogDensity?: number;
+  };
   entities: ForgeEntity[];
+  platform?: {
+    cloudId?: string;
+    slug?: string;
+    visibility?: "private" | "unlisted" | "public";
+    ownerId?: string;
+    ownerUsername?: string;
+    ownerDisplayName?: string;
+    description?: string;
+    updatedAt?: string;
+    playCount?: number;
+    thumbnailKind?: string;
+    isOfficial?: boolean;
+  };
 }

@@ -1,17 +1,16 @@
-name: Forge CI
+name: Forge Browser Smoke
 
 on:
   push:
     branches:
-      - main
-      - "forge-v*"
+      - forge-v0.4
       - "feature/**"
       - "fix/**"
   pull_request:
     branches: [main]
 
 jobs:
-  validate-build:
+  browser-smoke:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,5 +18,5 @@ jobs:
         with:
           node-version: 22
       - run: npm install
-      - run: npm run check
-      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser

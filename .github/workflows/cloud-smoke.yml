@@ -1,17 +1,16 @@
-name: Forge CI
+name: Forge Cloud Smoke
 
 on:
   push:
     branches:
-      - main
-      - "forge-v*"
+      - forge-v0.4
       - "feature/**"
       - "fix/**"
   pull_request:
     branches: [main]
 
 jobs:
-  validate-build:
+  cloud-smoke:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,5 +18,4 @@ jobs:
         with:
           node-version: 22
       - run: npm install
-      - run: npm run check
-      - run: npm run build
+      - run: npm run test:cloud
