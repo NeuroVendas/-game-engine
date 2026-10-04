@@ -5,6 +5,96 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
+function makeTriangleGlb(): Buffer {
+  const binary = Buffer.alloc(44);
+  const positions = [
+    0, 0, 0,
+    1, 0, 0,
+    0, 1, 0
+  ];
+  positions.forEach((value, index) => binary.writeFloatLE(value, index * 4));
+  binary.writeUInt16LE(0, 36);
+  binary.writeUInt16LE(1, 38);
+  binary.writeUInt16LE(2, 40);
+
+  const json = JSON.stringify({
+    asset: { version: "2.0" },
+    buffers: [{ byteLength: 44 }],
+    bufferViews: [
+      { buffer: 0, byteOffset: 0, byteLength: 36, target: 34962 },
+      { buffer: 0, byteOffset: 36, byteLength: 6, target: 34963 }
+    ],
+    accessors: [
+      {
+        bufferView: 0,
+        componentType: 5126,
+        count: 3,
+        type: "VEC3",
+        min: [0, 0, 0],
+        max: [1, 1, 0]
+      },
+      {
+        bufferView: 1,
+        componentType: 5123,
+        count: 3,
+        type: "SCALAR",
+        min: [0],
+        max: [2]
+      }
+    ],
+    meshes: [{ primitives: [{ attributes: { POSITION: 0 }, indices: 1 }] }],
+    nodes: [{ mesh: 0 }],
+    scenes: [{ nodes: [0] }],
+    scene: 0
+  });
+
+  const jsonRaw = Buffer.from(json, "utf8");
+  const jsonLength = Math.ceil(jsonRaw.length / 4) * 4;
+  const jsonChunk = Buffer.alloc(jsonLength, 0x20);
+  jsonRaw.copy(jsonChunk);
+
+  const totalLength = 12 + 8 + jsonChunk.length + 8 + binary.length;
+  const glb = Buffer.alloc(totalLength);
+  let offset = 0;
+
+  glb.writeUInt32LE(0x46546c67, offset); offset += 4;
+  glb.writeUInt32LE(2, offset); offset += 4;
+  glb.writeUInt32LE(totalLength, offset); offset += 4;
+
+  glb.writeUInt32LE(jsonChunk.length, offset); offset += 4;
+  glb.writeUInt32LE(0x4e4f534a, offset); offset += 4;
+  jsonChunk.copy(glb, offset); offset += jsonChunk.length;
+
+  glb.writeUInt32LE(binary.length, offset); offset += 4;
+  glb.writeUInt32LE(0x004e4942, offset); offset += 4;
+  binary.copy(glb, offset);
+
+  return glb;
+}
+
+function makeSilentWav(): Buffer {
+  const sampleRate = 8000;
+  const samples = 400;
+  const dataSize = samples * 2;
+  const wav = Buffer.alloc(44 + dataSize);
+
+  wav.write("RIFF", 0);
+  wav.writeUInt32LE(36 + dataSize, 4);
+  wav.write("WAVE", 8);
+  wav.write("fmt ", 12);
+  wav.writeUInt32LE(16, 16);
+  wav.writeUInt16LE(1, 20);
+  wav.writeUInt16LE(1, 22);
+  wav.writeUInt32LE(sampleRate, 24);
+  wav.writeUInt32LE(sampleRate * 2, 28);
+  wav.writeUInt16LE(2, 32);
+  wav.writeUInt16LE(16, 34);
+  wav.write("data", 36);
+  wav.writeUInt32LE(dataSize, 40);
+
+  return wav;
+}
+
 import { expect, test } from "@playwright/test";
 
 test("platform home, games, favorites, profile and direct play work", async ({ page }) => {
@@ -342,5 +432,35 @@ Forge.onStart(() => {
 
   await page.locator("#play").click();
   await expect(page.locator("#output-log")).toContainText("MODULE_OK:84");
+  expect(await page.locator("#viewport").getAttribute("data-runtime-error")).toBeNull();
+});
+
+
+test("Studio imports real GLB and audio assets", async ({ page }) => {
+  await page.goto("/");
+  await page.locator("[data-launch-tab='develop']").click();
+  await page.locator("#new-place").click();
+  await page.locator("#new-place-name").fill("Asset Import Place");
+  await page.locator("#confirm-create-place").click();
+
+  await expect(page.locator("#scene-tree")).toContainText("Baseplate");
+
+  await page.locator("#model-file-input").setInputFiles({
+    name: "triangle.glb",
+    mimeType: "model/gltf-binary",
+    buffer: makeTriangleGlb()
+  });
+
+  await expect(page.locator("#scene-tree")).toContainText("triangle");
+  await expect.poll(async () => page.locator("#output-log").textContent()).toContain("Loaded model triangle");
+
+  await page.locator("#audio-file-input").setInputFiles({
+    name: "silence.wav",
+    mimeType: "audio/wav",
+    buffer: makeSilentWav()
+  });
+
+  await expect(page.locator("#scene-tree")).toContainText("silence");
+  await expect(page.locator("#component-list")).toContainText("Sound");
   expect(await page.locator("#viewport").getAttribute("data-runtime-error")).toBeNull();
 });
