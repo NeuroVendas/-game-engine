@@ -378,6 +378,26 @@ Forge.onClick(() => {
   await page.locator("[data-object='sound']").click();
   await expect(page.locator("#scene-tree")).toContainText("Sound");
 
+  await page.locator(".scene-item", { hasText: "Baseplate" }).click();
+  await page.locator("[data-object='vfx']").click();
+  await expect(page.locator("#scene-tree")).toContainText("VFX Emitter");
+  await expect(page.locator("#component-list")).toContainText("VFX");
+  await expect(canvas).toHaveAttribute("data-vfx-count", "1");
+
+  await page.locator("[data-object='script']").click();
+  await page.locator("#code-selected").click();
+  await page.locator("#script-name").fill("vfx.controller");
+  await page.locator("#script-source").fill(`
+Forge.onStart(() => {
+  Forge.vfx.setRate("VFX_Emitter", 95);
+  Forge.vfx.stop("VFX_Emitter");
+  Forge.vfx.play("VFX_Emitter");
+  Forge.log("VFX_API_OK");
+});
+`);
+  await page.locator("#script-save").click();
+  await page.locator("#script-close").click();
+
   await page.locator("#play").click();
   await expect(page.locator("#mode-badge")).toHaveText("PLAY");
 
@@ -388,6 +408,8 @@ Forge.onClick(() => {
   await expect.poll(async () => page.locator("#status").textContent()).toContain("UI_CLICK_OK");
   const outputText = await page.locator("#output-log").textContent();
   expect((outputText?.match(/UI_CLICK_OK/g) ?? []).length).toBe(1);
+  await expect(page.locator("#output-log")).toContainText("VFX_API_OK");
+  await expect(canvas).toHaveAttribute("data-vfx-count", "1");
 
   expect(await canvas.getAttribute("data-runtime-error")).toBeNull();
 });
