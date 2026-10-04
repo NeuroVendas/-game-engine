@@ -186,7 +186,7 @@ export class PlayerController {
     this.jumpBuffer = Math.max(0, this.jumpBuffer - dt);
 
     if (this.grounded && this.verticalVelocity < 0) {
-      this.verticalVelocity = -0.8;
+      this.verticalVelocity = -0.35;
     }
 
     if (this.jumpBuffer > 0 && this.coyoteTime > 0) {
@@ -202,8 +202,8 @@ export class PlayerController {
       : Vector3.Zero();
 
     const acceleration = this.grounded
-      ? (moving ? 24 : 34)
-      : (moving ? 7.5 : 2.5);
+      ? (moving ? 24 : 36)
+      : (moving ? 8.5 : 10.5);
 
     this.horizontalVelocity = this.moveTowardVector(
       this.horizontalVelocity,
