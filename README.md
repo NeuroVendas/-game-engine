@@ -38,6 +38,7 @@ Project Helios is the first benchmark game.
 - Groups
 - materials/transparency/textures/emissive
 - Spawn / Light / Sound / UI
+- VFX emitters: sparks / smoke / fire / glow / dust
 - Script / LocalScript / ModuleScript
 - GLB/image/audio/sky import
 - environment/fog/sky
@@ -52,6 +53,7 @@ Project Helios is the first benchmark game.
 - typed scripting/modules
 - UI/audio/player/camera/world APIs
 - runtime create/clone/destroy
+- creator-controlled VFX through `Forge.vfx`
 
 ## Run locally
 
