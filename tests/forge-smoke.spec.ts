@@ -97,6 +97,62 @@ function makeSilentWav(): Buffer {
 
 import { expect, test } from "@playwright/test";
 
+async function readPlayerXZ(page: any): Promise<[number, number]> {
+  const raw = await page.locator("#viewport").getAttribute("data-player-position");
+  if (!raw) throw new Error("Player position is unavailable.");
+  const [x, , z] = raw.split(",").map(Number);
+  return [x, z];
+}
+
+async function holdMovement(page: any, keys: string[], milliseconds: number): Promise<void> {
+  for (const key of keys) await page.keyboard.down(key);
+  await page.waitForTimeout(milliseconds);
+  for (const key of [...keys].reverse()) await page.keyboard.up(key);
+  await page.waitForTimeout(45);
+}
+
+async function calibratePlayerAxes(page: any): Promise<{ forward: [number, number]; right: [number, number] }> {
+  const before = await readPlayerXZ(page);
+  await holdMovement(page, ["KeyW"], 220);
+  const after = await readPlayerXZ(page);
+  const dx = after[0] - before[0];
+  const dz = after[1] - before[1];
+  const length = Math.hypot(dx, dz);
+  if (length < 0.05) throw new Error("Could not calibrate player movement.");
+
+  const forward: [number, number] = [dx / length, dz / length];
+  const right: [number, number] = [forward[1], -forward[0]];
+  return { forward, right };
+}
+
+async function drivePlayerTo(
+  page: any,
+  axes: { forward: [number, number]; right: [number, number] },
+  target: [number, number]
+): Promise<void> {
+  for (let step = 0; step < 90; step += 1) {
+    const [x, z] = await readPlayerXZ(page);
+    const dx = target[0] - x;
+    const dz = target[1] - z;
+    const distance = Math.hypot(dx, dz);
+    if (distance < 0.55) return;
+
+    const forwardError = dx * axes.forward[0] + dz * axes.forward[1];
+    const rightError = dx * axes.right[0] + dz * axes.right[1];
+    const keys: string[] = [];
+
+    if (Math.abs(forwardError) > 0.18) keys.push(forwardError > 0 ? "KeyW" : "KeyS");
+    if (Math.abs(rightError) > 0.18) keys.push(rightError > 0 ? "KeyD" : "KeyA");
+    if (distance > 5) keys.push("ShiftLeft");
+
+    const duration = distance > 8 ? 170 : distance > 4 ? 120 : distance > 2 ? 80 : 55;
+    await holdMovement(page, keys, duration);
+  }
+
+  const [x, z] = await readPlayerXZ(page);
+  throw new Error(`Player failed to reach target ${target.join(",")} from ${x.toFixed(2)},${z.toFixed(2)}`);
+}
+
 test("platform home, games, favorites, profile and direct play work", async ({ page }) => {
   await page.goto("/");
 
@@ -516,9 +572,26 @@ test("Core Relay template is a playable complete-game benchmark", async ({ page 
   await hint.evaluate((button) => (button as HTMLButtonElement).click());
   await expect(page.locator("#forge-ui-root")).toContainText("Walk to each metal relay and press E");
 
-  expect(await page.locator("#viewport").getAttribute("data-runtime-error")).toBeNull();
+  const canvas = page.locator("#viewport");
+  const axes = await calibratePlayerAxes(page);
 
-  // Real audio resources must survive repeated Editor <-> Play transitions.
+  await drivePlayerTo(page, axes, [-7, -3.6]);
+  await page.keyboard.press("KeyE");
+  await expect(page.locator("#forge-ui-root")).toContainText("1 / 3 relays online");
+
+  await drivePlayerTo(page, axes, [0, -7.5]);
+  await page.keyboard.press("KeyE");
+  await expect(page.locator("#forge-ui-root")).toContainText("2 / 3 relays online");
+
+  await drivePlayerTo(page, axes, [7, -3.6]);
+  await page.keyboard.press("KeyE");
+  await expect(page.locator("#forge-ui-root")).toContainText("3 / 3 relays online");
+  await expect(page.locator("#forge-ui-root")).toContainText("CORE ONLINE • YOU WIN");
+  await expect(page.locator("#output-log")).toContainText("CORE_RELAY_WIN");
+  await expect(canvas).toHaveAttribute("data-last-vfx-action", "restart:CoreVictoryVFX");
+  expect(await canvas.getAttribute("data-runtime-error")).toBeNull();
+
+  // Real audio and particle resources must survive repeated Editor <-> Play transitions.
   await page.locator("#stop").click();
   await expect(page.locator("#mode-badge")).toHaveText("EDITOR");
   await page.locator("#play").click();
