@@ -1864,7 +1864,7 @@ Forge.onUpdate((dt) => {
 
     this.playSnapshot = this.forge.exportDocument();
     this.setSelection(null);
-    this.forge.loadDocument(this.playSnapshot, true);
+    this.forge.loadDocument(this.playSnapshot, true, false);
     this.forge.mountUI(this.uiRoot, true);
     this.mode = "play";
     this.gizmos.positionGizmoEnabled = false;
@@ -1881,6 +1881,9 @@ Forge.onUpdate((dt) => {
       (message) => this.log(message),
       (text, locked) => this.setInteractionPrompt(text, locked)
     );
+
+    // Scripts start only after the player and gameplay camera exist.
+    this.forge.startRuntimeScripts();
 
     must<HTMLButtonElement>("play").disabled = true;
     must<HTMLButtonElement>("stop").disabled = false;
