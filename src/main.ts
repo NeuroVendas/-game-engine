@@ -959,15 +959,23 @@ function setPage(page: LauncherPage): void {
 
 async function ensureEditor(scene: ForgeSceneDocument): Promise<void> {
   projectName.textContent = scene.name;
+  delete canvas.dataset.editorInitError;
 
-  if (!editor) {
-    editor = new EditorApp(canvas);
-    await editor.init(structuredClone(scene));
-  } else {
-    editor.openDocument(structuredClone(scene));
+  try {
+    if (!editor) {
+      editor = new EditorApp(canvas);
+      await editor.init(structuredClone(scene));
+    } else {
+      editor.openDocument(structuredClone(scene));
+    }
+
+    requestAnimationFrame(() => editor?.forge.resize());
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    canvas.dataset.editorInitError = message;
+    console.error("Forge Studio init failed:", error);
+    throw error;
   }
-
-  requestAnimationFrame(() => editor?.forge.resize());
 }
 
 async function editPlace(scene: ForgeSceneDocument): Promise<void> {
