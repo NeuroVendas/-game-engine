@@ -59,6 +59,12 @@ interface RuntimeUIAPI {
   show(idOrName: string, visible: boolean): boolean;
 }
 
+interface RuntimeVFXAPI {
+  play(idOrName: string): boolean;
+  stop(idOrName: string): boolean;
+  setRate(idOrName: string, rate: number): boolean;
+}
+
 interface ForgeUserAPI {
   readonly self: ForgeNodeAPI;
   readonly parent: ForgeNodeAPI | null;
@@ -87,6 +93,7 @@ interface ForgeUserAPI {
     lookAt(x: number, y: number, z: number): boolean;
   };
   readonly audio: RuntimeAudioAPI;
+  readonly vfx: RuntimeVFXAPI;
   readonly ui: RuntimeUIAPI;
   readonly time: {
     wait(seconds: number): Promise<void>;
@@ -139,6 +146,11 @@ export class ScriptRuntime {
     setText: () => false,
     show: () => false
   };
+  private vfxApi: RuntimeVFXAPI = {
+    play: () => false,
+    stop: () => false,
+    setRate: () => false
+  };
   private worldMutationApi: RuntimeWorldMutationAPI = {
     create: () => null,
     clone: () => null,
@@ -176,6 +188,10 @@ export class ScriptRuntime {
 
   setUIAPI(api: RuntimeUIAPI): void {
     this.uiApi = api;
+  }
+
+  setVFXAPI(api: RuntimeVFXAPI): void {
+    this.vfxApi = api;
   }
 
   setWorldMutationAPI(api: RuntimeWorldMutationAPI): void {
@@ -358,6 +374,11 @@ export class ScriptRuntime {
         pause: (idOrName: string) => this.audioApi.pause(idOrName),
         stop: (idOrName: string) => this.audioApi.stop(idOrName),
         setVolume: (idOrName: string, volume: number) => this.audioApi.setVolume(idOrName, volume)
+      },
+      vfx: {
+        play: (idOrName: string) => this.vfxApi.play(idOrName),
+        stop: (idOrName: string) => this.vfxApi.stop(idOrName),
+        setRate: (idOrName: string, rate: number) => this.vfxApi.setRate(idOrName, rate)
       },
       ui: {
         setText: (idOrName: string, text: string) => this.uiApi.setText(idOrName, text),
