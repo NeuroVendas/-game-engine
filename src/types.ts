@@ -80,6 +80,7 @@ export interface ForgeEntity {
   scale?: Vec3;
   size?: Vec3;
   color?: string;
+  material?: "plastic" | "matte" | "metal" | "glass" | "neon";
   emissive?: string;
   transparency?: number;
   texture?: string;
