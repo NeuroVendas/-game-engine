@@ -18,8 +18,8 @@
         </nav>
         <button id="account-button" class="site-account account-button">
           <span class="mail-icon">☺</span>
-          <span class="account-name" data-display-name>Builder</span>
-          <span class="online-dot"></span>
+          <span class="account-name" id="account-label">Sign In</span>
+          <span class="online-dot" id="account-dot"></span>
         </button>
       </header>
 
@@ -59,7 +59,7 @@
           <div class="sidebar-status">
             <b>Forge =] v0.4</b>
             <span>Classic Platform Preview</span>
-            <span class="status-online">● Local services ready</span>
+            <span id="cloud-status">● Connecting to Forge Cloud...</span>
           </div>
         </aside>
 
@@ -189,16 +189,45 @@
       </footer>
     </section>
 
+    <dialog id="auth-dialog" class="create-dialog auth-dialog">
+      <form method="dialog" id="auth-form">
+        <div class="dialog-title">Forge Account</div>
+        <div class="auth-intro">
+          <div class="old-face big">=]</div>
+          <div>
+            <b>Sign in to Forge Cloud</b>
+            <p>Sync places, publish games, keep favorites and use your profile on other browsers.</p>
+          </div>
+        </div>
+        <label>Display name <input id="auth-display-name" maxlength="24" value="Builder" autocomplete="nickname" /></label>
+        <label>Email <input id="auth-email" type="email" autocomplete="email" required /></label>
+        <label>Password <input id="auth-password" type="password" autocomplete="current-password" minlength="6" required /></label>
+        <div id="auth-message" class="auth-message">You can keep using Forge as a guest without signing in.</div>
+        <div class="dialog-actions auth-actions">
+          <button value="cancel">Continue as Guest</button>
+          <button id="auth-sign-in" type="button">Sign In</button>
+          <button id="auth-sign-up" type="button" class="primary-classic">Create Account</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog id="profile-dialog" class="create-dialog profile-dialog">
       <form method="dialog" id="profile-form">
         <div class="dialog-title">My Forge Profile</div>
         <div class="profile-editor-avatar">
           <div class="old-face big">=]</div>
-          <span>Default Forge Classic avatar</span>
+          <div class="profile-cloud-summary">
+            <b id="profile-cloud-name">Forge Cloud</b>
+            <span id="profile-email">Guest</span>
+          </div>
         </div>
-        <label>Display name<input id="profile-display-name" maxlength="24" value="Builder" /></label>
-        <p class="dialog-note">Saved locally in this browser. Online accounts come with Forge's backend milestone.</p>
-        <div class="dialog-actions">
+        <label>Username <input id="profile-username" maxlength="24" autocomplete="username" /></label>
+        <label>Display name <input id="profile-display-name" maxlength="24" value="Builder" autocomplete="nickname" /></label>
+        <label>Bio <textarea id="profile-bio" maxlength="160" rows="3"></textarea></label>
+        <p id="profile-note" class="dialog-note">Cloud profile.</p>
+        <div class="dialog-actions profile-actions">
+          <button id="profile-sign-out" type="button" class="danger-soft">Sign Out</button>
+          <span class="dialog-spacer"></span>
           <button value="cancel">Cancel</button>
           <button id="save-profile" value="default" class="primary-classic">Save Profile</button>
         </div>

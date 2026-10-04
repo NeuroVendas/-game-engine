@@ -775,3 +775,92 @@ input, textarea { cursor: text; }
 
 .honest-empty { gap: 4px; }
 .honest-empty .classic-action, .honest-empty .primary-classic { padding: 7px 12px; }
+
+/* ===== Forge Cloud / account UI ===== */
+#cloud-status {
+  color: #6d7a83;
+}
+#cloud-status.cloud-online { color: #4e7a2f; }
+#cloud-status.cloud-error { color: #9b3b35; }
+#account-dot.guest { background: #d0a13b; }
+#account-dot.signed-in { background: #83c94c; }
+
+.auth-intro {
+  display: grid;
+  grid-template-columns: 78px 1fr;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 14px;
+  padding: 10px;
+  border: 1px solid #a9b5bd;
+  background: #f8fafb;
+}
+.auth-intro .old-face { margin: 0; }
+.auth-intro b { color: #315774; }
+.auth-intro p {
+  margin: 4px 0 0;
+  color: #6d7a83;
+  font-size: 11px;
+  line-height: 1.35;
+}
+.auth-message {
+  min-height: 36px;
+  margin: 8px 0 12px;
+  padding: 8px;
+  border: 1px solid #b5c0c8;
+  background: #edf2f5;
+  color: #60717c;
+  font-size: 10px;
+  line-height: 1.4;
+}
+.auth-message.error {
+  border-color: #c18d89;
+  background: #fff0ef;
+  color: #8f3832;
+}
+.auth-message.success {
+  border-color: #94ae78;
+  background: #f0fae8;
+  color: #4e6f2f;
+}
+.auth-actions button { min-width: 90px; }
+.profile-cloud-summary {
+  display: grid;
+  gap: 3px;
+}
+.profile-cloud-summary b { color: #315774; }
+.profile-cloud-summary span { color: #74828c; font-size: 10px; }
+.profile-dialog textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 62px;
+  padding: 6px;
+  border: 1px solid #9da9b1;
+  background: white;
+  color: #202830;
+}
+.profile-actions { align-items: center; }
+.dialog-spacer { flex: 1; }
+.danger-soft {
+  border: 1px solid #a87b77 !important;
+  background: linear-gradient(#fff,#efd9d7) !important;
+  color: #8b2f2f !important;
+}
+.cloud-badge {
+  display: inline-block;
+  padding: 2px 5px;
+  border: 1px solid #7c9a60;
+  background: #edf7e5;
+  color: #4e6f2f;
+  font-size: 9px;
+  font-weight: 700;
+}
+.public-badge {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 4px;
+  border: 1px solid #6f8fa7;
+  background: #e7f1f8;
+  color: #315d7e;
+  font-size: 9px;
+}
