@@ -511,6 +511,7 @@ export class EditorApp {
   private setTool(tool: ToolMode): void {
     if (this.mode !== "editor") return;
     this.tool = tool;
+    this.canvas.dataset.editorTool = tool;
     this.gizmos.positionGizmoEnabled = tool === "move";
     this.gizmos.rotationGizmoEnabled = tool === "rotate";
     this.gizmos.scaleGizmoEnabled = tool === "scale";
