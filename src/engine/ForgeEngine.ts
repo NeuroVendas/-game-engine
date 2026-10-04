@@ -51,6 +51,7 @@ export class ForgeEngine {
   private sky: Mesh;
   private skyMaterial: StandardMaterial;
   private skyTexture: DynamicTexture;
+  private skyImageTexture: Texture | null = null;
   private runtimeMode = false;
   private uiRoot: HTMLElement | null = null;
   private uiInteractive = false;
@@ -416,6 +417,8 @@ export class ForgeEngine {
   applyEnvironment(environment = this.document?.environment): void {
     const next = {
       skyColor: environment?.skyColor ?? "#7fb9e8",
+      skyTexture: environment?.skyTexture,
+      skyTextureFileName: environment?.skyTextureFileName,
       ambientColor: environment?.ambientColor ?? "#d9e8f4",
       fogColor: environment?.fogColor ?? "#9fc6df",
       fogDensity: environment?.fogDensity ?? 0
@@ -428,14 +431,37 @@ export class ForgeEngine {
     const fog = safeColor(next.fogColor, "#9fc6df");
 
     this.skyMaterial.emissiveColor = Color3.White();
-    const skyContext = this.skyTexture.getContext();
-    const gradient = skyContext.createLinearGradient(0, 0, 0, 512);
-    gradient.addColorStop(0, next.skyColor);
-    gradient.addColorStop(0.62, next.skyColor);
-    gradient.addColorStop(1, next.fogColor);
-    skyContext.fillStyle = gradient;
-    skyContext.fillRect(0, 0, 16, 512);
-    this.skyTexture.update(false);
+
+    this.skyImageTexture?.dispose();
+    this.skyImageTexture = null;
+
+    if (next.skyTexture?.trim()) {
+      try {
+        const image = new Texture(next.skyTexture, this.scene, false, true);
+        image.uScale = -1;
+        this.skyImageTexture = image;
+        this.skyMaterial.emissiveTexture = image;
+        this.skyMaterial.diffuseTexture = image;
+        this.canvas.dataset.skyTexture = next.skyTextureFileName || "custom";
+      } catch (error) {
+        this.log(`Sky texture failed: ${error instanceof Error ? error.message : String(error)}`);
+        this.skyMaterial.emissiveTexture = this.skyTexture;
+        this.skyMaterial.diffuseTexture = this.skyTexture;
+        delete this.canvas.dataset.skyTexture;
+      }
+    } else {
+      const skyContext = this.skyTexture.getContext();
+      const gradient = skyContext.createLinearGradient(0, 0, 0, 512);
+      gradient.addColorStop(0, next.skyColor);
+      gradient.addColorStop(0.62, next.skyColor);
+      gradient.addColorStop(1, next.fogColor);
+      skyContext.fillStyle = gradient;
+      skyContext.fillRect(0, 0, 16, 512);
+      this.skyTexture.update(false);
+      this.skyMaterial.emissiveTexture = this.skyTexture;
+      this.skyMaterial.diffuseTexture = this.skyTexture;
+      delete this.canvas.dataset.skyTexture;
+    }
 
     this.scene.clearColor = new Color4(sky.r, sky.g, sky.b, 1);
 
