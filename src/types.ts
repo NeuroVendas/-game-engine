@@ -49,6 +49,18 @@ export interface ForgeComponents {
     spatial?: boolean;
     maxDistance?: number;
   };
+  Particle?: {
+    enabled?: boolean;
+    preset?: "energy" | "sparks" | "smoke";
+    color?: string;
+    color2?: string;
+    emitRate?: number;
+    capacity?: number;
+    lifetime?: number;
+    size?: number;
+    speed?: number;
+    autoplay?: boolean;
+  };
   UI?: {
     type: "text" | "button" | "panel";
     text?: string;

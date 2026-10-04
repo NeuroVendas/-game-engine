@@ -18,6 +18,7 @@ import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture";
 import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import { Sound } from "@babylonjs/core/Audio/sound";
+import { ParticleSystem } from "@babylonjs/core/Particles/particleSystem";
 import { SceneLoader } from "@babylonjs/core/Loading/sceneLoader";
 import type { ForgeEntity, ForgePrimitive, ForgeSceneDocument } from "../types";
 import { ScriptRuntime } from "./ScriptRuntime";
@@ -45,6 +46,7 @@ export class ForgeEngine {
   private readonly entityMeshes = new Map<string, Mesh>();
   private readonly entityLights = new Map<string, Light>();
   private readonly entitySounds = new Map<string, Sound>();
+  private readonly entityParticles = new Map<string, ParticleSystem>();
   private readonly hemi: HemisphericLight;
   private readonly key: DirectionalLight;
   private readonly shadowGenerator: ShadowGenerator | null;
@@ -131,6 +133,33 @@ export class ForgeEngine {
         return true;
       }
     });
+    this.scripts.setVFXAPI({
+      play: (idOrName) => {
+        const id = this.resolveEntityId(idOrName);
+        const particles = this.entityParticles.get(id);
+        if (!particles) return false;
+        particles.start();
+        this.canvas.dataset.lastVfxAction = `play:${id}`;
+        return true;
+      },
+      stop: (idOrName) => {
+        const id = this.resolveEntityId(idOrName);
+        const particles = this.entityParticles.get(id);
+        if (!particles) return false;
+        particles.stop();
+        this.canvas.dataset.lastVfxAction = `stop:${id}`;
+        return true;
+      },
+      restart: (idOrName) => {
+        const id = this.resolveEntityId(idOrName);
+        const particles = this.entityParticles.get(id);
+        if (!particles) return false;
+        particles.stop();
+        particles.start();
+        this.canvas.dataset.lastVfxAction = `restart:${id}`;
+        return true;
+      }
+    });
     this.scripts.setUIAPI({
       setText: (idOrName, text) => {
         const entity = this.getEntity(this.resolveEntityId(idOrName));
@@ -178,6 +207,7 @@ export class ForgeEngine {
     this.entityLights.clear();
 
     for (const id of [...this.entitySounds.keys()]) this.disposeEntitySound(id);
+    for (const id of [...this.entityParticles.keys()]) this.disposeEntityParticle(id);
 
     // Detach Forge entity roots first so disposing one parent cannot accidentally
     // dispose another tracked Forge entity before its own cleanup pass.
@@ -307,6 +337,7 @@ export class ForgeEngine {
     this.entityLights.get(id)?.dispose();
     this.entityLights.delete(id);
     this.disposeEntitySound(id);
+    this.disposeEntityParticle(id);
 
     const oldMesh = this.entityMeshes.get(id);
     if (oldMesh) this.unregisterShadowCaster(oldMesh, true);
@@ -397,6 +428,7 @@ export class ForgeEngine {
     this.entityLights.get(id)?.dispose();
     this.entityLights.delete(id);
     this.disposeEntitySound(id);
+    this.disposeEntityParticle(id);
 
     const forgeChildren = this.document.entities
       .filter((candidate) => candidate.parentId === id)
@@ -725,6 +757,7 @@ export class ForgeEngine {
 
     this.createLight(entity, mesh);
     this.createSound(entity, mesh);
+    this.createParticle(entity, mesh);
 
     if (entity.components?.Model?.src) {
       void this.loadModel(entity, mesh);
@@ -801,6 +834,98 @@ export class ForgeEngine {
     } catch (error) {
       this.log(`Sound failed on ${entity.name}: ${error instanceof Error ? error.message : String(error)}`);
     }
+  }
+
+  private disposeEntityParticle(id: string): void {
+    const particles = this.entityParticles.get(id);
+    if (!particles) return;
+
+    this.entityParticles.delete(id);
+    try {
+      particles.stop();
+      particles.dispose();
+    } catch (error) {
+      this.log(`VFX cleanup fallback on ${id}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    this.refreshParticleDiagnostics();
+  }
+
+  private createParticle(entity: ForgeEntity, mesh: Mesh): void {
+    const component = entity.components?.Particle;
+    if (!component || component.enabled === false) return;
+
+    try {
+      const capacity = Math.max(16, Math.min(5000, Math.round(component.capacity ?? 400)));
+      const particles = new ParticleSystem(`${entity.id}-particles`, capacity, this.scene);
+      const texture = new DynamicTexture(
+        `${entity.id}-particle-texture`,
+        { width: 32, height: 32 },
+        this.scene,
+        false
+      );
+      const context = texture.getContext();
+      context.clearRect(0, 0, 32, 32);
+      const gradient = context.createRadialGradient(16, 16, 1, 16, 16, 15);
+      gradient.addColorStop(0, "rgba(255,255,255,1)");
+      gradient.addColorStop(0.5, "rgba(255,255,255,0.85)");
+      gradient.addColorStop(1, "rgba(255,255,255,0)");
+      context.fillStyle = gradient;
+      context.fillRect(0, 0, 32, 32);
+      texture.hasAlpha = true;
+      texture.update(false);
+
+      const colorA = safeColor(component.color, "#b7f34a");
+      const colorB = safeColor(component.color2, "#5ed0ff");
+      const preset = component.preset ?? "energy";
+      const lifetime = Math.max(0.05, component.lifetime ?? (preset === "smoke" ? 2.6 : 1.1));
+      const size = Math.max(0.02, component.size ?? (preset === "smoke" ? 0.7 : 0.28));
+      const speed = Math.max(0, component.speed ?? (preset === "sparks" ? 5 : preset === "smoke" ? 0.65 : 1.8));
+
+      particles.particleTexture = texture;
+      particles.emitter = mesh;
+      particles.color1 = new Color4(colorA.r, colorA.g, colorA.b, preset === "smoke" ? 0.42 : 1);
+      particles.color2 = new Color4(colorB.r, colorB.g, colorB.b, preset === "smoke" ? 0.25 : 0.8);
+      particles.colorDead = new Color4(colorB.r, colorB.g, colorB.b, 0);
+      particles.emitRate = Math.max(0, component.emitRate ?? (preset === "sparks" ? 85 : preset === "smoke" ? 26 : 55));
+      particles.minLifeTime = lifetime * 0.65;
+      particles.maxLifeTime = lifetime * 1.35;
+      particles.minSize = size * 0.55;
+      particles.maxSize = size * 1.45;
+      particles.minEmitPower = speed * 0.55;
+      particles.maxEmitPower = Math.max(speed * 1.25, particles.minEmitPower);
+      particles.updateSpeed = 0.012;
+
+      if (preset === "sparks") {
+        particles.direction1 = new Vector3(-0.8, 0.7, -0.8);
+        particles.direction2 = new Vector3(0.8, 2.1, 0.8);
+        particles.gravity = new Vector3(0, -7.5, 0);
+        particles.blendMode = ParticleSystem.BLENDMODE_ADD;
+      } else if (preset === "smoke") {
+        particles.direction1 = new Vector3(-0.25, 0.7, -0.25);
+        particles.direction2 = new Vector3(0.25, 1.4, 0.25);
+        particles.gravity = new Vector3(0, 0.08, 0);
+        particles.blendMode = ParticleSystem.BLENDMODE_STANDARD;
+      } else {
+        particles.direction1 = new Vector3(-0.8, -0.1, -0.8);
+        particles.direction2 = new Vector3(0.8, 1.5, 0.8);
+        particles.gravity = Vector3.Zero();
+        particles.blendMode = ParticleSystem.BLENDMODE_ADD;
+      }
+
+      this.entityParticles.set(entity.id, particles);
+      if (!this.runtimeMode || component.autoplay !== false) particles.start();
+      this.refreshParticleDiagnostics();
+    } catch (error) {
+      this.log(`VFX failed on ${entity.name}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  private refreshParticleDiagnostics(): void {
+    this.canvas.dataset.particleSystems = String(this.entityParticles.size);
+    const presets = [...this.entityParticles.keys()]
+      .map((id) => this.getEntity(id)?.components?.Particle?.preset ?? "energy")
+      .join(",");
+    this.canvas.dataset.particlePresets = presets;
   }
 
   private async loadModel(entity: ForgeEntity, root: Mesh): Promise<void> {

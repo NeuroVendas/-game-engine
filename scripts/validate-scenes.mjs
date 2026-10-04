@@ -146,6 +146,27 @@ for (const file of files) {
       }
     }
 
+    if (components.Particle) {
+      const particle = components.Particle;
+      if (particle.enabled !== undefined && typeof particle.enabled !== "boolean") {
+        throw new Error(`${file}: ${entity.id} Particle.enabled must be boolean`);
+      }
+      if (particle.autoplay !== undefined && typeof particle.autoplay !== "boolean") {
+        throw new Error(`${file}: ${entity.id} Particle.autoplay must be boolean`);
+      }
+      if (particle.preset !== undefined && !["energy", "sparks", "smoke"].includes(particle.preset)) {
+        throw new Error(`${file}: ${entity.id} Particle.preset is invalid`);
+      }
+      for (const field of ["emitRate", "capacity", "lifetime", "size", "speed"]) {
+        if (particle[field] !== undefined && !Number.isFinite(particle[field])) {
+          throw new Error(`${file}: ${entity.id} Particle.${field} must be finite`);
+        }
+      }
+      if (particle.capacity !== undefined && (!Number.isInteger(particle.capacity) || particle.capacity < 16 || particle.capacity > 5000)) {
+        throw new Error(`${file}: ${entity.id} Particle.capacity must be an integer from 16 to 5000`);
+      }
+    }
+
     if (components.UI) {
       if (!["text", "button", "panel"].includes(components.UI.type)) {
         throw new Error(`${file}: ${entity.id} UI.type is invalid`);

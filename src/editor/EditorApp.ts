@@ -733,6 +733,7 @@ export class EditorApp {
       group: "Group",
       light: "Point Light",
       sound: "Sound",
+      vfx: "Particle VFX",
       "ui-text": "Screen Text",
       "ui-button": "UI Button",
       script: "Script",
@@ -771,6 +772,19 @@ export class EditorApp {
         autoplay: false,
         spatial: true,
         maxDistance: 40
+      };
+    } else if (objectType === "vfx") {
+      entity.components.Particle = {
+        enabled: true,
+        preset: "energy",
+        color: "#b7f34a",
+        color2: "#5ed0ff",
+        emitRate: 55,
+        capacity: 400,
+        lifetime: 1.1,
+        size: 0.28,
+        speed: 1.8,
+        autoplay: true
       };
     } else if (objectType === "ui-text") {
       entity.components.UI = {
@@ -1224,6 +1238,20 @@ export class EditorApp {
       case "Sound":
         components.Sound = { src: "", volume: 1, loop: false, autoplay: false, spatial: true, maxDistance: 40 };
         break;
+      case "Particle":
+        components.Particle = {
+          enabled: true,
+          preset: "energy",
+          color: "#b7f34a",
+          color2: "#5ed0ff",
+          emitRate: 55,
+          capacity: 400,
+          lifetime: 1.1,
+          size: 0.28,
+          speed: 1.8,
+          autoplay: true
+        };
+        break;
       case "UI":
         components.UI = {
           type: "text", text: "Text", x: 16, y: 16, width: 220, height: 40,
@@ -1426,6 +1454,45 @@ export class EditorApp {
           note.textContent = `Imported file: ${component.fileName}`;
           container.appendChild(note);
         }
+        break;
+      }
+      case "Particle": {
+        const component = components.Particle;
+        if (!component) return;
+        this.appendCheckboxField(container, "Enabled", component.enabled ?? true, (value) => {
+          component.enabled = value;
+        });
+        this.appendSelectField(container, "Preset", component.preset ?? "energy", [
+          ["energy", "Energy"],
+          ["sparks", "Sparks"],
+          ["smoke", "Smoke"]
+        ], (value) => {
+          component.preset = value as "energy" | "sparks" | "smoke";
+        });
+        this.appendTextField(container, "Color A", component.color ?? "#b7f34a", (value) => {
+          component.color = value || "#b7f34a";
+        });
+        this.appendTextField(container, "Color B", component.color2 ?? "#5ed0ff", (value) => {
+          component.color2 = value || "#5ed0ff";
+        });
+        this.appendNumberField(container, "Emit rate", component.emitRate ?? 55, 1, (value) => {
+          component.emitRate = Math.max(0, value);
+        });
+        this.appendNumberField(container, "Capacity", component.capacity ?? 400, 16, (value) => {
+          component.capacity = Math.max(16, Math.min(5000, Math.round(value)));
+        });
+        this.appendNumberField(container, "Lifetime", component.lifetime ?? 1.1, 0.1, (value) => {
+          component.lifetime = Math.max(0.05, value);
+        });
+        this.appendNumberField(container, "Particle size", component.size ?? 0.28, 0.05, (value) => {
+          component.size = Math.max(0.02, value);
+        });
+        this.appendNumberField(container, "Speed", component.speed ?? 1.8, 0.1, (value) => {
+          component.speed = Math.max(0, value);
+        });
+        this.appendCheckboxField(container, "Autoplay in Play", component.autoplay ?? true, (value) => {
+          component.autoplay = value;
+        });
         break;
       }
       case "UI": {

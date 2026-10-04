@@ -390,6 +390,13 @@ Forge.onClick(() => {
   await page.locator("[data-object='sound']").click();
   await expect(page.locator("#scene-tree")).toContainText("Sound");
 
+  await page.locator(".scene-item", { hasText: "Baseplate" }).click();
+  await page.locator("[data-object='vfx']").click();
+  await expect(page.locator("#scene-tree")).toContainText("Particle VFX");
+  await expect(page.locator("#component-list")).toContainText("Particle");
+  await expect(canvas).toHaveAttribute("data-particle-systems", "1");
+  await expect(canvas).toHaveAttribute("data-particle-presets", "energy");
+
   await page.locator("#play").click();
   await expect(page.locator("#mode-badge")).toHaveText("PLAY");
 
@@ -496,6 +503,8 @@ test("Core Relay template is a playable complete-game benchmark", async ({ page 
   await expect(page.locator("#scene-tree")).toContainText("Game Controller");
   await expect(page.locator("#scene-tree")).toContainText("Relay A");
   await expect(page.locator("#scene-tree")).toContainText("Hint Button");
+  await expect(page.locator("#scene-tree")).toContainText("Core Victory VFX");
+  await expect(page.locator("#viewport")).toHaveAttribute("data-particle-systems", "1");
 
   await page.locator("#play").click();
   await expect(page.locator("#mode-badge")).toHaveText("PLAY");
