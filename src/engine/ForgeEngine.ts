@@ -16,6 +16,7 @@ import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture";
+import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import { Sound } from "@babylonjs/core/Audio/sound";
 import { SceneLoader } from "@babylonjs/core/Loading/sceneLoader";
 import type { ForgeEntity, ForgePrimitive, ForgeSceneDocument } from "../types";
@@ -313,6 +314,34 @@ export class ForgeEngine {
     this.engine.resize();
   }
 
+  setEntityParent(id: string, parentId?: string): boolean {
+    const entity = this.getEntity(id);
+    const mesh = this.getMesh(id);
+    if (!entity || !mesh) return false;
+
+    if (!parentId) {
+      entity.parentId = undefined;
+      mesh.parent = null;
+      return true;
+    }
+
+    const parent = this.getMesh(parentId);
+    if (!parent || parentId === id) return false;
+
+    entity.parentId = parentId;
+    mesh.parent = parent;
+    return true;
+  }
+
+  getPlayerSpawn(fallback: [number, number, number]): [number, number, number] {
+    const spawn = this.document.entities.find((entity) => entity.components?.Spawn?.enabled);
+    if (!spawn) return this.document.playerSpawn ?? fallback;
+
+    const mesh = this.getMesh(spawn.id);
+    const position = mesh?.getAbsolutePosition() ?? vec3(spawn.position, fallback);
+    return [position.x, position.y + 1.65, position.z];
+  }
+
   registerShadowCaster(mesh: AbstractMesh, descendants = true): void {
     if (mesh.name === "__forge-sky") return;
     mesh.receiveShadows = true;
@@ -591,6 +620,16 @@ export class ForgeEngine {
       material.specularColor = new Color3(0.12, 0.14, 0.16);
       material.alpha = 1 - Math.min(1, Math.max(0, entity.transparency ?? 0));
       if (entity.emissive) material.emissiveColor = safeColor(entity.emissive, "#000000");
+      if (entity.texture?.trim()) {
+        try {
+          const texture = new Texture(entity.texture, this.scene, false, true);
+          texture.hasAlpha = true;
+          material.diffuseTexture = texture;
+          material.useAlphaFromDiffuseTexture = true;
+        } catch (error) {
+          this.log(`Texture failed on ${entity.name}: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
       mesh.material = material;
     }
 
