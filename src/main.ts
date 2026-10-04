@@ -2,16 +2,20 @@ import "./styles.css";
 import type { Session } from "@supabase/supabase-js";
 import { EditorApp } from "./editor/EditorApp";
 import {
+  acceptFriend,
   deleteCloudProject,
   getSession,
   loadCloudFavoriteIds,
   loadCloudRecentIds,
+  loadFriendConnections,
   loadMyProfile,
   loadMyProjects,
   loadPublicProjects,
   markCloudRecent,
   onAuthChange,
   pingCloud,
+  removeFriend,
+  requestFriendByUsername,
   setCloudFavorite,
   setCloudVisibility,
   signIn,
@@ -19,7 +23,8 @@ import {
   signUp,
   updateMyProfile,
   upsertCloudProject,
-  type CloudProfile
+  type CloudProfile,
+  type FriendConnection
 } from "./platform/CloudStore";
 import {
   loadPlatformState,
@@ -56,6 +61,7 @@ let projects = loadProjects();
 let publicCloudProjects: ForgeSceneDocument[] = [];
 let cloudSession: Session | null = null;
 let cloudProfile: CloudProfile | null = null;
+let friendConnections: FriendConnection[] = [];
 let cloudOnline = false;
 let cloudBusy = false;
 let currentPage: LauncherPage = "home";
@@ -259,6 +265,7 @@ async function hydrateAccount(session: Session): Promise<void> {
     savePlatformState(state);
 
     await syncLocalProjectsToCloud();
+    await refreshFriends();
     setCloudStatus(`Forge Cloud Online • @${cloudProfile?.username ?? "account"}`);
   } catch (error) {
     console.error("Account hydration failed", error);
@@ -271,6 +278,7 @@ async function hydrateAccount(session: Session): Promise<void> {
 function clearCloudAccountState(): void {
   cloudSession = null;
   cloudProfile = null;
+  friendConnections = [];
   setCloudStatus(cloudOnline ? "Forge Cloud Online • Guest" : "Forge Cloud Offline", !cloudOnline);
   renderAll();
 }
@@ -487,6 +495,145 @@ function recentRow(scene: ForgeSceneDocument): HTMLElement {
   return row;
 }
 
+async function refreshFriends(): Promise<void> {
+  if (!cloudSession) {
+    friendConnections = [];
+    renderFriends();
+    return;
+  }
+
+  try {
+    friendConnections = await loadFriendConnections();
+  } catch (error) {
+    console.error("Friend list failed", error);
+    friendConnections = [];
+  }
+
+  renderFriends();
+}
+
+function friendRow(connection: FriendConnection): HTMLElement {
+  const row = document.createElement("div");
+  row.className = "person-row";
+  row.innerHTML = `
+    <div class="person-face">=]</div>
+    <div class="person-info">
+      <b>${escapeHtml(connection.display_name)}</b>
+      <span>@${escapeHtml(connection.username)}</span>
+    </div>
+    <div class="person-actions"></div>
+  `;
+
+  const actions = row.querySelector<HTMLDivElement>(".person-actions")!;
+
+  if (connection.direction === "incoming") {
+    const accept = document.createElement("button");
+    accept.textContent = "Accept";
+    accept.addEventListener("click", () => {
+      void (async () => {
+        try {
+          await acceptFriend(connection.other_id);
+          await refreshFriends();
+        } catch (error) {
+          showFriendMessage(error instanceof Error ? error.message : String(error), true);
+        }
+      })();
+    });
+    actions.appendChild(accept);
+  }
+
+  const remove = document.createElement("button");
+  remove.textContent = connection.direction === "friend"
+    ? "Remove"
+    : connection.direction === "outgoing"
+      ? "Cancel"
+      : "Decline";
+  remove.addEventListener("click", () => {
+    void (async () => {
+      try {
+        await removeFriend(connection.other_id);
+        await refreshFriends();
+      } catch (error) {
+        showFriendMessage(error instanceof Error ? error.message : String(error), true);
+      }
+    })();
+  });
+  actions.appendChild(remove);
+
+  return row;
+}
+
+function renderFriends(): void {
+  const guest = must<HTMLElement>("friends-guest");
+  const app = must<HTMLElement>("friends-app");
+
+  guest.hidden = Boolean(cloudSession);
+  app.hidden = !cloudSession;
+
+  if (!cloudSession) return;
+
+  const friends = friendConnections.filter((item) => item.direction === "friend");
+  const requests = friendConnections.filter((item) => item.direction !== "friend");
+
+  must<HTMLElement>("friends-count").textContent = String(friends.length);
+  must<HTMLElement>("requests-count").textContent = String(requests.length);
+
+  const friendsList = must<HTMLElement>("friends-list");
+  friendsList.replaceChildren();
+  if (!friends.length) {
+    const empty = document.createElement("div");
+    empty.className = "people-empty";
+    empty.textContent = "No friends yet. Add someone by username.";
+    friendsList.appendChild(empty);
+  } else {
+    for (const connection of friends) friendsList.appendChild(friendRow(connection));
+  }
+
+  const requestsList = must<HTMLElement>("requests-list");
+  requestsList.replaceChildren();
+  if (!requests.length) {
+    const empty = document.createElement("div");
+    empty.className = "people-empty";
+    empty.textContent = "No pending requests.";
+    requestsList.appendChild(empty);
+  } else {
+    for (const connection of requests) requestsList.appendChild(friendRow(connection));
+  }
+}
+
+function showFriendMessage(message: string, error = false): void {
+  const box = must<HTMLElement>("friend-message");
+  box.textContent = message;
+  box.className = `friend-message ${error ? "error" : "success"}`;
+}
+
+async function sendFriendRequestFromUI(): Promise<void> {
+  if (!cloudSession) {
+    openAuth("Sign in to add friends.");
+    return;
+  }
+
+  const input = must<HTMLInputElement>("friend-username");
+  const username = input.value.trim();
+  if (!username) {
+    showFriendMessage("Enter an exact Forge username.", true);
+    return;
+  }
+
+  try {
+    const result = await requestFriendByUsername(username);
+    input.value = "";
+    showFriendMessage(
+      result === "accepted"
+        ? "Friend request accepted — you are now friends."
+        : "Friend request sent."
+    );
+    await refreshFriends();
+  } catch (error) {
+    showFriendMessage(error instanceof Error ? error.message : String(error), true);
+  }
+}
+
 function renderAll(): void {
   const displayName = cloudProfile?.display_name || state.profile.displayName || "Builder";
 
@@ -554,6 +701,8 @@ function renderAll(): void {
     : develop;
 
   for (const scene of developScenes) developGrid.appendChild(projectCard(scene, "develop"));
+
+  renderFriends();
 }
 
 function setPage(page: LauncherPage): void {
@@ -820,6 +969,15 @@ document.querySelectorAll<HTMLButtonElement>("[data-develop-view]").forEach((but
 
 launcherSearch.addEventListener("input", renderAll);
 must<HTMLButtonElement>("launcher-search-button").addEventListener("click", renderAll);
+
+must<HTMLButtonElement>("friends-sign-in").addEventListener("click", () => openAuth("Sign in to use Forge Friends."));
+must<HTMLButtonElement>("friend-add-button").addEventListener("click", () => void sendFriendRequestFromUI());
+must<HTMLInputElement>("friend-username").addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    void sendFriendRequestFromUI();
+  }
+});
 
 must<HTMLButtonElement>("account-button").addEventListener("click", () => {
   if (cloudSession) openProfile();
