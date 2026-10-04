@@ -79,6 +79,48 @@ export class ForgeEngine {
     this.sky.material = this.skyMaterial;
 
     this.scripts = new ScriptRuntime(this.scene, log);
+    this.scripts.setAudioAPI({
+      play: (idOrName) => {
+        const sound = this.entitySounds.get(this.resolveEntityId(idOrName));
+        if (!sound) return false;
+        sound.play();
+        return true;
+      },
+      pause: (idOrName) => {
+        const sound = this.entitySounds.get(this.resolveEntityId(idOrName));
+        if (!sound) return false;
+        sound.pause();
+        return true;
+      },
+      stop: (idOrName) => {
+        const sound = this.entitySounds.get(this.resolveEntityId(idOrName));
+        if (!sound) return false;
+        sound.stop();
+        return true;
+      },
+      setVolume: (idOrName, volume) => {
+        const sound = this.entitySounds.get(this.resolveEntityId(idOrName));
+        if (!sound) return false;
+        sound.setVolume(Math.min(1, Math.max(0, Number(volume) || 0)));
+        return true;
+      }
+    });
+    this.scripts.setUIAPI({
+      setText: (idOrName, text) => {
+        const entity = this.getEntity(this.resolveEntityId(idOrName));
+        if (!entity?.components?.UI) return false;
+        entity.components.UI.text = String(text);
+        this.refreshUI();
+        return true;
+      },
+      show: (idOrName, visible) => {
+        const entity = this.getEntity(this.resolveEntityId(idOrName));
+        if (!entity?.components?.UI) return false;
+        entity.components.UI.visible = Boolean(visible);
+        this.refreshUI();
+        return true;
+      }
+    });
     this.applyEnvironment();
   }
 
@@ -368,6 +410,14 @@ export class ForgeEngine {
 
       this.uiRoot.appendChild(element);
     }
+  }
+
+  private resolveEntityId(idOrName: string): string {
+    const direct = this.getEntity(idOrName);
+    if (direct) return direct.id;
+
+    const byName = this.document?.entities.find((entity) => entity.name === idOrName);
+    return byName?.id ?? idOrName;
   }
 
   private defaultPrimitiveName(kind: ForgePrimitive): string {
