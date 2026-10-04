@@ -407,6 +407,7 @@
             <button data-object="light">☀ Point Light</button>
             <button data-object="spawn">⚑ Spawn Location</button>
             <button data-object="sound">♪ Sound</button>
+            <button data-object="vfx">✦ VFX Emitter</button>
             <button id="import-audio">⇧ Import Audio</button>
             <input id="audio-file-input" type="file" accept="audio/*,.mp3,.wav,.ogg,.m4a" hidden />
             <button data-object="ui-text">T Screen Text</button>
@@ -529,6 +530,7 @@
                 <option value="Reactor">Reactor</option>
                 <option value="Light">Light</option>
                 <option value="Sound">Sound</option>
+                <option value="VFX">VFX</option>
                 <option value="UI">UI</option>
                 <option value="Model">Model</option>
                 <option value="Spawn">Spawn</option>
@@ -590,6 +592,9 @@
           <code>Forge.parent</code>
           <code>Forge.require("module.name")</code>
           <code>Forge.audio.play("Alarm")</code>
+          <code>Forge.vfx.play("Sparks")</code>
+          <code>Forge.vfx.stop("Smoke")</code>
+          <code>Forge.vfx.setRate("Smoke", 80)</code>
           <code>Forge.ui.setText("HUD", "Ready")</code>
         </div>
         <div class="script-actions">
