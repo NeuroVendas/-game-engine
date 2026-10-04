@@ -1,3 +1,10 @@
+test.beforeEach(async ({ page }) => {
+  page.on("pageerror", (error) => console.log("PAGE_ERROR:", error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") console.log("BROWSER_ERROR:", message.text());
+  });
+});
+
 import { expect, test } from "@playwright/test";
 
 test("platform home, games, favorites, profile and direct play work", async ({ page }) => {
@@ -47,6 +54,8 @@ test("platform home, games, favorites, profile and direct play work", async ({ p
   await heliosCard.locator("[data-action='play']").click();
   await expect(page.locator("#app")).toBeVisible();
   await expect(page.locator("#app")).toHaveClass(/game-session/);
+  await page.waitForTimeout(300);
+  console.log("EDITOR_INIT_ERROR:", await page.locator("#viewport").getAttribute("data-editor-init-error"));
   await expect(page.locator("#mode-badge")).toHaveText("PLAY");
 
   const canvas = page.locator("#viewport");
