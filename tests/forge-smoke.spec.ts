@@ -202,6 +202,18 @@ test("studio v0.5 supports resize, sky, UI, typed scripts, sound and lights", as
   await page.locator("#env-sky").dispatchEvent("change");
   await expect(canvas).toHaveAttribute("data-skybox", "#426f9b");
 
+  const skyPng = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9ZlGQAAAAASUVORK5CYII=",
+    "base64"
+  );
+  await page.locator("#sky-file-input").setInputFiles({
+    name: "sky.png",
+    mimeType: "image/png",
+    buffer: skyPng
+  });
+  await expect(canvas).toHaveAttribute("data-sky-texture", "sky.png");
+  await expect(page.locator("#sky-file-label")).toContainText("sky.png");
+
   await page.locator("[data-primitive='box']").click();
   await expect(page.locator("#prop-parent")).toHaveValue("");
 
