@@ -58,6 +58,13 @@ test("platform home, games, favorites, profile and direct play work", async ({ p
   await page.keyboard.up("KeyW");
   const after = (await canvas.getAttribute("data-player-position"))!;
   expect(after).not.toBe(before);
+  await expect(canvas).toHaveAttribute("data-player-velocity", /.+/);
+
+  await page.keyboard.press("Space");
+  await expect.poll(async () => {
+    const velocity = await canvas.getAttribute("data-player-velocity");
+    return velocity ? Number(velocity.split(",")[1]) : -999;
+  }).toBeGreaterThan(0.5);
 
   await page.locator("#exit-game").click();
   await expect(page.locator("#launcher-page-games")).toBeVisible();
@@ -140,4 +147,62 @@ Forge.onUpdate(() => {
 
   await expect.poll(async () => page.locator("#status").textContent()).toContain("PLATFORM_SCRIPT_OK");
   expect(await page.locator("#viewport").getAttribute("data-runtime-error")).toBeNull();
+});
+
+
+test("studio v0.5 supports resize, sky, UI, typed scripts, sound and lights", async ({ page }) => {
+  await page.goto("/");
+  await page.locator("[data-launch-tab='develop']").click();
+  await page.locator("#new-place").click();
+  await page.locator("#new-place-name").fill("Studio v05 Place");
+  await page.locator("#confirm-create-place").click();
+
+  const canvas = page.locator("#viewport");
+  await expect(canvas).toHaveAttribute("data-skybox", "#7fb9e8");
+  await expect(page.locator("#tool-select")).toBeVisible();
+  await expect(page.locator("#tool-scale")).toContainText("Resize");
+
+  await page.locator("#env-sky").fill("#426f9b");
+  await page.locator("#env-sky").dispatchEvent("change");
+  await expect(canvas).toHaveAttribute("data-skybox", "#426f9b");
+
+  await page.locator("[data-primitive='box']").click();
+  await page.locator("#size-x").fill("6");
+  await page.locator("#size-x").dispatchEvent("change");
+  await expect(page.locator("#size-x")).toHaveValue("6.00");
+
+  await page.locator("[data-object='ui-button']").click();
+  await expect(page.locator("#scene-tree")).toContainText("UI Button");
+  await expect(page.locator("#forge-ui-root .forge-ui-button")).toBeVisible();
+
+  await page.locator("[data-object='localscript']").click();
+  await expect(page.locator("#scene-tree")).toContainText("LocalScript");
+  await page.locator("#code-selected").click();
+  await expect(page.locator("#script-kind")).toHaveValue("LocalScript");
+  await page.locator("#script-source").fill(`
+Forge.onClick(() => {
+  Forge.log("UI_CLICK_OK");
+});
+`);
+  await page.locator("#script-save").click();
+  await page.locator("#script-close").click();
+
+  await page.locator(".scene-item", { hasText: "Baseplate" }).click();
+  await page.locator("[data-object='light']").click();
+  await expect(page.locator("#scene-tree")).toContainText("Point Light");
+
+  await page.locator(".scene-item", { hasText: "Baseplate" }).click();
+  await page.locator("[data-object='sound']").click();
+  await expect(page.locator("#scene-tree")).toContainText("Sound");
+
+  await page.locator("#play").click();
+  await expect(page.locator("#mode-badge")).toHaveText("PLAY");
+
+  const uiButton = page.locator("#forge-ui-root .forge-ui-button");
+  await expect(uiButton).toBeVisible();
+  await expect(uiButton).toBeEnabled();
+  await uiButton.click();
+  await expect.poll(async () => page.locator("#status").textContent()).toContain("UI_CLICK_OK");
+
+  expect(await canvas.getAttribute("data-runtime-error")).toBeNull();
 });
