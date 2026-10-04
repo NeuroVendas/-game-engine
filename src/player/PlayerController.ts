@@ -56,8 +56,8 @@ export class PlayerController {
   private readonly onKeyUp = (event: KeyboardEvent) => {
     this.keys.delete(event.code);
 
-    if (event.code === "Space" && this.verticalVelocity > 2.4) {
-      this.verticalVelocity *= 0.52;
+    if (event.code === "Space" && this.verticalVelocity > 4) {
+      this.verticalVelocity *= 0.62;
     }
   };
 
@@ -190,7 +190,7 @@ export class PlayerController {
     }
 
     if (this.jumpBuffer > 0 && this.coyoteTime > 0) {
-      this.verticalVelocity = 7.15;
+      this.verticalVelocity = 7.9;
       this.jumpBuffer = 0;
       this.coyoteTime = 0;
       this.grounded = false;
@@ -211,7 +211,7 @@ export class PlayerController {
       acceleration * dt
     );
 
-    this.verticalVelocity = Math.max(-28, this.verticalVelocity - 20.5 * dt);
+    this.verticalVelocity = Math.max(-30, this.verticalVelocity - 21.5 * dt);
 
     const frameMotion = new Vector3(
       this.horizontalVelocity.x * dt,
