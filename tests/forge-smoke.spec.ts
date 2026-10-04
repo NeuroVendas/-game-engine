@@ -16,6 +16,12 @@ test("platform home, games, favorites, profile and direct play work", async ({ p
   await page.locator("#auth-guest").click();
   await expect(page.locator("#auth-dialog")).toBeHidden();
 
+  await page.locator("[data-launch-tab='friends']").click();
+  await expect(page.locator("#friends-guest")).toBeVisible();
+  await page.locator("#friends-sign-in").click();
+  await expect(page.locator("#auth-dialog")).toBeVisible();
+  await page.locator("#auth-guest").click();
+
   await page.locator("[data-launch-tab='games']").click();
   await expect(page.locator("#launcher-page-games")).toBeVisible();
   await expect(page.locator("#games-grid .place-card")).toHaveCount(1);
