@@ -386,6 +386,8 @@ Forge.onClick(() => {
   await expect(uiButton).toBeEnabled();
   await uiButton.evaluate((button) => (button as HTMLButtonElement).click());
   await expect.poll(async () => page.locator("#status").textContent()).toContain("UI_CLICK_OK");
+  const outputText = await page.locator("#output-log").textContent();
+  expect((outputText?.match(/UI_CLICK_OK/g) ?? []).length).toBe(1);
 
   expect(await canvas.getAttribute("data-runtime-error")).toBeNull();
 });
