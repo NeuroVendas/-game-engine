@@ -547,9 +547,6 @@ export class ForgeEngine {
         if (this.uiInteractive) {
           button.addEventListener("click", () => {
             this.scripts.uiClick(entity.id);
-            for (const child of this.document.entities.filter((candidate) => candidate.parentId === entity.id)) {
-              this.scripts.uiClick(child.id);
-            }
           });
         }
       }
