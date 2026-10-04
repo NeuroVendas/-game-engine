@@ -508,7 +508,9 @@ The test now:
 10. requires the victory VFX restart action,
 11. stops/starts Play again to regression-check resource lifecycle.
 
-The first coordinate-microstep version timed out in headless Chromium. It was deliberately replaced with prompt-driven navigation: the acceptance test now uses the same interaction feedback a player sees instead of brittle precision steering.
+The first coordinate-microstep version timed out in headless Chromium. A first prompt-driven route then passed once but flaked on a repeat because a fast player can cross the prompt window between polling frames.
+
+The final controller therefore uses coarse closed-loop world-space waypoints reached through real WASD input, settles within a safe tolerance, and only then requires the same interaction prompt a player sees before pressing E. This preserves real gameplay coverage while removing frame-timing dependence.
 
 Verification for code commit `5a26dfe1`:
 
