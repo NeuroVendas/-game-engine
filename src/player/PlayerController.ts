@@ -21,6 +21,10 @@ export class PlayerController {
 
   private readonly keys = new Set<string>();
   private verticalVelocity = 0;
+  private horizontalVelocity = Vector3.Zero();
+  private coyoteTime = 0;
+  private jumpBuffer = 0;
+  private grounded = false;
   private firstPerson = false;
   private interactPressed = false;
   private walkTime = 0;
@@ -32,6 +36,10 @@ export class PlayerController {
     }
 
     this.keys.add(event.code);
+
+    if (event.code === "Space" && !event.repeat) {
+      this.jumpBuffer = 0.14;
+    }
 
     if (event.code === "KeyC" && !event.repeat) {
       this.firstPerson = !this.firstPerson;
@@ -47,6 +55,10 @@ export class PlayerController {
 
   private readonly onKeyUp = (event: KeyboardEvent) => {
     this.keys.delete(event.code);
+
+    if (event.code === "Space" && this.verticalVelocity > 2.4) {
+      this.verticalVelocity *= 0.52;
+    }
   };
 
   private readonly onBlur = () => {
@@ -157,44 +169,94 @@ export class PlayerController {
     forward.normalize();
 
     const right = new Vector3(forward.z, 0, -forward.x);
-    const direction = Vector3.Zero();
+    const desiredDirection = Vector3.Zero();
 
-    if (this.keys.has("KeyW")) direction.addInPlace(forward);
-    if (this.keys.has("KeyS")) direction.subtractInPlace(forward);
-    if (this.keys.has("KeyD")) direction.addInPlace(right);
-    if (this.keys.has("KeyA")) direction.subtractInPlace(right);
+    if (this.keys.has("KeyW")) desiredDirection.addInPlace(forward);
+    if (this.keys.has("KeyS")) desiredDirection.subtractInPlace(forward);
+    if (this.keys.has("KeyD")) desiredDirection.addInPlace(right);
+    if (this.keys.has("KeyA")) desiredDirection.subtractInPlace(right);
 
-    const grounded = this.isGrounded();
-    const moving = direction.lengthSquared() > 0;
+    const moving = desiredDirection.lengthSquared() > 0.0001;
     const running = moving && (this.keys.has("ShiftLeft") || this.keys.has("ShiftRight"));
 
-    if (moving) {
-      direction.normalize();
-      const speed = running ? 7.5 : 4.7;
-      this.body.moveWithCollisions(direction.scale(speed * dt));
-      this.body.rotation.y = Math.atan2(direction.x, direction.z);
+    if (moving) desiredDirection.normalize();
+
+    this.grounded = this.isGrounded();
+    this.coyoteTime = this.grounded ? 0.12 : Math.max(0, this.coyoteTime - dt);
+    this.jumpBuffer = Math.max(0, this.jumpBuffer - dt);
+
+    if (this.grounded && this.verticalVelocity < 0) {
+      this.verticalVelocity = -0.8;
     }
 
-    if (grounded && this.verticalVelocity < 0) this.verticalVelocity = -0.1;
-    if (grounded && this.keys.has("Space")) this.verticalVelocity = 6.2;
+    if (this.jumpBuffer > 0 && this.coyoteTime > 0) {
+      this.verticalVelocity = 7.15;
+      this.jumpBuffer = 0;
+      this.coyoteTime = 0;
+      this.grounded = false;
+    }
 
-    this.verticalVelocity -= 16 * dt;
-    this.body.moveWithCollisions(new Vector3(0, this.verticalVelocity * dt, 0));
+    const targetSpeed = running ? 7.4 : 4.85;
+    const targetVelocity = moving
+      ? desiredDirection.scale(targetSpeed)
+      : Vector3.Zero();
 
-    if (!grounded || Math.abs(this.verticalVelocity) > 0.7) {
+    const acceleration = this.grounded
+      ? (moving ? 24 : 34)
+      : (moving ? 7.5 : 2.5);
+
+    this.horizontalVelocity = this.moveTowardVector(
+      this.horizontalVelocity,
+      targetVelocity,
+      acceleration * dt
+    );
+
+    this.verticalVelocity = Math.max(-28, this.verticalVelocity - 20.5 * dt);
+
+    const frameMotion = new Vector3(
+      this.horizontalVelocity.x * dt,
+      this.verticalVelocity * dt,
+      this.horizontalVelocity.z * dt
+    );
+    this.body.moveWithCollisions(frameMotion);
+
+    const horizontalSpeed = Math.hypot(this.horizontalVelocity.x, this.horizontalVelocity.z);
+    if (horizontalSpeed > 0.08) {
+      const targetYaw = Math.atan2(this.horizontalVelocity.x, this.horizontalVelocity.z);
+      this.body.rotation.y = this.lerpAngle(
+        this.body.rotation.y,
+        targetYaw,
+        1 - Math.exp(-14 * dt)
+      );
+    }
+
+    if (!this.grounded || Math.abs(this.verticalVelocity) > 1.0) {
       this.animateJump(dt);
-    } else if (moving) {
+    } else if (horizontalSpeed > 0.18) {
       this.animateClassicWalk(dt, running);
     } else {
       this.animateIdle(dt);
     }
 
-    this.camera.target.copyFrom(this.body.position.add(new Vector3(0, 0.48, 0)));
+    const desiredCameraTarget = this.body.position.add(new Vector3(0, 0.54, 0));
+    Vector3.LerpToRef(
+      this.camera.target,
+      desiredCameraTarget,
+      1 - Math.exp(-18 * dt),
+      this.camera.target
+    );
+
     this.forge.canvas.dataset.playerPosition = [
       this.body.position.x.toFixed(3),
       this.body.position.y.toFixed(3),
       this.body.position.z.toFixed(3)
     ].join(",");
+    this.forge.canvas.dataset.playerVelocity = [
+      this.horizontalVelocity.x.toFixed(3),
+      this.verticalVelocity.toFixed(3),
+      this.horizontalVelocity.z.toFixed(3)
+    ].join(",");
+    this.forge.canvas.dataset.playerGrounded = String(this.grounded);
     this.forge.canvas.dataset.cameraAngles = [
       this.camera.alpha.toFixed(4),
       this.camera.beta.toFixed(4),
@@ -209,6 +271,19 @@ export class PlayerController {
     }
   }
 
+  private moveTowardVector(current: Vector3, target: Vector3, maxDelta: number): Vector3 {
+    const delta = target.subtract(current);
+    const distance = delta.length();
+    if (distance <= maxDelta || distance < 0.00001) return target.clone();
+    return current.add(delta.scale(maxDelta / distance));
+  }
+
+  private lerpAngle(current: number, target: number, t: number): number {
+    let difference = (target - current + Math.PI) % (Math.PI * 2) - Math.PI;
+    if (difference < -Math.PI) difference += Math.PI * 2;
+    return current + difference * Math.min(1, Math.max(0, t));
+  }
+
   dispose(): void {
     window.removeEventListener("keydown", this.onKeyDown);
     window.removeEventListener("keyup", this.onKeyUp);
@@ -218,6 +293,8 @@ export class PlayerController {
     this.setPrompt(null, false);
 
     delete this.forge.canvas.dataset.playerPosition;
+    delete this.forge.canvas.dataset.playerVelocity;
+    delete this.forge.canvas.dataset.playerGrounded;
     delete this.forge.canvas.dataset.cameraAngles;
     delete this.forge.canvas.dataset.avatarRig;
     delete this.forge.canvas.dataset.avatarShape;
