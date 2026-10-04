@@ -1146,3 +1146,25 @@ input, textarea { cursor: text; }
 }
 .creator-game-row b, .creator-game-row small { display: block; }
 .creator-game-row small { margin-top: 2px; color: #7a8790; font-size: 9px; }
+
+.game-detail-share-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 5px;
+  margin-top: 8px;
+}
+.game-detail-share-row input {
+  min-width: 0;
+  padding: 5px 7px;
+  border: 1px solid #a0acb4;
+  background: #f7f9fa;
+  color: #5c6b75;
+  font-size: 9px;
+}
+.game-detail-share-row button {
+  border: 1px solid #8c99a2;
+  background: linear-gradient(#fff,#dce4e9);
+  color: #315774;
+  padding: 5px 8px;
+  font-size: 10px;
+}

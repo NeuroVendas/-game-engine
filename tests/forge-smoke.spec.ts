@@ -31,6 +31,14 @@ test("platform home, games, favorites, profile and direct play work", async ({ p
   await expect(page.locator("#game-details-dialog")).toBeVisible();
   await expect(page.locator("#game-detail-title")).toHaveText("Project Helios");
   await expect(page.locator("#game-detail-creator")).toHaveText("Forge");
+  await expect(page.locator("#game-detail-share-url")).toHaveValue(/#game\/project-helios$/);
+  await page.locator("#game-detail-close").click();
+
+  await page.evaluate(() => {
+    location.hash = "#game/project-helios";
+  });
+  await expect(page.locator("#game-details-dialog")).toBeVisible();
+  await expect(page.locator("#game-detail-title")).toHaveText("Project Helios");
   await page.locator("#game-detail-close").click();
 
   await heliosCard.locator("[data-action='favorite']").click();

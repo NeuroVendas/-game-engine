@@ -322,6 +322,7 @@ async function bootstrapCloud(): Promise<void> {
 
     setCloudStatus("Forge Cloud Online • Guest");
     await refreshPublicCloud();
+    applyGameHashRoute();
 
     const session = await getSession();
     if (session) await hydrateAccount(session);
@@ -496,7 +497,16 @@ function sceneDescription(scene: ForgeSceneDocument): string {
   return "A Forge place.";
 }
 
-function openGameDetails(scene: ForgeSceneDocument): void {
+function gameShareUrl(scene: ForgeSceneDocument): string | null {
+  if (scene.platform?.visibility !== "public" && !isOfficial(scene)) return null;
+
+  const slug = scene.platform?.slug ?? (isOfficial(scene) ? "project-helios" : null);
+  if (!slug) return null;
+
+  return `${location.origin}${location.pathname}${location.search}#game/${encodeURIComponent(slug)}`;
+}
+
+function openGameDetails(scene: ForgeSceneDocument, syncHash = true): void {
   detailsSceneId = projectId(scene);
   const editable = canEdit(scene);
   const favorite = isFavorite(scene);
@@ -527,6 +537,18 @@ function openGameDetails(scene: ForgeSceneDocument): void {
   must<HTMLButtonElement>("game-detail-edit").hidden = !official && !editable;
 
   const note = must<HTMLElement>("game-detail-note");
+  const shareRow = must<HTMLElement>("game-detail-share-row");
+  const shareInput = must<HTMLInputElement>("game-detail-share-url");
+  const shareUrl = gameShareUrl(scene);
+
+  shareRow.hidden = !shareUrl;
+  shareInput.value = shareUrl ?? "";
+
+  if (syncHash && shareUrl) {
+    const slug = scene.platform?.slug ?? "project-helios";
+    history.replaceState(null, "", `#game/${encodeURIComponent(slug)}`);
+  }
+
   if (official) {
     note.textContent = "Official Forge sample. Remix it to make your own editable copy.";
   } else if (editable && !cloudSession) {
@@ -605,6 +627,41 @@ function renderCreatorGames(ownerId: string): void {
       openGameDetails(scene);
     });
     container.appendChild(row);
+  }
+}
+
+function applyGameHashRoute(): void {
+  const match = location.hash.match(/^#game\/(.+)$/);
+  if (!match) return;
+
+  const slug = decodeURIComponent(match[1]);
+  const scene = catalogPlaces().find((item) =>
+    item.platform?.slug === slug
+    || (isOfficial(item) && slug === "project-helios")
+  );
+
+  if (!scene) return;
+
+  setPage("games");
+  if (!gameDetailsDialog.open || detailsSceneId !== projectId(scene)) {
+    openGameDetails(scene, false);
+  }
+}
+
+async function copyCurrentGameLink(): Promise<void> {
+  const input = must<HTMLInputElement>("game-detail-share-url");
+  if (!input.value) return;
+
+  try {
+    await navigator.clipboard.writeText(input.value);
+    must<HTMLButtonElement>("game-detail-share").textContent = "Copied!";
+    window.setTimeout(() => {
+      must<HTMLButtonElement>("game-detail-share").textContent = "Copy Link";
+    }, 1200);
+  } catch {
+    input.focus();
+    input.select();
+    must<HTMLButtonElement>("game-detail-share").textContent = "Select + Copy";
   }
 }
 
@@ -1148,7 +1205,13 @@ must<HTMLInputElement>("friend-username").addEventListener("keydown", (event) =>
   }
 });
 
-must<HTMLButtonElement>("game-detail-close").addEventListener("click", () => gameDetailsDialog.close());
+must<HTMLButtonElement>("game-detail-close").addEventListener("click", () => {
+  gameDetailsDialog.close();
+  if (location.hash.startsWith("#game/")) {
+    history.replaceState(null, "", location.pathname + location.search);
+  }
+});
+must<HTMLButtonElement>("game-detail-share").addEventListener("click", () => void copyCurrentGameLink());
 must<HTMLButtonElement>("game-detail-creator").addEventListener("click", () => {
   if (!detailsSceneId) return;
   const scene = sceneById(detailsSceneId);
@@ -1308,6 +1371,8 @@ window.addEventListener("forge:scene-saved", (event) => {
   if (!scene) return;
   void saveScene(scene);
 });
+
+window.addEventListener("hashchange", applyGameHashRoute);
 
 renderAll();
 setPage("home");
