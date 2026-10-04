@@ -362,9 +362,10 @@
 
       <header class="topbar">
         <div class="toolbar">
-          <button id="tool-move" title="Move (W)">↔ Move</button>
-          <button id="tool-rotate" title="Rotate (E)">⟳ Rotate</button>
-          <button id="tool-scale" title="Scale (R)">□ Scale</button>
+          <button id="tool-select" title="Select (Ctrl+1)">⌖ Select</button>
+          <button id="tool-move" title="Move (Ctrl+2)">↔ Move</button>
+          <button id="tool-scale" title="Resize (Ctrl+3)">□ Resize</button>
+          <button id="tool-rotate" title="Rotate (Ctrl+4)">⟳ Rotate</button>
           <button id="snap-toggle" class="active" title="Toggle transform snapping">Snap On</button>
           <select id="snap-size" title="Move snap size">
             <option value="0.25">0.25</option>
@@ -400,6 +401,17 @@
             <button data-primitive="sphere">● Sphere</button>
             <button data-primitive="capsule">⬭ Capsule</button>
             <button data-primitive="ground">▱ Ground</button>
+            <div class="palette-label">Objects</div>
+            <button data-object="empty">◇ Empty Object</button>
+            <button data-object="light">☀ Point Light</button>
+            <button data-object="sound">♪ Sound</button>
+            <button data-object="ui-text">T Screen Text</button>
+            <button data-object="ui-button">▣ UI Button</button>
+            <button data-object="script">⌘ Script</button>
+            <button data-object="localscript">⌘ LocalScript</button>
+            <button data-object="modulescript">⌘ ModuleScript</button>
+            <button id="import-model">⇧ Import GLB</button>
+            <input id="model-file-input" type="file" accept=".glb,model/gltf-binary,application/octet-stream" hidden />
             <div class="palette-label">Industrial</div>
             <button data-prefab="blast-door">▥ Blast Door</button>
             <button data-prefab="console">▰ Console</button>
@@ -412,15 +424,22 @@
             <div class="service">▾ Workspace</div>
             <div id="scene-tree" class="scene-tree"></div>
             <div class="service muted">Players</div>
-            <div class="service muted">Lighting</div>
-            <div class="service muted">Sound</div>
-            <div class="service muted">UI</div>
-            <div class="service muted">Scripts</div>
+            <div class="service">▾ Lighting</div>
+            <div class="lighting-editor">
+              <label>Sky <input id="env-sky" type="color" value="#7fb9e8" /></label>
+              <label>Ambient <input id="env-ambient" type="color" value="#d9e8f4" /></label>
+              <label>Fog <input id="env-fog" type="color" value="#9fc6df" /></label>
+              <label>Fog density <input id="env-fog-density" type="number" min="0" max="0.1" step="0.001" value="0" /></label>
+            </div>
+            <div class="service">Sound</div>
+            <div class="service">UI</div>
+            <div class="service">Scripts</div>
           </div>
         </aside>
 
         <section class="viewport-wrap">
           <canvas id="viewport"></canvas>
+          <div id="forge-ui-root" class="forge-ui-root"></div>
           <div id="game-session-bar" class="game-session-bar">
             <button id="exit-game">← Back to Forge</button>
             <strong id="game-session-title">Playing</strong>
@@ -454,6 +473,14 @@
               </div>
             </fieldset>
             <fieldset>
+              <legend>Size</legend>
+              <div class="triplet">
+                <input id="size-x" type="number" min="0.01" step="0.1" />
+                <input id="size-y" type="number" min="0.01" step="0.1" />
+                <input id="size-z" type="number" min="0.01" step="0.1" />
+              </div>
+            </fieldset>
+            <fieldset>
               <legend>Scale</legend>
               <div class="triplet">
                 <input id="scale-x" type="number" step="0.1" />
@@ -470,6 +497,10 @@
                 <option value="Clearance">Clearance</option>
                 <option value="PowerConsumer">Power Consumer</option>
                 <option value="Reactor">Reactor</option>
+                <option value="Light">Light</option>
+                <option value="Sound">Sound</option>
+                <option value="UI">UI</option>
+                <option value="Model">Model</option>
                 <option value="Script">Script</option>
               </select>
               <button id="add-component">+ Component</button>
@@ -495,8 +526,15 @@
           <button id="script-close" type="button">×</button>
         </div>
         <div class="script-toolbar">
+          <label>Type
+            <select id="script-kind">
+              <option value="Script">Script</option>
+              <option value="LocalScript">LocalScript</option>
+              <option value="ModuleScript">ModuleScript</option>
+            </select>
+          </label>
           <label>Script name <input id="script-name" value="custom.script" /></label>
-          <span class="script-language">JavaScript • local trusted scripts</span>
+          <span class="script-language">Forge JavaScript • runs only in Play</span>
         </div>
         <textarea id="script-source" spellcheck="false" aria-label="Forge script source"></textarea>
         <div class="script-docs">
@@ -506,6 +544,11 @@
           <code>Forge.onStart(fn)</code>
           <code>Forge.onUpdate(fn)</code>
           <code>Forge.onInteract(fn)</code>
+          <code>Forge.onClick(fn)</code>
+          <code>Forge.onKeyDown(fn)</code>
+          <code>Forge.input.isDown("KeyE")</code>
+          <code>Forge.parent</code>
+          <code>Forge.require("module.name")</code>
         </div>
         <div class="script-actions">
           <span>Ctrl+S saves. Custom scripts run when you press Play.</span>
