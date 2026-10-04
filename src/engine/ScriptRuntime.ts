@@ -77,6 +77,15 @@ interface ForgeUserAPI {
   readonly input: {
     isDown(code: string): boolean;
   };
+  readonly player: {
+    get(): ForgeNodeAPI | null;
+  };
+  readonly camera: {
+    getFov(): number;
+    setFov(degrees: number): void;
+    getPosition(): { x: number; y: number; z: number } | null;
+    lookAt(x: number, y: number, z: number): boolean;
+  };
   readonly audio: RuntimeAudioAPI;
   readonly ui: RuntimeUIAPI;
   readonly time: {
@@ -293,6 +302,32 @@ export class ScriptRuntime {
       },
       input: {
         isDown: (code: string) => this.keys.has(code)
+      },
+      player: {
+        get: () => this.findNode("__player-collider")
+      },
+      camera: {
+        getFov: () => {
+          const camera = this.scene.activeCamera;
+          return camera ? camera.fov * 180 / Math.PI : 60;
+        },
+        setFov: (degrees: number) => {
+          const camera = this.scene.activeCamera;
+          if (!camera) return;
+          const clamped = Math.min(120, Math.max(20, Number(degrees) || 60));
+          camera.fov = clamped * Math.PI / 180;
+        },
+        getPosition: () => {
+          const camera = this.scene.activeCamera;
+          if (!camera) return null;
+          return { x: camera.position.x, y: camera.position.y, z: camera.position.z };
+        },
+        lookAt: (x: number, y: number, z: number) => {
+          const camera = this.scene.activeCamera as unknown as { setTarget?: (target: Vector3) => void } | null;
+          if (!camera?.setTarget) return false;
+          camera.setTarget(new Vector3(Number(x) || 0, Number(y) || 0, Number(z) || 0));
+          return true;
+        }
       },
       audio: {
         play: (idOrName: string) => this.audioApi.play(idOrName),
