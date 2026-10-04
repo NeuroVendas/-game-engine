@@ -226,6 +226,12 @@ export class EditorApp {
     must<HTMLInputElement>("model-file-input").addEventListener("change", (event) => {
       void this.importModelFile(event);
     });
+    must<HTMLButtonElement>("import-audio").addEventListener("click", () => {
+      must<HTMLInputElement>("audio-file-input").click();
+    });
+    must<HTMLInputElement>("audio-file-input").addEventListener("change", (event) => {
+      void this.importAudioFile(event);
+    });
 
     document.querySelectorAll<HTMLButtonElement>("[data-prefab]").forEach((button) => {
       button.addEventListener("click", () => {
@@ -242,6 +248,7 @@ export class EditorApp {
     must<HTMLButtonElement>("add-component").addEventListener("click", () => this.addSelectedComponent());
     must<HTMLButtonElement>("script-close").addEventListener("click", () => this.scriptDialog.close());
     must<HTMLButtonElement>("script-save").addEventListener("click", () => this.saveScriptEditor());
+    must<HTMLButtonElement>("script-check").addEventListener("click", () => this.checkScriptSyntax());
     must<HTMLButtonElement>("script-template").addEventListener("click", () => {
       this.scriptSource.value = this.defaultScriptSource(this.scriptKind.value as ForgeScriptKind);
     });
@@ -312,6 +319,10 @@ export class EditorApp {
       this.renderInspector();
       this.log(`Renamed to ${entity.name}`);
     });
+
+    for (const id of ["prop-color", "prop-emissive", "prop-transparency"]) {
+      must<HTMLInputElement>(id).addEventListener("change", () => this.applyAppearance());
+    }
 
     window.addEventListener("pointerup", () => {
       if (this.mode === "editor" && this.selectedId) {
@@ -796,6 +807,9 @@ export class EditorApp {
     if (!entity || !mesh) return;
 
     must<HTMLInputElement>("prop-name").value = entity.name;
+    must<HTMLInputElement>("prop-color").value = this.safeHex(entity.color, "#8796a3");
+    must<HTMLInputElement>("prop-emissive").value = this.safeHex(entity.emissive, "#000000");
+    must<HTMLInputElement>("prop-transparency").value = String(entity.transparency ?? 0);
     must<HTMLInputElement>("pos-x").value = mesh.position.x.toFixed(2);
     must<HTMLInputElement>("pos-y").value = mesh.position.y.toFixed(2);
     must<HTMLInputElement>("pos-z").value = mesh.position.z.toFixed(2);
@@ -914,7 +928,7 @@ export class EditorApp {
       remove.addEventListener("click", () => {
         this.checkpoint();
         if (entity.components) delete entity.components[componentName];
-        this.forge.refreshUI();
+        this.forge.rebuildEntity(entity.id);
         this.renderInspector();
         this.log(`Removed ${componentName} from ${entity.name}.`);
       });
@@ -1244,7 +1258,7 @@ Forge.onUpdate((dt) => {
     input.addEventListener("change", () => {
       this.checkpoint();
       apply(input.value.trim());
-      this.forge.refreshUI();
+      if (this.selectedId) this.forge.rebuildEntity(this.selectedId);
       this.renderInspector();
       this.log(`${labelText} updated.`);
     });
@@ -1275,7 +1289,7 @@ Forge.onUpdate((dt) => {
       }
       this.checkpoint();
       apply(next);
-      this.forge.refreshUI();
+      if (this.selectedId) this.forge.rebuildEntity(this.selectedId);
       this.renderInspector();
       this.log(`${labelText} updated.`);
     });
@@ -1299,7 +1313,7 @@ Forge.onUpdate((dt) => {
     input.addEventListener("change", () => {
       this.checkpoint();
       apply(input.checked);
-      this.forge.refreshUI();
+      if (this.selectedId) this.forge.rebuildEntity(this.selectedId);
       this.renderInspector();
       this.log(`${labelText} updated.`);
     });
@@ -1330,7 +1344,7 @@ Forge.onUpdate((dt) => {
     select.addEventListener("change", () => {
       this.checkpoint();
       apply(select.value);
-      this.forge.refreshUI();
+      if (this.selectedId) this.forge.rebuildEntity(this.selectedId);
       this.renderInspector();
       this.log(`${labelText} updated.`);
     });
