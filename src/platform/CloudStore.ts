@@ -305,3 +305,40 @@ export async function pingCloud(): Promise<boolean> {
 
   return !error;
 }
+
+
+export interface FriendConnection {
+  other_id: string;
+  username: string;
+  display_name: string;
+  status: "pending" | "accepted";
+  direction: "incoming" | "outgoing" | "friend";
+}
+
+export async function requestFriendByUsername(username: string): Promise<"pending" | "accepted"> {
+  const { data, error } = await supabase.rpc("friend_request", {
+    target_username: username.trim()
+  });
+  if (error) throw error;
+  return data as "pending" | "accepted";
+}
+
+export async function loadFriendConnections(): Promise<FriendConnection[]> {
+  const { data, error } = await supabase.rpc("friend_connections");
+  if (error) throw error;
+  return (data ?? []) as FriendConnection[];
+}
+
+export async function acceptFriend(requesterId: string): Promise<void> {
+  const { error } = await supabase.rpc("friend_accept", {
+    requester: requesterId
+  });
+  if (error) throw error;
+}
+
+export async function removeFriend(otherUserId: string): Promise<void> {
+  const { error } = await supabase.rpc("friend_remove", {
+    other_user: otherUserId
+  });
+  if (error) throw error;
+}
