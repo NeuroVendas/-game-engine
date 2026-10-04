@@ -125,32 +125,41 @@ async function calibratePlayerAxes(page: any): Promise<{ forward: [number, numbe
   return { forward, right };
 }
 
-async function drivePlayerTo(
+async function moveUntilPosition(
   page: any,
-  axes: { forward: [number, number]; right: [number, number] },
-  target: [number, number]
+  keys: string[],
+  reached: (position: [number, number]) => boolean,
+  timeout = 6000
 ): Promise<void> {
-  for (let step = 0; step < 90; step += 1) {
-    const [x, z] = await readPlayerXZ(page);
-    const dx = target[0] - x;
-    const dz = target[1] - z;
-    const distance = Math.hypot(dx, dz);
-    if (distance < 0.55) return;
-
-    const forwardError = dx * axes.forward[0] + dz * axes.forward[1];
-    const rightError = dx * axes.right[0] + dz * axes.right[1];
-    const keys: string[] = [];
-
-    if (Math.abs(forwardError) > 0.18) keys.push(forwardError > 0 ? "KeyW" : "KeyS");
-    if (Math.abs(rightError) > 0.18) keys.push(rightError > 0 ? "KeyD" : "KeyA");
-    if (distance > 5) keys.push("ShiftLeft");
-
-    const duration = distance > 8 ? 170 : distance > 4 ? 120 : distance > 2 ? 80 : 55;
-    await holdMovement(page, keys, duration);
+  for (const key of keys) await page.keyboard.down(key);
+  try {
+    await expect.poll(async () => reached(await readPlayerXZ(page)), {
+      timeout,
+      intervals: [80, 100, 120]
+    }).toBe(true);
+  } finally {
+    for (const key of [...keys].reverse()) await page.keyboard.up(key);
   }
+  await page.waitForTimeout(120);
+}
 
-  const [x, z] = await readPlayerXZ(page);
-  throw new Error(`Player failed to reach target ${target.join(",")} from ${x.toFixed(2)},${z.toFixed(2)}`);
+async function moveUntilPrompt(
+  page: any,
+  keys: string[],
+  promptText: string,
+  timeout = 7000
+): Promise<void> {
+  const prompt = page.locator("#interaction-prompt");
+  for (const key of keys) await page.keyboard.down(key);
+  try {
+    await expect.poll(async () => (await prompt.textContent()) ?? "", {
+      timeout,
+      intervals: [80, 100, 120]
+    }).toContain(promptText);
+  } finally {
+    for (const key of [...keys].reverse()) await page.keyboard.up(key);
+  }
+  await page.waitForTimeout(140);
 }
 
 test("platform home, games, favorites, profile and direct play work", async ({ page }) => {
@@ -574,16 +583,28 @@ test("Core Relay template is a playable complete-game benchmark", async ({ page 
 
   const canvas = page.locator("#viewport");
   const axes = await calibratePlayerAxes(page);
+  expect(Math.abs(axes.forward[1])).toBeGreaterThan(0.75);
+  expect(Math.abs(axes.right[0])).toBeGreaterThan(0.75);
 
-  await drivePlayerTo(page, axes, [-7, -3.6]);
+  const xPositive = axes.right[0] >= 0 ? "KeyD" : "KeyA";
+  const xNegative = xPositive === "KeyD" ? "KeyA" : "KeyD";
+  const zNegative = axes.forward[1] >= 0 ? "KeyS" : "KeyW";
+
+  // Route through open floor and stop based on the same interaction prompt a player sees.
+  await moveUntilPosition(page, [xNegative, "ShiftLeft"], ([x]) => x <= -6.4);
+  await moveUntilPrompt(page, [zNegative, "ShiftLeft"], "Relay A");
   await page.keyboard.press("KeyE");
   await expect(page.locator("#forge-ui-root")).toContainText("1 / 3 relays online");
 
-  await drivePlayerTo(page, axes, [0, -7.5]);
+  // Step away from Relay A / the central core, then approach Relay B from its west side.
+  await moveUntilPosition(page, [xPositive, "ShiftLeft"], ([x]) => x >= -3.5);
+  await moveUntilPosition(page, [zNegative, "ShiftLeft"], ([, z]) => z <= -7.1);
+  await moveUntilPrompt(page, [xPositive, "ShiftLeft"], "Relay B");
   await page.keyboard.press("KeyE");
   await expect(page.locator("#forge-ui-root")).toContainText("2 / 3 relays online");
 
-  await drivePlayerTo(page, axes, [7, -3.6]);
+  // Relay C is reachable across the same lower corridor without crossing the core.
+  await moveUntilPrompt(page, [xPositive, "ShiftLeft"], "Relay C");
   await page.keyboard.press("KeyE");
   await expect(page.locator("#forge-ui-root")).toContainText("3 / 3 relays online");
   await expect(page.locator("#forge-ui-root")).toContainText("CORE ONLINE • YOU WIN");
