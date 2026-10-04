@@ -6,11 +6,13 @@ test("platform home, games, favorites, profile and direct play work", async ({ p
   await expect(page.locator("#launcher-page-home")).toBeVisible();
   await expect(page.locator("#app")).toBeHidden();
 
+  await expect.poll(async () => page.locator("#cloud-status").textContent()).toContain("Forge Cloud Online");
+
   await page.locator("#account-button").click();
-  await expect(page.locator("#profile-dialog")).toBeVisible();
-  await page.locator("#profile-display-name").fill("Test Builder");
-  await page.locator("#save-profile").click();
-  await expect(page.locator(".welcome-strip")).toContainText("Test Builder");
+  await expect(page.locator("#auth-dialog")).toBeVisible();
+  await expect(page.locator("#auth-message")).toContainText("guest");
+  await page.locator("#auth-dialog button[value='cancel']").click();
+  await expect(page.locator("#auth-dialog")).toBeHidden();
 
   await page.locator("[data-launch-tab='games']").click();
   await expect(page.locator("#launcher-page-games")).toBeVisible();
