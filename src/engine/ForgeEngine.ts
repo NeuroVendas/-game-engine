@@ -643,6 +643,7 @@ export class ForgeEngine {
           forgeEntityName: entity.name
         };
         imported.isPickable = true;
+        imported.checkCollisions = entity.components?.Collider?.enabled ?? false;
         if (!imported.parent) imported.parent = root;
       }
 
