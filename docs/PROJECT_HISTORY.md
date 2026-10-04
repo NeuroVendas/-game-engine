@@ -389,12 +389,15 @@ Project Helios exists to stop Forge from becoming a collection of unrelated engi
 
 ## 14. Version/branch note
 
-Current repository history has a naming mismatch:
+The historical creator/platform foundation remains on `forge-v0.4`.
 
-- active branch: `forge-v0.4`
+Creator-quality development was formally split to:
+
+- active branch: `forge-v0.5`
 - package version: `0.5.0`
+- draft PR: #12 — Forge v0.5: Creator Experience
 
-The branch name is historical. Do not infer capability from it.
+Do not infer capability only from old branch names.
 
 ## 15. Source-of-truth priority
 
@@ -408,3 +411,48 @@ After context loss, trust in this order:
 6. old chat descriptions
 
 The repository is canonical.
+
+
+## 16. Forge v0.5 — Creator Experience formalized
+
+After the documentation/recovery milestone, active work moved from the historically named `forge-v0.4` branch to `forge-v0.5`.
+
+The v0.5 quality target is explicit: a new creator should be able to build a small game without the Studio or runtime immediately feeling like a prototype.
+
+### Transform workflow
+
+The first v0.5 Creator Experience pass added:
+
+- explicit World / Local transform space
+- Ctrl+5 space toggle
+- separate Move / Rotate / Resize snap controls
+- gizmo drag Undo checkpoints
+- primitive Resize that bakes visual scaling into canonical object `size`
+- model/group scale remains transform-based instead of being incorrectly baked as primitive size
+
+### Core Relay acceptance game
+
+A complete small benchmark game named **Core Relay** was added to `public/scenes/core-relay.forge.json` and exposed under Develop -> Starter Templates.
+
+It intentionally exercises Forge systems together:
+
+- player spawn/collision
+- three interactable relay consoles
+- ModuleScript shared state
+- gameplay Scripts
+- LocalScript UI interaction
+- HUD panel/text/button
+- real WAV sound asset
+- light/environment
+- completion event
+- exit unlock
+- visible win state
+
+Core Relay is not decorative sample content. It is an engine acceptance test: if building or running it exposes a missing capability, that gap becomes engine work rather than an external workaround.
+
+### v0.5 tracking
+
+- #9 — Creator Experience umbrella
+- #10 — Professional transform workflow
+- #11 — complete mini-game acceptance test
+- PR #12 — Forge v0.5: Creator Experience
