@@ -11,7 +11,7 @@ test("platform home, games, favorites, profile and direct play work", async ({ p
   await page.locator("#account-button").click();
   await expect(page.locator("#auth-dialog")).toBeVisible();
   await expect(page.locator("#auth-message")).toContainText("guest");
-  await page.locator("#auth-dialog button[value='cancel']").click();
+  await page.locator("#auth-guest").click();
   await expect(page.locator("#auth-dialog")).toBeHidden();
 
   await page.locator("[data-launch-tab='games']").click();
