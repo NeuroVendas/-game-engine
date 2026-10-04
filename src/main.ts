@@ -192,6 +192,7 @@ async function refreshPublicCloud(): Promise<void> {
   if (!cloudOnline) return;
   try {
     publicCloudProjects = await loadPublicProjects();
+    launcher.dataset.cloudCatalogCount = String(publicCloudProjects.length);
   } catch (error) {
     console.error("Public catalog failed", error);
     setCloudStatus("Forge Cloud catalog unavailable — local mode active.", true);
@@ -275,6 +276,7 @@ function clearCloudAccountState(): void {
 }
 
 function setCloudStatus(message: string, error = false): void {
+  launcher.dataset.cloudSession = cloudSession ? "signed-in" : "guest";
   const status = must<HTMLElement>("cloud-status");
   status.textContent = `● ${message}`;
   status.classList.toggle("cloud-online", !error && cloudOnline);
