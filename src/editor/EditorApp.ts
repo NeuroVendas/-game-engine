@@ -1373,7 +1373,11 @@ Forge.onUpdate((dt) => {
       }
       this.checkpoint();
       apply(next);
-      if (this.selectedId) this.forge.rebuildEntity(this.selectedId);
+      if (this.selectedId) {
+        const selectedId = this.selectedId;
+        this.forge.rebuildEntity(selectedId);
+        this.setSelection(selectedId);
+      }
       this.renderInspector();
       this.log(`${labelText} updated.`);
     });
@@ -1397,7 +1401,11 @@ Forge.onUpdate((dt) => {
     input.addEventListener("change", () => {
       this.checkpoint();
       apply(input.checked);
-      if (this.selectedId) this.forge.rebuildEntity(this.selectedId);
+      if (this.selectedId) {
+        const selectedId = this.selectedId;
+        this.forge.rebuildEntity(selectedId);
+        this.setSelection(selectedId);
+      }
       this.renderInspector();
       this.log(`${labelText} updated.`);
     });
@@ -1428,7 +1436,11 @@ Forge.onUpdate((dt) => {
     select.addEventListener("change", () => {
       this.checkpoint();
       apply(select.value);
-      if (this.selectedId) this.forge.rebuildEntity(this.selectedId);
+      if (this.selectedId) {
+        const selectedId = this.selectedId;
+        this.forge.rebuildEntity(selectedId);
+        this.setSelection(selectedId);
+      }
       this.renderInspector();
       this.log(`${labelText} updated.`);
     });
