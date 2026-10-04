@@ -314,6 +314,8 @@ test("studio v0.5 supports resize, sky, UI, typed scripts, sound and lights", as
 
   await page.locator("[data-primitive='box']").click();
   await expect(page.locator("#prop-parent")).toHaveValue("");
+  await page.locator("#prop-material").selectOption("metal");
+  await expect(page.locator("#prop-material")).toHaveValue("metal");
 
   await page.locator("[data-object='empty']").click();
   await expect(page.locator("#scene-tree")).toContainText("Object");
