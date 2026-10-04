@@ -508,4 +508,12 @@ test("Core Relay template is a playable complete-game benchmark", async ({ page 
   await expect(page.locator("#forge-ui-root")).toContainText("Walk to each metal relay and press E");
 
   expect(await page.locator("#viewport").getAttribute("data-runtime-error")).toBeNull();
+
+  // Real audio resources must survive repeated Editor <-> Play transitions.
+  await page.locator("#stop").click();
+  await expect(page.locator("#mode-badge")).toHaveText("EDITOR");
+  await page.locator("#play").click();
+  await expect(page.locator("#mode-badge")).toHaveText("PLAY");
+  await expect(page.locator("#output-log")).toContainText("CORE_RELAY_READY");
+  expect(await page.locator("#viewport").getAttribute("data-runtime-error")).toBeNull();
 });
