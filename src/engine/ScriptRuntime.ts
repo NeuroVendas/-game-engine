@@ -47,6 +47,18 @@ interface ForgeNodeAPI {
   setColor(hex: string): void;
 }
 
+interface RuntimeAudioAPI {
+  play(idOrName: string): boolean;
+  pause(idOrName: string): boolean;
+  stop(idOrName: string): boolean;
+  setVolume(idOrName: string, volume: number): boolean;
+}
+
+interface RuntimeUIAPI {
+  setText(idOrName: string, text: string): boolean;
+  show(idOrName: string, visible: boolean): boolean;
+}
+
 interface ForgeUserAPI {
   readonly self: ForgeNodeAPI;
   readonly parent: ForgeNodeAPI | null;
@@ -62,6 +74,8 @@ interface ForgeUserAPI {
   readonly input: {
     isDown(code: string): boolean;
   };
+  readonly audio: RuntimeAudioAPI;
+  readonly ui: RuntimeUIAPI;
   readonly time: {
     wait(seconds: number): Promise<void>;
   };
@@ -96,6 +110,16 @@ export class ScriptRuntime {
   private readonly modules = new Map<string, unknown>();
   private readonly events = new Map<string, Set<ScriptCallback>>();
   private readonly keys = new Set<string>();
+  private audioApi: RuntimeAudioAPI = {
+    play: () => false,
+    pause: () => false,
+    stop: () => false,
+    setVolume: () => false
+  };
+  private uiApi: RuntimeUIAPI = {
+    setText: () => false,
+    show: () => false
+  };
 
   constructor(
     private readonly scene: Scene,
@@ -120,6 +144,14 @@ export class ScriptRuntime {
 
   register(name: string, factory: ForgeScriptFactory): void {
     this.factories.set(name, factory);
+  }
+
+  setAudioAPI(api: RuntimeAudioAPI): void {
+    this.audioApi = api;
+  }
+
+  setUIAPI(api: RuntimeUIAPI): void {
+    this.uiApi = api;
   }
 
   attach(entity: ForgeEntity, node: AbstractMesh): void {
@@ -234,6 +266,16 @@ export class ScriptRuntime {
       },
       input: {
         isDown: (code: string) => this.keys.has(code)
+      },
+      audio: {
+        play: (idOrName: string) => this.audioApi.play(idOrName),
+        pause: (idOrName: string) => this.audioApi.pause(idOrName),
+        stop: (idOrName: string) => this.audioApi.stop(idOrName),
+        setVolume: (idOrName: string, volume: number) => this.audioApi.setVolume(idOrName, volume)
+      },
+      ui: {
+        setText: (idOrName: string, text: string) => this.uiApi.setText(idOrName, text),
+        show: (idOrName: string, visible: boolean) => this.uiApi.show(idOrName, visible)
       },
       time: {
         wait: (seconds: number) => new Promise((resolve) => {
