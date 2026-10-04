@@ -146,6 +146,24 @@ for (const file of files) {
       }
     }
 
+    if (components.VFX) {
+      if (!["sparks", "smoke", "fire", "glow", "dust"].includes(components.VFX.preset)) {
+        throw new Error(`${file}: ${entity.id} VFX.preset is invalid`);
+      }
+      if (components.VFX.enabled !== undefined && typeof components.VFX.enabled !== "boolean") {
+        throw new Error(`${file}: ${entity.id} VFX.enabled must be boolean`);
+      }
+      if (components.VFX.autoplay !== undefined && typeof components.VFX.autoplay !== "boolean") {
+        throw new Error(`${file}: ${entity.id} VFX.autoplay must be boolean`);
+      }
+      for (const field of ["emitRate", "lifetime", "size", "speed"]) {
+        if (components.VFX[field] !== undefined && !Number.isFinite(components.VFX[field])) {
+          throw new Error(`${file}: ${entity.id} VFX.${field} must be finite`);
+        }
+      }
+      assertVec3(file, entity.id, "VFX.gravity", components.VFX.gravity);
+    }
+
     if (components.UI) {
       if (!["text", "button", "panel"].includes(components.UI.type)) {
         throw new Error(`${file}: ${entity.id} UI.type is invalid`);
