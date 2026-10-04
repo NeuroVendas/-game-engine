@@ -142,6 +142,11 @@ export class ForgeEngine {
     for (const sound of this.entitySounds.values()) sound.dispose();
     this.entitySounds.clear();
 
+    // Detach Forge entity roots first so disposing one parent cannot accidentally
+    // dispose another tracked Forge entity before its own cleanup pass.
+    for (const mesh of this.entityMeshes.values()) {
+      mesh.parent = null;
+    }
     for (const mesh of this.entityMeshes.values()) {
       mesh.dispose(false, true);
     }
@@ -305,6 +310,13 @@ export class ForgeEngine {
     this.entityLights.delete(id);
     this.entitySounds.get(id)?.dispose();
     this.entitySounds.delete(id);
+
+    const forgeChildren = this.document.entities
+      .filter((candidate) => candidate.parentId === id)
+      .map((candidate) => this.entityMeshes.get(candidate.id))
+      .filter((mesh): mesh is Mesh => Boolean(mesh));
+
+    for (const childMesh of forgeChildren) childMesh.parent = null;
 
     this.entityMeshes.get(id)?.dispose(false, true);
     this.entityMeshes.delete(id);
@@ -635,6 +647,11 @@ export class ForgeEngine {
         undefined,
         source.startsWith("data:") ? ".glb" : undefined
       );
+
+      if (root.isDisposed()) {
+        for (const imported of result.meshes) imported.dispose(false, true);
+        return;
+      }
 
       for (const imported of result.meshes) {
         imported.metadata = {
