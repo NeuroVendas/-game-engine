@@ -1299,3 +1299,17 @@ input, textarea { cursor: text; }
   color: #e8ffd0 !important;
 }
 .workspace-root { user-select: none; }
+
+/* ===== Custom sky controls ===== */
+.lighting-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+.lighting-actions button {
+  padding: 4px 5px;
+  border: 1px solid #596771;
+  background: linear-gradient(#303c45,#222b32);
+  color: #c8d2d9;
+  font-size: 9px;
+}
