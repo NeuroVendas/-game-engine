@@ -63,21 +63,21 @@ test("develop can create, edit, duplicate, rename, delete and persist a place", 
   await page.locator("#home-button").click();
   await expect(page.locator("#launcher-page-develop")).toBeVisible();
 
-  const card = page.locator("#game-grid .place-card", { hasText: "Menu Test Place" });
+  const card = page.locator("#game-grid .place-card[data-place-name='Menu Test Place']");
   await expect(card).toHaveCount(1);
 
   await card.locator("[data-action='more']").click();
   await card.locator("[data-action='duplicate']").click();
   await expect(page.locator("#game-grid")).toContainText("Menu Test Place Copy");
 
-  const original = page.locator("#game-grid .place-card", { hasText: "Menu Test Place" }).first();
+  const original = page.locator("#game-grid .place-card[data-place-name='Menu Test Place']");
   await original.locator("[data-action='more']").click();
   await original.locator("[data-action='rename']").click();
   await page.locator("#rename-place-name").fill("Renamed Place");
   await page.locator("#confirm-rename-place").click();
   await expect(page.locator("#game-grid")).toContainText("Renamed Place");
 
-  const renamed = page.locator("#game-grid .place-card", { hasText: "Renamed Place" });
+  const renamed = page.locator("#game-grid .place-card[data-place-name='Renamed Place']");
   await renamed.locator("[data-action='more']").click();
   page.once("dialog", (dialog) => dialog.accept());
   await renamed.locator("[data-action='delete']").click();
