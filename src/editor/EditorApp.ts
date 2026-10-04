@@ -667,6 +667,54 @@ export class EditorApp {
     }
   }
 
+  private async importAudioFile(event: Event): Promise<void> {
+    if (this.mode !== "editor") return;
+
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    try {
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error("Audio is larger than 5 MB. Use a hosted audio URL for larger assets.");
+      }
+
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(reader.error ?? new Error("Could not read audio file."));
+        reader.onload = () => resolve(String(reader.result));
+        reader.readAsDataURL(file);
+      });
+
+      this.checkpoint();
+      const entity = this.forge.createPrimitive("empty", file.name.replace(/\.[^.]+$/, "") || "Sound");
+      entity.parentId = this.selectedId ?? undefined;
+      entity.components = {
+        Sound: {
+          src: dataUrl,
+          fileName: file.name,
+          volume: 1,
+          loop: false,
+          autoplay: false,
+          spatial: true,
+          maxDistance: 40
+        }
+      };
+
+      const document = this.forge.exportDocument();
+      this.setSelection(null);
+      this.forge.loadDocument(document, false);
+      this.forge.mountUI(this.uiRoot, false);
+      this.renderTree();
+      this.selectEntity(entity.id);
+      this.log(`Imported audio ${file.name}. Enable Autoplay or trigger it from gameplay later.`);
+    } catch (error) {
+      this.log(`Audio import failed: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      input.value = "";
+    }
+  }
+
   private createPrefab(prefab: ForgePrefabName): void {
     this.checkpoint();
     const entity = this.forge.createPrefab(prefab);
@@ -1060,6 +1108,12 @@ export class EditorApp {
         this.appendNumberField(container, "Max distance", component.maxDistance ?? 40, 1, (value) => {
           component.maxDistance = Math.max(1, value);
         });
+        if (component.fileName) {
+          const note = document.createElement("div");
+          note.className = "component-note";
+          note.textContent = `Imported file: ${component.fileName}`;
+          container.appendChild(note);
+        }
         break;
       }
       case "UI": {
@@ -1230,6 +1284,12 @@ Forge.onUpdate((dt) => {
     const entity = this.forge.getEntity(this.scriptEditingEntityId);
     if (!entity) return;
 
+    const syntaxError = this.getScriptSyntaxError();
+    if (syntaxError) {
+      this.log(`SCRIPT SYNTAX ERROR: ${syntaxError}`);
+      return;
+    }
+
     this.checkpoint();
     const components = entity.components ?? (entity.components = {});
     components.Script = {
@@ -1241,6 +1301,25 @@ Forge.onUpdate((dt) => {
 
     this.renderInspector();
     this.log(`Saved ${components.Script.kind}: ${components.Script.name} • runs in Play`);
+  }
+
+  private getScriptSyntaxError(): string | null {
+    try {
+      new Function("Forge", `"use strict";\n${this.scriptSource.value}`);
+      return null;
+    } catch (error) {
+      return error instanceof Error ? error.message : String(error);
+    }
+  }
+
+  private checkScriptSyntax(): void {
+    const error = this.getScriptSyntaxError();
+    if (error) {
+      this.log(`SCRIPT SYNTAX ERROR: ${error}`);
+      return;
+    }
+
+    this.log(`${this.scriptKind.value} syntax OK • ready to save and Play.`);
   }
 
   private appendTextField(
@@ -1351,6 +1430,29 @@ Forge.onUpdate((dt) => {
 
     label.appendChild(select);
     container.appendChild(label);
+  }
+
+  private safeHex(value: string | undefined, fallback: string): string {
+    return /^#[0-9a-fA-F]{6}$/.test(value ?? "") ? value! : fallback;
+  }
+
+  private applyAppearance(): void {
+    if (!this.selectedId) return;
+    const entity = this.forge.getEntity(this.selectedId);
+    if (!entity) return;
+
+    this.checkpoint();
+    entity.color = must<HTMLInputElement>("prop-color").value;
+    const emissive = must<HTMLInputElement>("prop-emissive").value;
+    entity.emissive = emissive === "#000000" ? undefined : emissive;
+    entity.transparency = Math.min(
+      1,
+      Math.max(0, Number(must<HTMLInputElement>("prop-transparency").value) || 0)
+    );
+
+    this.forge.rebuildEntity(entity.id);
+    this.renderInspector();
+    this.log(`Appearance updated for ${entity.name}.`);
   }
 
   private applyInspectorSize(): void {
