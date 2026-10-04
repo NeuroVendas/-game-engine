@@ -436,6 +436,12 @@
               <label>Ambient <input id="env-ambient" type="color" value="#d9e8f4" /></label>
               <label>Fog <input id="env-fog" type="color" value="#9fc6df" /></label>
               <label>Fog density <input id="env-fog-density" type="number" min="0" max="0.1" step="0.001" value="0" /></label>
+              <div class="lighting-actions">
+                <button id="import-sky" type="button">Import Sky Image</button>
+                <button id="clear-sky" type="button">Use Color Sky</button>
+                <input id="sky-file-input" type="file" accept="image/png,image/jpeg,image/webp" hidden />
+              </div>
+              <div id="sky-file-label" class="component-note">Color sky</div>
             </div>
             <div class="service">Sound</div>
             <div class="service">UI</div>
