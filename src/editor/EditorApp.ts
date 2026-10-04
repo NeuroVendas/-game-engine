@@ -527,6 +527,135 @@ export class EditorApp {
     this.log(`Created ${entity.name}`);
   }
 
+  private createStudioObject(objectType: string): void {
+    this.checkpoint();
+
+    const names: Record<string, string> = {
+      empty: "Object",
+      light: "Point Light",
+      sound: "Sound",
+      "ui-text": "Screen Text",
+      "ui-button": "UI Button",
+      script: "Script",
+      localscript: "LocalScript",
+      modulescript: "ModuleScript"
+    };
+
+    const entity = this.forge.createPrimitive("empty", names[objectType] ?? "Object");
+    entity.parentId = this.selectedId ?? undefined;
+    entity.components = {};
+
+    if (objectType === "light") {
+      entity.components.Light = {
+        type: "point",
+        color: "#ffffff",
+        intensity: 1.4,
+        range: 24
+      };
+    } else if (objectType === "sound") {
+      entity.components.Sound = {
+        src: "",
+        volume: 1,
+        loop: false,
+        autoplay: false,
+        spatial: true,
+        maxDistance: 40
+      };
+    } else if (objectType === "ui-text") {
+      entity.components.UI = {
+        type: "text",
+        text: "Hello Forge",
+        x: 0,
+        y: 24,
+        width: 320,
+        height: 42,
+        fontSize: 22,
+        color: "#ffffff",
+        background: "transparent",
+        visible: true,
+        anchor: "top-center"
+      };
+    } else if (objectType === "ui-button") {
+      entity.components.UI = {
+        type: "button",
+        text: "Button",
+        x: 0,
+        y: 24,
+        width: 180,
+        height: 42,
+        fontSize: 16,
+        color: "#21303a",
+        background: "#dce6ed",
+        visible: true,
+        anchor: "bottom-center"
+      };
+    } else if (["script", "localscript", "modulescript"].includes(objectType)) {
+      const kind: ForgeScriptKind =
+        objectType === "localscript" ? "LocalScript"
+          : objectType === "modulescript" ? "ModuleScript"
+          : "Script";
+
+      entity.components.Script = {
+        name: `custom.${entity.id}`,
+        kind,
+        enabled: true,
+        source: this.defaultScriptSource(kind)
+      };
+    }
+
+    const document = this.forge.exportDocument();
+    this.setSelection(null);
+    this.forge.loadDocument(document);
+    this.forge.mountUI(this.uiRoot, false);
+    this.renderTree();
+    this.selectEntity(entity.id);
+    this.log(`Inserted ${entity.name}${entity.parentId ? " as child object" : ""}.`);
+  }
+
+  private async importModelFile(event: Event): Promise<void> {
+    if (this.mode !== "editor") return;
+
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    try {
+      if (file.size > 8 * 1024 * 1024) {
+        throw new Error("GLB is larger than 8 MB. Use a hosted model URL in the Model component for large assets.");
+      }
+
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(reader.error ?? new Error("Could not read model file."));
+        reader.onload = () => resolve(String(reader.result));
+        reader.readAsDataURL(file);
+      });
+
+      this.checkpoint();
+      const entity = this.forge.createPrimitive("model", file.name.replace(/\.glb$/i, "") || "Model");
+      entity.parentId = this.selectedId ?? undefined;
+      entity.components = {
+        Model: {
+          src: dataUrl,
+          fileName: file.name
+        },
+        Collider: { enabled: false }
+      };
+
+      const document = this.forge.exportDocument();
+      this.setSelection(null);
+      this.forge.loadDocument(document);
+      this.forge.mountUI(this.uiRoot, false);
+      this.renderTree();
+      this.selectEntity(entity.id);
+      this.log(`Imported ${file.name}. Model loading in viewport...`);
+    } catch (error) {
+      this.log(`Model import failed: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      input.value = "";
+    }
+  }
+
   private createPrefab(prefab: ForgePrefabName): void {
     this.checkpoint();
     const entity = this.forge.createPrefab(prefab);
@@ -608,14 +737,53 @@ export class EditorApp {
   private renderTree(): void {
     this.tree.replaceChildren();
 
-    for (const entity of this.forge.document.entities) {
+    const entities = this.forge.document.entities;
+    const byParent = new Map<string | null, ForgeEntity[]>();
+
+    for (const entity of entities) {
+      const parentExists = entity.parentId && entities.some((candidate) => candidate.id === entity.parentId);
+      const parentKey = parentExists ? entity.parentId! : null;
+      const bucket = byParent.get(parentKey) ?? [];
+      bucket.push(entity);
+      byParent.set(parentKey, bucket);
+    }
+
+    const visited = new Set<string>();
+    const appendEntity = (entity: ForgeEntity, depth: number) => {
+      if (visited.has(entity.id)) return;
+      visited.add(entity.id);
+
       const button = document.createElement("button");
       button.className = "scene-item";
       button.classList.toggle("selected", entity.id === this.selectedId);
-      button.textContent = `◇ ${entity.name}`;
-      button.title = entity.id;
+      button.style.paddingLeft = `${8 + depth * 14}px`;
+
+      const icon = entity.components?.Script ? "⌘"
+        : entity.components?.Light ? "☀"
+        : entity.components?.Sound ? "♪"
+        : entity.components?.UI ? "▣"
+        : entity.kind === "model" ? "⬡"
+        : entity.kind === "empty" ? "◇"
+        : "◆";
+
+      button.textContent = `${icon} ${entity.name}`;
+      button.title = entity.parentId
+        ? `${entity.id} • child of ${entity.parentId}`
+        : entity.id;
       button.addEventListener("click", () => this.selectEntity(entity.id));
+      button.addEventListener("dblclick", () => {
+        if (entity.components?.Script) this.openScriptEditor(entity.id);
+      });
       this.tree.appendChild(button);
+
+      for (const child of byParent.get(entity.id) ?? []) {
+        appendEntity(child, depth + 1);
+      }
+    };
+
+    for (const entity of byParent.get(null) ?? []) appendEntity(entity, 0);
+    for (const entity of entities) {
+      if (!visited.has(entity.id)) appendEntity(entity, 0);
     }
   }
 
@@ -634,6 +802,10 @@ export class EditorApp {
     must<HTMLInputElement>("rot-x").value = degrees(mesh.rotation.x).toFixed(1);
     must<HTMLInputElement>("rot-y").value = degrees(mesh.rotation.y).toFixed(1);
     must<HTMLInputElement>("rot-z").value = degrees(mesh.rotation.z).toFixed(1);
+    const baseSize = entity.size ?? [1, 1, 1];
+    must<HTMLInputElement>("size-x").value = Math.abs(baseSize[0] * mesh.scaling.x).toFixed(2);
+    must<HTMLInputElement>("size-y").value = Math.abs(baseSize[1] * mesh.scaling.y).toFixed(2);
+    must<HTMLInputElement>("size-z").value = Math.abs(baseSize[2] * mesh.scaling.z).toFixed(2);
     must<HTMLInputElement>("scale-x").value = mesh.scaling.x.toFixed(2);
     must<HTMLInputElement>("scale-y").value = mesh.scaling.y.toFixed(2);
     must<HTMLInputElement>("scale-z").value = mesh.scaling.z.toFixed(2);
@@ -676,11 +848,27 @@ export class EditorApp {
       case "Reactor":
         components.Reactor = { power: 0, temperature: 20 };
         break;
+      case "Light":
+        components.Light = { type: "point", color: "#ffffff", intensity: 1.2, range: 20 };
+        break;
+      case "Sound":
+        components.Sound = { src: "", volume: 1, loop: false, autoplay: false, spatial: true, maxDistance: 40 };
+        break;
+      case "UI":
+        components.UI = {
+          type: "text", text: "Text", x: 16, y: 16, width: 220, height: 40,
+          fontSize: 18, color: "#ffffff", background: "transparent", visible: true, anchor: "top-left"
+        };
+        break;
+      case "Model":
+        components.Model = { src: "" };
+        break;
       case "Script":
         components.Script = {
           name: `custom.${entity.id}`,
+          kind: "Script",
           enabled: true,
-          source: this.defaultScriptSource()
+          source: this.defaultScriptSource("Script")
         };
         break;
     }
@@ -726,6 +914,7 @@ export class EditorApp {
       remove.addEventListener("click", () => {
         this.checkpoint();
         if (entity.components) delete entity.components[componentName];
+        this.forge.refreshUI();
         this.renderInspector();
         this.log(`Removed ${componentName} from ${entity.name}.`);
       });
