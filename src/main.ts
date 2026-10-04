@@ -372,6 +372,7 @@ function projectCard(scene: ForgeSceneDocument, context: "game" | "develop"): HT
   const card = document.createElement("article");
   card.className = "game-card place-card";
   card.dataset.placeId = id;
+  card.dataset.placeName = scene.name;
 
   const title = escapeHtml(scene.name);
   const thumbClass = official ? "helios-thumb" : "user-thumb";
