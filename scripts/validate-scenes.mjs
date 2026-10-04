@@ -9,7 +9,9 @@ const allowedKinds = new Set([
   "sphere",
   "capsule",
   "cylinder",
-  "ground"
+  "ground",
+  "empty",
+  "model"
 ]);
 
 const knownScripts = new Set([
@@ -41,6 +43,15 @@ for (const file of files) {
 
   assertVec3(file, "<scene>", "playerSpawn", document.playerSpawn);
 
+  if (document.environment !== undefined) {
+    if (!document.environment || typeof document.environment !== "object") {
+      throw new Error(`${file}: environment must be an object`);
+    }
+    if (document.environment.fogDensity !== undefined && !Number.isFinite(document.environment.fogDensity)) {
+      throw new Error(`${file}: environment.fogDensity must be finite`);
+    }
+  }
+
   const ids = new Set();
 
   for (const [index, entity] of document.entities.entries()) {
@@ -58,6 +69,10 @@ for (const file of files) {
     assertVec3(file, entity.id, "rotation", entity.rotation);
     assertVec3(file, entity.id, "scale", entity.scale);
     assertVec3(file, entity.id, "size", entity.size);
+
+    if (entity.parentId !== undefined && typeof entity.parentId !== "string") {
+      throw new Error(`${file}: ${entity.id} parentId must be a string`);
+    }
 
     const components = entity.components ?? {};
 
@@ -97,9 +112,43 @@ for (const file of files) {
       }
     }
 
+    if (components.Light) {
+      if (!["point", "spot"].includes(components.Light.type)) {
+        throw new Error(`${file}: ${entity.id} Light.type is invalid`);
+      }
+      if (components.Light.intensity !== undefined && !Number.isFinite(components.Light.intensity)) {
+        throw new Error(`${file}: ${entity.id} Light.intensity must be finite`);
+      }
+    }
+
+    if (components.Sound) {
+      if (typeof components.Sound.src !== "string") {
+        throw new Error(`${file}: ${entity.id} Sound.src must be a string`);
+      }
+      if (components.Sound.volume !== undefined && !Number.isFinite(components.Sound.volume)) {
+        throw new Error(`${file}: ${entity.id} Sound.volume must be finite`);
+      }
+    }
+
+    if (components.UI) {
+      if (!["text", "button", "panel"].includes(components.UI.type)) {
+        throw new Error(`${file}: ${entity.id} UI.type is invalid`);
+      }
+    }
+
+    if (components.Model && typeof components.Model.src !== "string") {
+      throw new Error(`${file}: ${entity.id} Model.src must be a string`);
+    }
+
     if (components.Script) {
       if (typeof components.Script.name !== "string" || !components.Script.name.trim()) {
         throw new Error(`${file}: ${entity.id} Script.name is required`);
+      }
+      if (
+        components.Script.kind !== undefined
+        && !["Script", "LocalScript", "ModuleScript"].includes(components.Script.kind)
+      ) {
+        throw new Error(`${file}: ${entity.id} Script.kind is invalid`);
       }
       if (components.Script.enabled !== undefined && typeof components.Script.enabled !== "boolean") {
         throw new Error(`${file}: ${entity.id} Script.enabled must be boolean`);
@@ -111,6 +160,15 @@ for (const file of files) {
       if (!hasCustomSource && !knownScripts.has(components.Script.name)) {
         throw new Error(`${file}: ${entity.id} references unknown built-in script "${components.Script.name}"`);
       }
+    }
+  }
+
+  for (const entity of document.entities) {
+    if (entity.parentId && !ids.has(entity.parentId)) {
+      throw new Error(`${file}: ${entity.id} references missing parentId "${entity.parentId}"`);
+    }
+    if (entity.parentId === entity.id) {
+      throw new Error(`${file}: ${entity.id} cannot parent itself`);
     }
   }
 
