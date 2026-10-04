@@ -246,8 +246,15 @@ async function hydrateAccount(session: Session): Promise<void> {
     projects = dedupeScenes([...myProjects, ...localOnly]);
     saveProjects(projects);
 
-    state.favorites = [...new Set([...state.favorites, ...favoriteIds])];
-    state.recent = [...new Set([...recentIds, ...state.recent])].slice(0, 12);
+    const normalizeCloudId = (id: string): string => {
+      if (!id.startsWith("cloud:")) return id;
+      const cloudId = id.slice("cloud:".length);
+      const scene = [...myProjects, ...publicCloudProjects].find((item) => item.platform?.cloudId === cloudId);
+      return scene ? projectId(scene) : id;
+    };
+
+    state.favorites = [...new Set([...state.favorites, ...favoriteIds.map(normalizeCloudId)])];
+    state.recent = [...new Set([...recentIds.map(normalizeCloudId), ...state.recent])].slice(0, 12);
     savePlatformState(state);
 
     await syncLocalProjectsToCloud();
