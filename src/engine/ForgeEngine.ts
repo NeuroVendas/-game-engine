@@ -13,6 +13,7 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
+import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture";
 import { Sound } from "@babylonjs/core/Audio/sound";
 import { SceneLoader } from "@babylonjs/core/Loading/sceneLoader";
 import type { ForgeEntity, ForgePrimitive, ForgeSceneDocument } from "../types";
@@ -45,6 +46,7 @@ export class ForgeEngine {
   private readonly key: DirectionalLight;
   private sky: Mesh;
   private skyMaterial: StandardMaterial;
+  private skyTexture: DynamicTexture;
   private runtimeMode = false;
   private uiRoot: HTMLElement | null = null;
   private uiInteractive = false;
@@ -76,7 +78,13 @@ export class ForgeEngine {
     this.skyMaterial = new StandardMaterial("__forge-sky-material", this.scene);
     this.skyMaterial.backFaceCulling = false;
     this.skyMaterial.disableLighting = true;
+    this.skyTexture = new DynamicTexture("__forge-sky-gradient", { width: 16, height: 512 }, this.scene, false);
+    this.skyMaterial.emissiveTexture = this.skyTexture;
+    this.skyMaterial.diffuseTexture = this.skyTexture;
     this.sky.material = this.skyMaterial;
+
+    this.scene.imageProcessingConfiguration.exposure = 1.05;
+    this.scene.imageProcessingConfiguration.contrast = 1.06;
 
     this.scripts = new ScriptRuntime(this.scene, log);
     this.scripts.setAudioAPI({
@@ -326,7 +334,16 @@ export class ForgeEngine {
     const ambient = safeColor(next.ambientColor, "#d9e8f4");
     const fog = safeColor(next.fogColor, "#9fc6df");
 
-    this.skyMaterial.emissiveColor = sky;
+    this.skyMaterial.emissiveColor = Color3.White();
+    const skyContext = this.skyTexture.getContext();
+    const gradient = skyContext.createLinearGradient(0, 0, 0, 512);
+    gradient.addColorStop(0, next.skyColor);
+    gradient.addColorStop(0.62, next.skyColor);
+    gradient.addColorStop(1, next.fogColor);
+    skyContext.fillStyle = gradient;
+    skyContext.fillRect(0, 0, 16, 512);
+    this.skyTexture.update(false);
+
     this.scene.clearColor = new Color4(sky.r, sky.g, sky.b, 1);
 
     this.hemi.diffuse = ambient;
