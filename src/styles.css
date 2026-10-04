@@ -1313,3 +1313,34 @@ input, textarea { cursor: text; }
   color: #c8d2d9;
   font-size: 9px;
 }
+
+.core-relay-template {
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 45%, #315c68 0 10%, #17252c 11% 28%, transparent 29%),
+    linear-gradient(#2b3e49 0 58%, #3d454a 58%);
+  color: #dce9ee;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+.core-relay-template .mini-core-ring {
+  position: absolute;
+  width: 58px;
+  height: 58px;
+  border: 9px solid #b7f34a;
+  border-radius: 50%;
+  box-shadow: 0 0 18px #b7f34a66;
+}
+.core-relay-template span {
+  position: absolute;
+  bottom: 8px;
+  left: 10px;
+  font-size: 10px;
+  text-shadow: 0 1px 2px #000;
+}
+.playable-template-card {
+  border-color: #829866;
+}

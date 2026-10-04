@@ -197,6 +197,15 @@
               <p>Neutral industrial base for facilities and roleplay.</p>
               <button>Create</button>
             </article>
+            <article class="template-card playable-template-card" data-template-scene="core-relay">
+              <div class="template-thumb core-relay-template">
+                <div class="mini-core-ring"></div>
+                <span>CORE RELAY</span>
+              </div>
+              <h3>Core Relay — Playable Demo</h3>
+              <p>A complete mini-game using modules, interaction, UI, sound and a win state.</p>
+              <button>Create & Edit</button>
+            </article>
           </div>
 
           <section class="developer-note">
@@ -366,12 +375,24 @@
           <button id="tool-move" title="Move (Ctrl+2)">↔ Move</button>
           <button id="tool-scale" title="Resize (Ctrl+3)">□ Resize</button>
           <button id="tool-rotate" title="Rotate (Ctrl+4)">⟳ Rotate</button>
+          <button id="transform-space" title="Transforms follow world axes (Ctrl+5)">World</button>
           <button id="snap-toggle" class="active" title="Toggle transform snapping">Snap On</button>
           <select id="snap-size" title="Move snap size">
-            <option value="0.25">0.25</option>
-            <option value="0.5">0.5</option>
-            <option value="1" selected>1 stud</option>
-            <option value="2">2 studs</option>
+            <option value="0.25">Move .25</option>
+            <option value="0.5">Move .5</option>
+            <option value="1" selected>Move 1</option>
+            <option value="2">Move 2</option>
+          </select>
+          <select id="rotation-snap" title="Rotation snap">
+            <option value="5">Rotate 5°</option>
+            <option value="15" selected>Rotate 15°</option>
+            <option value="45">Rotate 45°</option>
+          </select>
+          <select id="scale-snap" title="Resize snap">
+            <option value="0.05">Resize .05</option>
+            <option value="0.1" selected>Resize .1</option>
+            <option value="0.25">Resize .25</option>
+            <option value="0.5">Resize .5</option>
           </select>
           <span class="separator"></span>
           <button id="undo" title="Undo (Ctrl+Z)">↶ Undo</button>

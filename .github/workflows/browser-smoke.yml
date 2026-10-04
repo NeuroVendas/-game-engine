@@ -4,10 +4,15 @@ on:
   push:
     branches:
       - forge-v0.4
+      - forge-v0.5
       - "feature/**"
       - "fix/**"
   pull_request:
     branches: [main]
+
+concurrency:
+  group: forge-browser-smoke-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   browser-smoke:

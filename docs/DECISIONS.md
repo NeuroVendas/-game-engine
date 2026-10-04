@@ -167,3 +167,18 @@ Consequences:
 
 - do not advertise it as a security sandbox
 - production public UGC execution will require stronger isolation
+
+
+## D015 — Complete games are engine acceptance tests
+
+Status: Accepted
+
+Forge engine quality is judged by building and playing complete small games, not by counting isolated features.
+
+Consequences:
+
+- Core Relay is the v0.5 small-game acceptance benchmark
+- Project Helios remains the deeper long-term benchmark
+- missing capabilities discovered while building benchmark games become engine work
+- benchmark games should use normal Forge scene/components/scripts instead of private engine-only shortcuts
+- passing typecheck/build is insufficient when a benchmark gameplay path is broken

@@ -28,9 +28,9 @@ Delivered far beyond the original scope:
 - creator/game details
 - shareable game URLs
 
-Active branch remains historically named `forge-v0.4`.
+The historical implementation branch is `forge-v0.4`. Active creator-quality work now continues on `forge-v0.5`.
 
-## Current v0.5-dev — credible engine quality
+## Current v0.5 — Creator Experience / credible engine quality
 
 Already delivered:
 
@@ -46,6 +46,18 @@ Already delivered:
 - modules/player/camera/audio/UI/world APIs
 - runtime create/clone/destroy
 - improved movement/jump feel
+
+### Creator Experience acceptance
+
+v0.5 should feel like a usable creator tool, not a prototype editor.
+
+- Move/Rotate/Resize must be predictable and undoable
+- World/Local transform space must be explicit
+- primitive Resize changes real object dimensions rather than silently accumulating scale
+- per-tool transform snapping must be creator-configurable
+- player/camera feel must remain a tested product surface
+- assets, UI, audio and scripts must be sufficient to build a complete small game
+- browser smoke must cover creator workflows, not only compilation
 
 ### Remaining focus
 

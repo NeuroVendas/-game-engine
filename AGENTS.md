@@ -46,7 +46,7 @@ Prefer scene JSON, semantic IDs, components, scripts, prefabs, stable APIs, and 
 
 ## Current technology
 
-Current package version is 0.5.0 while development remains on the historical forge-v0.4 branch.
+Current package version is 0.5.0 and active Creator Experience development is on forge-v0.5. forge-v0.4 is the historical platform/creator-foundation branch.
 
 Current stack: TypeScript, Vite, Babylon.js, Supabase, scene JSON, Playwright, and GitHub Actions.
 
@@ -81,11 +81,11 @@ Use:
 
 Do not claim runtime/editor behavior is working merely because TypeScript/build succeeded.
 
-## Project Helios
+## Benchmark games
 
-Project Helios is Forge's benchmark game.
+Project Helios remains the large long-term benchmark for systems such as doors, clearance, power, alarms, multiplayer, persistence and publishing.
 
-Use it to prove doors, components, scripting, clearance, UI, alarms, audio, multiplayer, persistence, and publishing.
+Core Relay is the v0.5 small-game acceptance benchmark. Use it to prove creator ergonomics, scripts/modules, interaction, UI, sound, environment and complete-game flow.
 
 Do not let Forge become a collection of unused engine features.
 

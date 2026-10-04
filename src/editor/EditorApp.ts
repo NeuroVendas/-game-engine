@@ -43,8 +43,11 @@ export class EditorApp {
   private editorOrbitLastX = 0;
   private editorOrbitLastY = 0;
   private draggedEntityId: string | null = null;
+  private transformSpace: "world" | "local" = "world";
   private snapEnabled = true;
   private moveSnap = 1;
+  private rotationSnap = 15;
+  private scaleSnap = 0.1;
 
   private readonly tree = must<HTMLDivElement>("scene-tree");
   private readonly status = must<HTMLSpanElement>("status");
@@ -90,6 +93,7 @@ export class EditorApp {
       this.gizmos.gizmos.positionGizmo.updateGizmoRotationToMatchAttachedMesh = false;
     }
 
+    this.bindGizmoTransactions();
     this.bindUI();
     this.bindScenePicking();
     this.bindKeyboard();
@@ -190,10 +194,16 @@ export class EditorApp {
     must<HTMLButtonElement>("tool-rotate").addEventListener("click", () => this.setTool("rotate"));
     must<HTMLButtonElement>("tool-scale").addEventListener("click", () => this.setTool("scale"));
 
+    must<HTMLButtonElement>("transform-space").addEventListener("click", () => this.toggleTransformSpace());
+
     must<HTMLButtonElement>("snap-toggle").addEventListener("click", () => {
       this.snapEnabled = !this.snapEnabled;
       this.applySnapSettings();
-      this.log(this.snapEnabled ? `Snap enabled at ${this.moveSnap}u / 15°.` : "Snap disabled.");
+      this.log(
+        this.snapEnabled
+          ? `Snap enabled • move ${this.moveSnap}u • rotate ${this.rotationSnap}° • resize ${this.scaleSnap}.`
+          : "Snap disabled."
+      );
     });
 
     must<HTMLSelectElement>("snap-size").addEventListener("change", (event) => {
@@ -202,6 +212,24 @@ export class EditorApp {
         this.moveSnap = next;
         this.applySnapSettings();
         this.log(`Move snap: ${this.moveSnap}u.`);
+      }
+    });
+
+    must<HTMLSelectElement>("rotation-snap").addEventListener("change", (event) => {
+      const next = Number((event.target as HTMLSelectElement).value);
+      if (Number.isFinite(next) && next > 0) {
+        this.rotationSnap = next;
+        this.applySnapSettings();
+        this.log(`Rotation snap: ${this.rotationSnap}°.`);
+      }
+    });
+
+    must<HTMLSelectElement>("scale-snap").addEventListener("change", (event) => {
+      const next = Number((event.target as HTMLSelectElement).value);
+      if (Number.isFinite(next) && next > 0) {
+        this.scaleSnap = next;
+        this.applySnapSettings();
+        this.log(`Resize snap: ${this.scaleSnap}.`);
       }
     });
 
@@ -451,6 +479,11 @@ export class EditorApp {
           this.setTool("rotate");
           return;
         }
+        if (control && event.code === "Digit5") {
+          event.preventDefault();
+          this.toggleTransformSpace();
+          return;
+        }
 
         if (event.code === "Delete") {
           this.deleteSelected();
@@ -555,6 +588,8 @@ export class EditorApp {
       this.gizmos.gizmos.positionGizmo.planarGizmoEnabled = false;
     }
 
+    this.applyTransformSpace();
+
     for (const name of ["select", "move", "rotate", "scale"] as const) {
       must<HTMLButtonElement>(`tool-${name}`).classList.toggle("active", name === tool);
     }
@@ -564,8 +599,8 @@ export class EditorApp {
 
   private applySnapSettings(): void {
     const moveDistance = this.snapEnabled ? this.moveSnap : 0;
-    const rotationDistance = this.snapEnabled ? radians(15) : 0;
-    const scaleDistance = this.snapEnabled ? 0.1 : 0;
+    const rotationDistance = this.snapEnabled ? radians(this.rotationSnap) : 0;
+    const scaleDistance = this.snapEnabled ? this.scaleSnap : 0;
 
     if (this.gizmos.gizmos.positionGizmo) {
       this.gizmos.gizmos.positionGizmo.snapDistance = moveDistance;
@@ -580,6 +615,106 @@ export class EditorApp {
     const toggle = must<HTMLButtonElement>("snap-toggle");
     toggle.classList.toggle("active", this.snapEnabled);
     toggle.textContent = this.snapEnabled ? "Snap On" : "Snap Off";
+  }
+
+  private toggleTransformSpace(): void {
+    if (this.mode !== "editor") return;
+    this.transformSpace = this.transformSpace === "world" ? "local" : "world";
+    this.applyTransformSpace();
+    this.log(`Transform space: ${this.transformSpace === "world" ? "World" : "Local"}.`);
+  }
+
+  private applyTransformSpace(): void {
+    const local = this.transformSpace === "local";
+    this.canvas.dataset.editorSpace = this.transformSpace;
+
+    if (this.gizmos.gizmos.positionGizmo) {
+      this.gizmos.gizmos.positionGizmo.updateGizmoRotationToMatchAttachedMesh = local;
+    }
+    if (this.gizmos.gizmos.rotationGizmo) {
+      this.gizmos.gizmos.rotationGizmo.updateGizmoRotationToMatchAttachedMesh = local;
+    }
+    if (this.gizmos.gizmos.scaleGizmo) {
+      this.gizmos.gizmos.scaleGizmo.updateGizmoRotationToMatchAttachedMesh = local;
+    }
+
+    const button = must<HTMLButtonElement>("transform-space");
+    button.classList.toggle("active", local);
+    button.textContent = local ? "Local" : "World";
+    button.title = local
+      ? "Transforms follow the selected object's axes (Ctrl+5)"
+      : "Transforms follow world axes (Ctrl+5)";
+  }
+
+  private bindGizmoTransactions(): void {
+    const begin = () => {
+      if (this.mode !== "editor" || !this.selectedId) return;
+      this.checkpoint();
+    };
+
+    const finish = () => {
+      if (this.mode !== "editor" || !this.selectedId) return;
+
+      this.forge.syncEntityFromMesh(this.selectedId);
+      if (this.tool === "scale") this.bakeSelectedResize();
+      this.renderInspector();
+      this.renderTree();
+    };
+
+    const bind = (gizmo: any) => {
+      if (!gizmo?.dragBehavior) return;
+      gizmo.dragBehavior.onDragStartObservable.add(begin);
+      gizmo.dragBehavior.onDragEndObservable.add(finish);
+    };
+
+    const position = this.gizmos.gizmos.positionGizmo;
+    bind(position?.xGizmo);
+    bind(position?.yGizmo);
+    bind(position?.zGizmo);
+
+    const rotation = this.gizmos.gizmos.rotationGizmo;
+    bind(rotation?.xGizmo);
+    bind(rotation?.yGizmo);
+    bind(rotation?.zGizmo);
+
+    const scale = this.gizmos.gizmos.scaleGizmo;
+    bind(scale?.xGizmo);
+    bind(scale?.yGizmo);
+    bind(scale?.zGizmo);
+    bind(scale?.uniformScaleGizmo);
+  }
+
+  private bakeSelectedResize(): void {
+    if (!this.selectedId) return;
+
+    const entity = this.forge.getEntity(this.selectedId);
+    const mesh = this.forge.getMesh(this.selectedId);
+    if (!entity || !mesh) return;
+
+    // Models and groups intentionally retain transform scale. Primitive Resize
+    // behaves like a size-editing tool instead of accumulating arbitrary scale.
+    if (entity.kind === "model" || entity.kind === "empty") return;
+
+    const sx = Math.abs(mesh.scaling.x);
+    const sy = Math.abs(mesh.scaling.y);
+    const sz = Math.abs(mesh.scaling.z);
+    if (
+      Math.abs(sx - 1) < 0.0001
+      && Math.abs(sy - 1) < 0.0001
+      && Math.abs(sz - 1) < 0.0001
+    ) return;
+
+    const base = entity.size ?? [1, 1, 1];
+    entity.size = [
+      Math.max(0.05, base[0] * sx),
+      Math.max(0.05, base[1] * sy),
+      Math.max(0.05, base[2] * sz)
+    ];
+    entity.scale = [1, 1, 1];
+
+    this.forge.rebuildEntity(entity.id);
+    this.setSelection(entity.id);
+    this.canvas.dataset.lastResize = entity.size.map((value) => value.toFixed(3)).join(",");
   }
 
   private createPrimitive(kind: ForgePrimitive): void {

@@ -8,7 +8,9 @@ Project Helios is the first benchmark game.
 
 > Current package version: **0.5.0**
 >
-> Historical active branch: **forge-v0.4**
+> Active creator-quality branch: **forge-v0.5**
+>
+> `forge-v0.4` is retained as the historical platform/creator-foundation branch.
 
 ## What works now
 

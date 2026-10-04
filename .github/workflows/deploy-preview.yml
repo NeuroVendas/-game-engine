@@ -3,14 +3,14 @@ name: Deploy Forge Preview
 on:
   push:
     branches:
-      - forge-v0.4
+      - forge-v0.5
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: forge-preview-v04-controls
+  group: forge-preview-v05
   cancel-in-progress: true
 
 jobs:
@@ -33,8 +33,8 @@ jobs:
           git init
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -b forge-preview-v04-controls
+          git checkout -b forge-preview-v05
           git add -A
-          git commit -m "Forge v0.4 preview"
+          git commit -m "Forge v0.5 preview"
           git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
-          git push --force origin forge-preview-v04-controls
+          git push --force origin forge-preview-v05

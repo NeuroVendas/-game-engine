@@ -177,8 +177,7 @@ export class ForgeEngine {
     for (const light of this.entityLights.values()) light.dispose();
     this.entityLights.clear();
 
-    for (const sound of this.entitySounds.values()) sound.dispose();
-    this.entitySounds.clear();
+    for (const id of [...this.entitySounds.keys()]) this.disposeEntitySound(id);
 
     // Detach Forge entity roots first so disposing one parent cannot accidentally
     // dispose another tracked Forge entity before its own cleanup pass.
@@ -307,8 +306,7 @@ export class ForgeEngine {
     this.scripts.detach(id);
     this.entityLights.get(id)?.dispose();
     this.entityLights.delete(id);
-    this.entitySounds.get(id)?.dispose();
-    this.entitySounds.delete(id);
+    this.disposeEntitySound(id);
 
     const oldMesh = this.entityMeshes.get(id);
     if (oldMesh) this.unregisterShadowCaster(oldMesh, true);
@@ -398,8 +396,7 @@ export class ForgeEngine {
     this.scripts.detach(id);
     this.entityLights.get(id)?.dispose();
     this.entityLights.delete(id);
-    this.entitySounds.get(id)?.dispose();
-    this.entitySounds.delete(id);
+    this.disposeEntitySound(id);
 
     const forgeChildren = this.document.entities
       .filter((candidate) => candidate.parentId === id)
@@ -762,9 +759,27 @@ export class ForgeEngine {
     this.entityLights.set(entity.id, light);
   }
 
+  private disposeEntitySound(id: string): void {
+    const sound = this.entitySounds.get(id);
+    if (!sound) return;
+
+    this.entitySounds.delete(id);
+    try {
+      sound.stop();
+    } catch {
+      // Audio backends can be absent or partially initialized in preview/headless contexts.
+    }
+
+    try {
+      sound.dispose();
+    } catch (error) {
+      this.log(`Sound cleanup fallback on ${id}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
   private createSound(entity: ForgeEntity, mesh: Mesh): void {
     const component = entity.components?.Sound;
-    if (!component?.src?.trim()) return;
+    if (!this.runtimeMode || !component?.src?.trim()) return;
 
     try {
       const sound = new Sound(

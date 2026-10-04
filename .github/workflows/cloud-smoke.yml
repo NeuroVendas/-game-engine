@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - forge-v0.4
+      - forge-v0.5
       - "feature/**"
       - "fix/**"
   pull_request:
