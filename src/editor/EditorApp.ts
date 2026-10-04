@@ -2,14 +2,14 @@ import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
 import { GizmoManager } from "@babylonjs/core/Gizmos/gizmoManager";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import type { ForgeComponents, ForgeEntity, ForgePrimitive, ForgeSceneDocument } from "../types";
+import type { ForgeComponents, ForgeEntity, ForgePrimitive, ForgeSceneDocument, ForgeScriptKind } from "../types";
 import { ForgeEngine } from "../engine/ForgeEngine";
 import { registerDefaultScripts } from "../engine/defaultScripts";
 import type { ForgePrefabName } from "../engine/prefabs";
 import { PlayerController } from "../player/PlayerController";
 import { HistoryManager } from "./HistoryManager";
 
-type ToolMode = "move" | "rotate" | "scale";
+type ToolMode = "select" | "move" | "rotate" | "scale";
 type AppMode = "editor" | "play";
 
 function must<T extends HTMLElement>(id: string): T {
@@ -51,11 +51,13 @@ export class EditorApp {
   private readonly historyState = must<HTMLDivElement>("history-state");
   private readonly modeBadge = must<HTMLDivElement>("mode-badge");
   private readonly interactionPrompt = must<HTMLDivElement>("interaction-prompt");
+  private readonly uiRoot = must<HTMLDivElement>("forge-ui-root");
   private readonly inspectorEmpty = must<HTMLDivElement>("inspector-empty");
   private readonly inspectorFields = must<HTMLDivElement>("inspector-fields");
   private readonly componentList = must<HTMLDivElement>("component-list");
   private readonly scriptDialog = must<HTMLDialogElement>("script-editor-dialog");
   private readonly scriptTarget = must<HTMLSpanElement>("script-editor-target");
+  private readonly scriptKind = must<HTMLSelectElement>("script-kind");
   private readonly scriptName = must<HTMLInputElement>("script-name");
   private readonly scriptSource = must<HTMLTextAreaElement>("script-source");
   private scriptEditingEntityId: string | null = null;
@@ -90,6 +92,7 @@ export class EditorApp {
     this.bindScenePicking();
     this.bindKeyboard();
     this.bindEditorNavigation();
+    this.forge.mountUI(this.uiRoot, false);
     this.setTool("move");
     this.updateHistoryUI();
   }
@@ -99,6 +102,8 @@ export class EditorApp {
     this.history.clear();
     this.renderTree();
     this.renderInspector();
+    this.syncEnvironmentInputs();
+    this.forge.mountUI(this.uiRoot, false);
     this.updateHistoryUI();
     this.startLoop();
     requestAnimationFrame(() => this.forge.resize());
@@ -111,6 +116,8 @@ export class EditorApp {
     this.history.clear();
     this.renderTree();
     this.renderInspector();
+    this.syncEnvironmentInputs();
+    this.forge.mountUI(this.uiRoot, false);
     this.updateHistoryUI();
     this.forge.resize();
     this.log(`Opened ${sceneDocument.name}`);
@@ -176,6 +183,7 @@ export class EditorApp {
   }
 
   private bindUI(): void {
+    must<HTMLButtonElement>("tool-select").addEventListener("click", () => this.setTool("select"));
     must<HTMLButtonElement>("tool-move").addEventListener("click", () => this.setTool("move"));
     must<HTMLButtonElement>("tool-rotate").addEventListener("click", () => this.setTool("rotate"));
     must<HTMLButtonElement>("tool-scale").addEventListener("click", () => this.setTool("scale"));
@@ -204,6 +212,21 @@ export class EditorApp {
       });
     });
 
+    document.querySelectorAll<HTMLButtonElement>("[data-object]").forEach((button) => {
+      button.addEventListener("click", () => {
+        if (this.mode !== "editor") return;
+        const objectType = button.dataset.object;
+        if (objectType) this.createStudioObject(objectType);
+      });
+    });
+
+    must<HTMLButtonElement>("import-model").addEventListener("click", () => {
+      must<HTMLInputElement>("model-file-input").click();
+    });
+    must<HTMLInputElement>("model-file-input").addEventListener("change", (event) => {
+      void this.importModelFile(event);
+    });
+
     document.querySelectorAll<HTMLButtonElement>("[data-prefab]").forEach((button) => {
       button.addEventListener("click", () => {
         if (this.mode !== "editor") return;
@@ -220,7 +243,12 @@ export class EditorApp {
     must<HTMLButtonElement>("script-close").addEventListener("click", () => this.scriptDialog.close());
     must<HTMLButtonElement>("script-save").addEventListener("click", () => this.saveScriptEditor());
     must<HTMLButtonElement>("script-template").addEventListener("click", () => {
-      this.scriptSource.value = this.defaultScriptSource();
+      this.scriptSource.value = this.defaultScriptSource(this.scriptKind.value as ForgeScriptKind);
+    });
+    this.scriptKind.addEventListener("change", () => {
+      if (!this.scriptSource.value.trim()) {
+        this.scriptSource.value = this.defaultScriptSource(this.scriptKind.value as ForgeScriptKind);
+      }
     });
     this.scriptSource.addEventListener("keydown", (event) => {
       if ((event.ctrlKey || event.metaKey) && event.code === "KeyS") {
@@ -260,6 +288,17 @@ export class EditorApp {
         this.checkpoint();
         this.applyInspectorTransform();
       });
+    }
+
+    for (const id of ["size-x", "size-y", "size-z"]) {
+      must<HTMLInputElement>(id).addEventListener("change", () => {
+        this.checkpoint();
+        this.applyInspectorSize();
+      });
+    }
+
+    for (const id of ["env-sky", "env-ambient", "env-fog", "env-fog-density"]) {
+      must<HTMLInputElement>(id).addEventListener("change", () => this.applyEnvironmentInputs());
     }
 
     must<HTMLInputElement>("prop-name").addEventListener("change", (event) => {
@@ -330,6 +369,11 @@ export class EditorApp {
           return;
         }
 
+        if (control && event.code === "Digit1") {
+          event.preventDefault();
+          this.setTool("select");
+          return;
+        }
         if (control && event.code === "Digit2") {
           event.preventDefault();
           this.setTool("move");
@@ -448,7 +492,7 @@ export class EditorApp {
       this.gizmos.gizmos.positionGizmo.planarGizmoEnabled = false;
     }
 
-    for (const name of ["move", "rotate", "scale"] as const) {
+    for (const name of ["select", "move", "rotate", "scale"] as const) {
       must<HTMLButtonElement>(`tool-${name}`).classList.toggle("active", name === tool);
     }
 
