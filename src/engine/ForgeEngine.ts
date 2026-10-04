@@ -333,7 +333,12 @@ export class ForgeEngine {
         const button = element as HTMLButtonElement;
         button.disabled = !this.uiInteractive;
         if (this.uiInteractive) {
-          button.addEventListener("click", () => this.scripts.uiClick(entity.id));
+          button.addEventListener("click", () => {
+            this.scripts.uiClick(entity.id);
+            for (const child of this.document.entities.filter((candidate) => candidate.parentId === entity.id)) {
+              this.scripts.uiClick(child.id);
+            }
+          });
         }
       }
 
