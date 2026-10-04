@@ -65,6 +65,7 @@ Current components:
 - Script
 - Light
 - Sound
+- VFX
 - UI
 - Model
 - Spawn
@@ -95,6 +96,7 @@ Implemented:
 - Spawn
 - Light
 - Sound
+- VFX emitter presets (sparks/smoke/fire/glow/dust)
 - UI
 - Script/LocalScript/ModuleScript
 - GLB import
@@ -184,6 +186,19 @@ Major current creator/runtime capabilities:
 - logging/output
 
 Current scripts are trusted creator code, not a hardened hostile-code sandbox.
+
+## VFX
+
+Forge now has a first particle/VFX authoring pass:
+
+- VFX Emitter object/component
+- presets: sparks, smoke, fire, glow and dust
+- editor preview
+- emit rate/lifetime/size/speed/colors/gravity controls
+- runtime autoplay
+- script API: `Forge.vfx.play`, `Forge.vfx.stop`, `Forge.vfx.setRate`
+
+This is the initial VFX layer. Trails, beams, decals, post-processing stacks and a richer particle graph remain future work.
 
 ## UI
 
@@ -321,7 +336,7 @@ Do not describe these as finished:
 - chat
 - production asset CDN/library
 - full animation asset/controller pipeline
-- particles/effects authoring
+- advanced VFX authoring (trails/beams/decals/post FX; basic particles now exist)
 - terrain editor
 - mature physics/collision editor
 - moderation
