@@ -1000,9 +1000,125 @@ export class EditorApp {
         });
         break;
       }
+      case "Light": {
+        const component = components.Light;
+        if (!component) return;
+        this.appendSelectField(container, "Type", component.type, [
+          ["point", "Point"],
+          ["spot", "Spot"]
+        ], (value) => {
+          component.type = value as "point" | "spot";
+        });
+        this.appendTextField(container, "Color", component.color ?? "#ffffff", (value) => {
+          component.color = value || "#ffffff";
+        });
+        this.appendNumberField(container, "Intensity", component.intensity ?? 1, 0.1, (value) => {
+          component.intensity = Math.max(0, value);
+        });
+        this.appendNumberField(container, "Range", component.range ?? 20, 1, (value) => {
+          component.range = Math.max(0, value);
+        });
+        if (component.type === "spot") {
+          this.appendNumberField(container, "Angle °", (component.angle ?? Math.PI / 3) * 180 / Math.PI, 1, (value) => {
+            component.angle = Math.max(1, value) * Math.PI / 180;
+          });
+        }
+        break;
+      }
+      case "Sound": {
+        const component = components.Sound;
+        if (!component) return;
+        this.appendTextField(container, "Audio URL", component.src, (value) => {
+          component.src = value;
+        });
+        this.appendNumberField(container, "Volume", component.volume ?? 1, 0.05, (value) => {
+          component.volume = Math.min(1, Math.max(0, value));
+        });
+        this.appendCheckboxField(container, "Loop", component.loop ?? false, (value) => {
+          component.loop = value;
+        });
+        this.appendCheckboxField(container, "Autoplay", component.autoplay ?? false, (value) => {
+          component.autoplay = value;
+        });
+        this.appendCheckboxField(container, "Spatial 3D", component.spatial ?? true, (value) => {
+          component.spatial = value;
+        });
+        this.appendNumberField(container, "Max distance", component.maxDistance ?? 40, 1, (value) => {
+          component.maxDistance = Math.max(1, value);
+        });
+        break;
+      }
+      case "UI": {
+        const component = components.UI;
+        if (!component) return;
+        this.appendSelectField(container, "UI type", component.type, [
+          ["text", "Text"],
+          ["button", "Button"],
+          ["panel", "Panel"]
+        ], (value) => {
+          component.type = value as "text" | "button" | "panel";
+        });
+        this.appendTextField(container, "Text", component.text ?? "", (value) => {
+          component.text = value;
+        });
+        this.appendSelectField(container, "Anchor", component.anchor ?? "top-left", [
+          ["top-left", "Top Left"],
+          ["top-center", "Top Center"],
+          ["center", "Center"],
+          ["bottom-center", "Bottom Center"]
+        ], (value) => {
+          component.anchor = value as "top-left" | "top-center" | "center" | "bottom-center";
+        });
+        this.appendNumberField(container, "X", component.x ?? 0, 1, (value) => {
+          component.x = value;
+        });
+        this.appendNumberField(container, "Y", component.y ?? 0, 1, (value) => {
+          component.y = value;
+        });
+        this.appendNumberField(container, "Width", component.width ?? 180, 1, (value) => {
+          component.width = Math.max(1, value);
+        });
+        this.appendNumberField(container, "Height", component.height ?? 40, 1, (value) => {
+          component.height = Math.max(1, value);
+        });
+        this.appendNumberField(container, "Font size", component.fontSize ?? 18, 1, (value) => {
+          component.fontSize = Math.max(8, value);
+        });
+        this.appendTextField(container, "Text color", component.color ?? "#ffffff", (value) => {
+          component.color = value || "#ffffff";
+        });
+        this.appendTextField(container, "Background", component.background ?? "transparent", (value) => {
+          component.background = value || "transparent";
+        });
+        this.appendCheckboxField(container, "Visible", component.visible ?? true, (value) => {
+          component.visible = value;
+        });
+        break;
+      }
+      case "Model": {
+        const component = components.Model;
+        if (!component) return;
+        this.appendTextField(container, "GLB / glTF URL", component.src, (value) => {
+          component.src = value;
+        });
+        if (component.fileName) {
+          const note = document.createElement("div");
+          note.className = "component-note";
+          note.textContent = `Imported file: ${component.fileName}`;
+          container.appendChild(note);
+        }
+        break;
+      }
       case "Script": {
         const component = components.Script;
         if (!component) return;
+        this.appendSelectField(container, "Type", component.kind ?? "Script", [
+          ["Script", "Script"],
+          ["LocalScript", "LocalScript"],
+          ["ModuleScript", "ModuleScript"]
+        ], (value) => {
+          component.kind = value as ForgeScriptKind;
+        });
         this.appendCheckboxField(container, "Enabled", component.enabled ?? true, (value) => {
           component.enabled = value;
         });
@@ -1012,7 +1128,7 @@ export class EditorApp {
 
         const open = document.createElement("button");
         open.type = "button";
-        open.textContent = component.source?.trim() ? "Open Code" : "Override with Custom Code";
+        open.textContent = component.source?.trim() ? "Open Code" : "Write Code";
         open.addEventListener("click", () => this.openScriptEditor(entity.id));
         container.appendChild(open);
         break;
@@ -1020,21 +1136,48 @@ export class EditorApp {
     }
   }
 
-  private defaultScriptSource(): string {
-    return `let elapsed = 0;
+  private defaultScriptSource(kind: ForgeScriptKind = "Script"): string {
+    if (kind === "ModuleScript") {
+      return `Forge.module({
+  clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+  },
 
-Forge.onStart(() => {
-  Forge.log(Forge.self.name + " started");
+  hello(name) {
+    return "Hello " + name;
+  }
+});
+`;
+    }
+
+    if (kind === "LocalScript") {
+      return `Forge.onStart(() => {
+  Forge.log("LocalScript started");
+});
+
+Forge.onKeyDown((code) => {
+  if (code === "KeyF") {
+    Forge.log("F was pressed");
+  }
 });
 
 Forge.onUpdate((dt) => {
-  elapsed += dt;
+  // Local player / camera behavior belongs here.
+});
+`;
+    }
+
+    return `Forge.onStart(() => {
+  Forge.log(Forge.script.name + " started");
 });
 
 Forge.onInteract(() => {
-  Forge.log("Interacted with " + Forge.self.name);
-  // Example:
-  // Forge.self.move(0, 1, 0);
+  const target = Forge.parent ?? Forge.self;
+  target.move(0, 1, 0);
+});
+
+Forge.onUpdate((dt) => {
+  // Game logic runs here every frame.
 });
 `;
   }
@@ -1043,7 +1186,7 @@ Forge.onInteract(() => {
     if (this.mode !== "editor") return;
 
     if (!entityId) {
-      this.log("Select an object before opening Code.");
+      this.log("Select a Script object or an object with a Script component.");
       return;
     }
 
@@ -1052,11 +1195,16 @@ Forge.onInteract(() => {
 
     this.scriptEditingEntityId = entity.id;
     const script = entity.components?.Script;
-    this.scriptTarget.textContent = entity.name;
+    const kind = script?.kind ?? "Script";
+
+    this.scriptTarget.textContent = entity.parentId
+      ? `${entity.name} • child of ${entity.parentId}`
+      : entity.name;
+    this.scriptKind.value = kind;
     this.scriptName.value = script?.name || `custom.${entity.id}`;
     this.scriptSource.value = script?.source?.trim()
       ? script.source
-      : this.defaultScriptSource();
+      : this.defaultScriptSource(kind);
 
     this.scriptDialog.showModal();
     requestAnimationFrame(() => this.scriptSource.focus());
@@ -1072,12 +1220,13 @@ Forge.onInteract(() => {
     const components = entity.components ?? (entity.components = {});
     components.Script = {
       name: this.scriptName.value.trim() || `custom.${entity.id}`,
+      kind: this.scriptKind.value as ForgeScriptKind,
       enabled: true,
       source: this.scriptSource.value
     };
 
     this.renderInspector();
-    this.log(`Saved script: ${components.Script.name} • press Play to run`);
+    this.log(`Saved ${components.Script.kind}: ${components.Script.name} • runs in Play`);
   }
 
   private appendTextField(
@@ -1095,6 +1244,7 @@ Forge.onInteract(() => {
     input.addEventListener("change", () => {
       this.checkpoint();
       apply(input.value.trim());
+      this.forge.refreshUI();
       this.renderInspector();
       this.log(`${labelText} updated.`);
     });
@@ -1125,6 +1275,7 @@ Forge.onInteract(() => {
       }
       this.checkpoint();
       apply(next);
+      this.forge.refreshUI();
       this.renderInspector();
       this.log(`${labelText} updated.`);
     });
@@ -1148,12 +1299,91 @@ Forge.onInteract(() => {
     input.addEventListener("change", () => {
       this.checkpoint();
       apply(input.checked);
+      this.forge.refreshUI();
       this.renderInspector();
       this.log(`${labelText} updated.`);
     });
 
     label.appendChild(input);
     container.appendChild(label);
+  }
+
+  private appendSelectField(
+    container: HTMLDivElement,
+    labelText: string,
+    value: string,
+    options: Array<[string, string]>,
+    apply: (value: string) => void
+  ): void {
+    const label = document.createElement("label");
+    label.textContent = labelText;
+
+    const select = document.createElement("select");
+    for (const [optionValue, optionLabel] of options) {
+      const option = document.createElement("option");
+      option.value = optionValue;
+      option.textContent = optionLabel;
+      select.appendChild(option);
+    }
+    select.value = value;
+
+    select.addEventListener("change", () => {
+      this.checkpoint();
+      apply(select.value);
+      this.forge.refreshUI();
+      this.renderInspector();
+      this.log(`${labelText} updated.`);
+    });
+
+    label.appendChild(select);
+    container.appendChild(label);
+  }
+
+  private applyInspectorSize(): void {
+    if (!this.selectedId) return;
+    const entity = this.forge.getEntity(this.selectedId);
+    const mesh = this.forge.getMesh(this.selectedId);
+    if (!entity || !mesh) return;
+
+    const base = entity.size ?? [1, 1, 1];
+    const wanted = [
+      Math.max(0.01, Number(must<HTMLInputElement>("size-x").value)),
+      Math.max(0.01, Number(must<HTMLInputElement>("size-y").value)),
+      Math.max(0.01, Number(must<HTMLInputElement>("size-z").value))
+    ];
+
+    mesh.scaling.set(
+      wanted[0] / Math.max(0.0001, Math.abs(base[0])),
+      wanted[1] / Math.max(0.0001, Math.abs(base[1])),
+      wanted[2] / Math.max(0.0001, Math.abs(base[2]))
+    );
+
+    this.forge.syncEntityFromMesh(this.selectedId);
+    this.renderInspector();
+    this.log(`Resized ${entity.name} to ${wanted.map((value) => value.toFixed(2)).join(" × ")}.`);
+  }
+
+  private syncEnvironmentInputs(): void {
+    const environment = this.forge.document.environment ?? {};
+    must<HTMLInputElement>("env-sky").value = environment.skyColor ?? "#7fb9e8";
+    must<HTMLInputElement>("env-ambient").value = environment.ambientColor ?? "#d9e8f4";
+    must<HTMLInputElement>("env-fog").value = environment.fogColor ?? "#9fc6df";
+    must<HTMLInputElement>("env-fog-density").value = String(environment.fogDensity ?? 0);
+  }
+
+  private applyEnvironmentInputs(): void {
+    if (this.mode !== "editor") return;
+    this.checkpoint();
+
+    this.forge.document.environment = {
+      skyColor: must<HTMLInputElement>("env-sky").value,
+      ambientColor: must<HTMLInputElement>("env-ambient").value,
+      fogColor: must<HTMLInputElement>("env-fog").value,
+      fogDensity: Math.min(0.1, Math.max(0, Number(must<HTMLInputElement>("env-fog-density").value) || 0))
+    };
+
+    this.forge.applyEnvironment(this.forge.document.environment);
+    this.log("Lighting / sky environment updated.");
   }
 
   private applyInspectorTransform(): void {
@@ -1216,7 +1446,9 @@ Forge.onInteract(() => {
   private restoreDocument(sceneDocument: ForgeSceneDocument, action: string): void {
     const wantedSelection = this.selectedId;
     this.setSelection(null);
-    this.forge.loadDocument(sceneDocument);
+    this.forge.loadDocument(sceneDocument, false);
+    this.forge.mountUI(this.uiRoot, false);
+    this.syncEnvironmentInputs();
 
     if (wantedSelection && this.forge.getEntity(wantedSelection)) {
       this.setSelection(wantedSelection);
@@ -1242,7 +1474,8 @@ Forge.onInteract(() => {
 
     this.playSnapshot = this.forge.exportDocument();
     this.setSelection(null);
-    this.forge.loadDocument(this.playSnapshot);
+    this.forge.loadDocument(this.playSnapshot, true);
+    this.forge.mountUI(this.uiRoot, true);
     this.mode = "play";
     this.gizmos.positionGizmoEnabled = false;
     this.gizmos.rotationGizmoEnabled = false;
@@ -1276,7 +1509,8 @@ Forge.onInteract(() => {
     this.mode = "editor";
 
     if (this.playSnapshot) {
-      this.forge.loadDocument(this.playSnapshot);
+      this.forge.loadDocument(this.playSnapshot, false);
+      this.forge.mountUI(this.uiRoot, false);
       this.playSnapshot = null;
     }
 
@@ -1345,7 +1579,9 @@ Forge.onInteract(() => {
   private loadSceneDocument(sceneDocument: ForgeSceneDocument, message: string): void {
     this.checkpoint();
     this.setSelection(null);
-    this.forge.loadDocument(sceneDocument);
+    this.forge.loadDocument(sceneDocument, false);
+    this.forge.mountUI(this.uiRoot, false);
+    this.syncEnvironmentInputs();
     this.renderTree();
     this.renderInspector();
     this.updateHistoryUI();
