@@ -977,6 +977,7 @@ export class EditorApp {
         this.checkpoint();
         if (entity.components) delete entity.components[componentName];
         this.forge.rebuildEntity(entity.id);
+        this.setSelection(entity.id);
         this.renderInspector();
         this.log(`Removed ${componentName} from ${entity.name}.`);
       });
@@ -1337,7 +1338,11 @@ Forge.onUpdate((dt) => {
     input.addEventListener("change", () => {
       this.checkpoint();
       apply(input.value.trim());
-      if (this.selectedId) this.forge.rebuildEntity(this.selectedId);
+      if (this.selectedId) {
+        const selectedId = this.selectedId;
+        this.forge.rebuildEntity(selectedId);
+        this.setSelection(selectedId);
+      }
       this.renderInspector();
       this.log(`${labelText} updated.`);
     });
@@ -1451,6 +1456,7 @@ Forge.onUpdate((dt) => {
     );
 
     this.forge.rebuildEntity(entity.id);
+    this.setSelection(entity.id);
     this.renderInspector();
     this.log(`Appearance updated for ${entity.name}.`);
   }
