@@ -95,6 +95,8 @@ export interface ForgeSceneDocument {
   playerSpawn?: Vec3;
   environment?: {
     skyColor?: string;
+    skyTexture?: string;
+    skyTextureFileName?: string;
     ambientColor?: string;
     fogColor?: string;
     fogDensity?: number;
