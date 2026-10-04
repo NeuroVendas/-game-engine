@@ -67,6 +67,7 @@ let cloudBusy = false;
 let currentPage: LauncherPage = "home";
 let currentGameFilter: GameFilter = "all";
 let renamingProjectId: string | null = null;
+let openCardMenuId: string | null = null;
 let sessionMode: "edit" | "play" | null = null;
 
 function must<T extends HTMLElement>(id: string): T {
@@ -405,7 +406,7 @@ function projectCard(scene: ForgeSceneDocument, context: "game" | "develop"): HT
       ${context === "develop" && editable && !official ? '<button data-action="more" class="more-action">More ▾</button>' : ""}
     </div>
     ${context === "develop" && editable && !official ? `
-      <div class="card-menu" hidden>
+      <div class="card-menu" ${openCardMenuId === id ? "" : "hidden"}>
         <button data-action="duplicate">Duplicate</button>
         <button data-action="rename">Rename</button>
         <button data-action="publish">${visibility === "public" ? "Make Private" : "Publish"}</button>
@@ -426,11 +427,12 @@ function projectCard(scene: ForgeSceneDocument, context: "game" | "develop"): HT
     if (action === "remix") void remixPlace(scene);
 
     if (action === "more") {
-      const menu = card.querySelector<HTMLElement>(".card-menu");
-      if (menu) menu.hidden = !menu.hidden;
+      openCardMenuId = openCardMenuId === id ? null : id;
+      renderAll();
     }
 
     if (action === "duplicate") {
+      openCardMenuId = null;
       const copy = structuredClone(scene);
       copy.name = uniqueProjectName(`${scene.name} Copy`);
       delete copy.platform;
@@ -440,6 +442,7 @@ function projectCard(scene: ForgeSceneDocument, context: "game" | "develop"): HT
     }
 
     if (action === "rename") {
+      openCardMenuId = null;
       renamingProjectId = id;
       const input = must<HTMLInputElement>("rename-place-name");
       input.value = scene.name;
@@ -449,9 +452,15 @@ function projectCard(scene: ForgeSceneDocument, context: "game" | "develop"): HT
       requestAnimationFrame(() => input.select());
     }
 
-    if (action === "publish") void togglePublish(scene);
+    if (action === "publish") {
+      openCardMenuId = null;
+      void togglePublish(scene);
+    }
 
-    if (action === "delete") void deletePlace(scene);
+    if (action === "delete") {
+      openCardMenuId = null;
+      void deletePlace(scene);
+    }
   });
 
   return card;
