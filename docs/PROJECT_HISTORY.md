@@ -510,7 +510,9 @@ The test now:
 
 The first coordinate-microstep version timed out in headless Chromium. A first prompt-driven route then passed once but flaked on a repeat because a fast player can cross the prompt window between polling frames.
 
-The final controller therefore uses coarse closed-loop world-space waypoints reached through real WASD input, settles within a safe tolerance, and only then requires the same interaction prompt a player sees before pressing E. This preserves real gameplay coverage while removing frame-timing dependence.
+A second closed-loop waypoint attempt exposed another useful constraint: waypoints must respect the player's collision radius and the solid relay geometry, not only the relay center coordinates.
+
+The final route uses collider-safe, axis-aligned coordinate gates at normal walking speed. It approaches each console from open floor, stops before the collider face, and then requires the same interaction prompt a player sees before pressing E. This preserves real gameplay coverage while removing both frame-timing dependence and impossible/ambiguous target positions.
 
 Verification for code commit `5a26dfe1`:
 

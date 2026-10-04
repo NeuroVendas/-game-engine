@@ -264,7 +264,7 @@ Still planned: room/corridor/connect-room semantic building, richer component/ma
 
 It uses Spawn, collisions, interactables, ModuleScript, Script, LocalScript, HUD UI, Sound, Light, Particle VFX, environment controls and a completion/win state. It is available as a playable Develop template.
 
-Browser Smoke now performs the actual gameplay route: it calibrates movement, drives the player through safe world-space waypoints using real WASD input, requires the player-visible interaction prompt at Relay A/B/C, presses E, verifies 3/3, requires `CORE_RELAY_WIN` and confirms the victory VFX restart.
+Browser Smoke now performs the actual gameplay route: it calibrates movement, follows collider-safe axis-aligned world-space gates using real WASD input at walking speed, requires the player-visible interaction prompt at Relay A/B/C, presses E, verifies 3/3, requires `CORE_RELAY_WIN` and confirms the victory VFX restart.
 
 The benchmark exists to expose engine deficiencies through real game construction.
 

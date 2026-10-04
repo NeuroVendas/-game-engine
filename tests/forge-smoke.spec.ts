@@ -125,46 +125,24 @@ async function calibratePlayerAxes(page: any): Promise<{ forward: [number, numbe
   return { forward, right };
 }
 
-async function drivePlayerNear(
+async function moveUntilCoordinate(
   page: any,
-  axes: { forward: [number, number]; right: [number, number] },
-  target: [number, number],
-  tolerance = 0.8
+  key: string,
+  reached: (position: [number, number]) => boolean,
+  timeout = 6500
 ): Promise<void> {
-  for (let step = 0; step < 24; step += 1) {
-    const [x, z] = await readPlayerXZ(page);
-    const dx = target[0] - x;
-    const dz = target[1] - z;
-    const distance = Math.hypot(dx, dz);
-
-    if (distance <= tolerance) {
-      await page.waitForTimeout(160);
-      return;
-    }
-
-    const forwardError = dx * axes.forward[0] + dz * axes.forward[1];
-    const rightError = dx * axes.right[0] + dz * axes.right[1];
-    const keys: string[] = [];
-    const axisTolerance = Math.max(0.16, tolerance * 0.25);
-
-    if (Math.abs(forwardError) > axisTolerance) keys.push(forwardError > 0 ? "KeyW" : "KeyS");
-    if (Math.abs(rightError) > axisTolerance) keys.push(rightError > 0 ? "KeyD" : "KeyA");
-
-    const running = distance > 5;
-    if (running) keys.push("ShiftLeft");
-
-    const nominalSpeed = running ? 7.4 : 4.85;
-    const duration = Math.max(
-      100,
-      Math.min(650, (distance / nominalSpeed) * 1000 * 0.34)
-    );
-    await holdMovement(page, keys, duration);
+  await page.keyboard.down(key);
+  try {
+    await expect.poll(async () => reached(await readPlayerXZ(page)), {
+      timeout,
+      intervals: [50, 60, 70]
+    }).toBe(true);
+  } finally {
+    await page.keyboard.up(key);
   }
 
-  const [x, z] = await readPlayerXZ(page);
-  throw new Error(
-    `Player failed to settle near ${target.join(",")} from ${x.toFixed(2)},${z.toFixed(2)}`
-  );
+  // Walking deceleration finishes quickly; allow it to settle before the next axis.
+  await page.waitForTimeout(180);
 }
 
 async function expectInteractionPrompt(page: any, promptText: string): Promise<void> {
@@ -596,18 +574,27 @@ test("Core Relay template is a playable complete-game benchmark", async ({ page 
   expect(Math.abs(axes.forward[1])).toBeGreaterThan(0.75);
   expect(Math.abs(axes.right[0])).toBeGreaterThan(0.75);
 
-  // Use safe waypoints reached through real WASD movement, then require the same prompt a player sees.
-  await drivePlayerNear(page, axes, [-7, -3.8]);
+  const xPositive = axes.right[0] >= 0 ? "KeyD" : "KeyA";
+  const xNegative = xPositive === "KeyD" ? "KeyA" : "KeyD";
+  const zNegative = axes.forward[1] >= 0 ? "KeyS" : "KeyW";
+
+  // Relay A: walk laterally first so the central core is never on the route.
+  await moveUntilCoordinate(page, xNegative, ([x]) => x <= -6.6);
+  await moveUntilCoordinate(page, zNegative, ([, z]) => z <= -3.1);
   await expectInteractionPrompt(page, "Relay A");
   await page.keyboard.press("KeyE");
   await expect(page.locator("#forge-ui-root")).toContainText("1 / 3 relays online");
 
-  await drivePlayerNear(page, axes, [-1.8, -7.8]);
+  // Relay B: step away from A, descend the open lower lane, then approach from the west.
+  await moveUntilCoordinate(page, xPositive, ([x]) => x >= -3.8);
+  await moveUntilCoordinate(page, zNegative, ([, z]) => z <= -7.2);
+  await moveUntilCoordinate(page, xPositive, ([x]) => x >= -1.2);
   await expectInteractionPrompt(page, "Relay B");
   await page.keyboard.press("KeyE");
   await expect(page.locator("#forge-ui-root")).toContainText("2 / 3 relays online");
 
-  await drivePlayerNear(page, axes, [4.8, -7.2]);
+  // Relay C: stay in the lower lane and approach from the west, before its collider face.
+  await moveUntilCoordinate(page, xPositive, ([x]) => x >= 4.4);
   await expectInteractionPrompt(page, "Relay C");
   await page.keyboard.press("KeyE");
   await expect(page.locator("#forge-ui-root")).toContainText("3 / 3 relays online");
