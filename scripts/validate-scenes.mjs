@@ -70,6 +70,13 @@ for (const file of files) {
     assertVec3(file, entity.id, "scale", entity.scale);
     assertVec3(file, entity.id, "size", entity.size);
 
+    if (
+      entity.transparency !== undefined
+      && (!Number.isFinite(entity.transparency) || entity.transparency < 0 || entity.transparency > 1)
+    ) {
+      throw new Error(`${file}: ${entity.id} transparency must be between 0 and 1`);
+    }
+
     if (entity.parentId !== undefined && typeof entity.parentId !== "string") {
       throw new Error(`${file}: ${entity.id} parentId must be a string`);
     }
@@ -124,6 +131,9 @@ for (const file of files) {
     if (components.Sound) {
       if (typeof components.Sound.src !== "string") {
         throw new Error(`${file}: ${entity.id} Sound.src must be a string`);
+      }
+      if (components.Sound.fileName !== undefined && typeof components.Sound.fileName !== "string") {
+        throw new Error(`${file}: ${entity.id} Sound.fileName must be a string`);
       }
       if (components.Sound.volume !== undefined && !Number.isFinite(components.Sound.volume)) {
         throw new Error(`${file}: ${entity.id} Sound.volume must be finite`);
