@@ -291,6 +291,18 @@ test("studio v0.5 supports resize, sky, UI, typed scripts, sound and lights", as
   await expect(canvas).toHaveAttribute("data-skybox", "#7fb9e8");
   await expect(page.locator("#tool-select")).toBeVisible();
   await expect(page.locator("#tool-scale")).toContainText("Resize");
+  await expect(canvas).toHaveAttribute("data-editor-space", "world");
+  await page.locator("#transform-space").click();
+  await expect(canvas).toHaveAttribute("data-editor-space", "local");
+  await expect(page.locator("#transform-space")).toHaveText("Local");
+  await page.locator("#transform-space").click();
+  await expect(canvas).toHaveAttribute("data-editor-space", "world");
+
+  await page.locator("#rotation-snap").selectOption("45");
+  await expect(page.locator("#rotation-snap")).toHaveValue("45");
+  await page.locator("#scale-snap").selectOption("0.25");
+  await expect(page.locator("#scale-snap")).toHaveValue("0.25");
+
   await page.locator("#tool-scale").click();
   await expect(canvas).toHaveAttribute("data-editor-tool", "scale");
   await page.locator("#tool-move").click();
