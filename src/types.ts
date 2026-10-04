@@ -49,6 +49,18 @@ export interface ForgeComponents {
     spatial?: boolean;
     maxDistance?: number;
   };
+  VFX?: {
+    preset: "sparks" | "smoke" | "fire" | "glow" | "dust";
+    enabled?: boolean;
+    autoplay?: boolean;
+    emitRate?: number;
+    lifetime?: number;
+    size?: number;
+    speed?: number;
+    color?: string;
+    color2?: string;
+    gravity?: Vec3;
+  };
   UI?: {
     type: "text" | "button" | "panel";
     text?: string;
