@@ -354,6 +354,7 @@ export class EditorApp {
     for (const id of ["prop-color", "prop-emissive", "prop-transparency"]) {
       must<HTMLInputElement>(id).addEventListener("change", () => this.applyAppearance());
     }
+    must<HTMLSelectElement>("prop-material").addEventListener("change", () => this.applyAppearance());
 
     const workspaceRoot = must<HTMLDivElement>("workspace-root");
     workspaceRoot.addEventListener("dragover", (event) => {
@@ -1026,6 +1027,7 @@ export class EditorApp {
     must<HTMLInputElement>("prop-name").value = entity.name;
     this.renderParentOptions(entity);
     must<HTMLInputElement>("prop-color").value = this.safeHex(entity.color, "#8796a3");
+    must<HTMLSelectElement>("prop-material").value = entity.material ?? "plastic";
     must<HTMLInputElement>("prop-emissive").value = this.safeHex(entity.emissive, "#000000");
     must<HTMLInputElement>("prop-transparency").value = String(entity.transparency ?? 0);
     must<HTMLInputElement>("prop-texture").value = entity.texture ?? "";
@@ -1712,6 +1714,7 @@ Forge.onUpdate((dt) => {
 
     this.checkpoint();
     entity.color = must<HTMLInputElement>("prop-color").value;
+    entity.material = must<HTMLSelectElement>("prop-material").value as ForgeEntity["material"];
     const emissive = must<HTMLInputElement>("prop-emissive").value;
     entity.emissive = emissive === "#000000" ? undefined : emissive;
     entity.transparency = Math.min(
