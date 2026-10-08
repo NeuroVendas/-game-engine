@@ -171,6 +171,7 @@ export class EditorApp {
       try {
         if (this.mode === "play") {
           this.player?.update(dt);
+          if (this.player) this.forge.updateTriggers(this.player.body);
           this.forge.scripts.tick(dt);
         } else {
           this.updateEditorCamera(dt);
@@ -1465,6 +1466,13 @@ export class EditorApp {
           offset: [0, 0, 0]
         };
         break;
+      case "Trigger":
+        components.Trigger = {
+          enabled: true,
+          size: entity.size ? [...entity.size] : [4, 4, 4],
+          offset: [0, 0, 0]
+        };
+        break;
       case "Interactable":
         components.Interactable = { enabled: true, prompt: "E • Interact" };
         break;
@@ -1666,6 +1674,44 @@ export class EditorApp {
           container.appendChild(note);
         }
 
+        break;
+      }
+      case "Trigger": {
+        const component = components.Trigger;
+        if (!component) return;
+
+        this.appendCheckboxField(container, "Enabled", component.enabled, (value) => {
+          component.enabled = value;
+        });
+
+        const size = component.size ?? (entity.size ? [...entity.size] : [4, 4, 4]);
+        const offset = component.offset ?? [0, 0, 0];
+        component.size = size;
+        component.offset = offset;
+
+        this.appendNumberField(container, "Size X", size[0], 0.1, (value) => {
+          component.size = [Math.max(0.05, Math.abs(value)), size[1], size[2]];
+        });
+        this.appendNumberField(container, "Size Y", size[1], 0.1, (value) => {
+          component.size = [size[0], Math.max(0.05, Math.abs(value)), size[2]];
+        });
+        this.appendNumberField(container, "Size Z", size[2], 0.1, (value) => {
+          component.size = [size[0], size[1], Math.max(0.05, Math.abs(value))];
+        });
+        this.appendNumberField(container, "Offset X", offset[0], 0.1, (value) => {
+          component.offset = [value, offset[1], offset[2]];
+        });
+        this.appendNumberField(container, "Offset Y", offset[1], 0.1, (value) => {
+          component.offset = [offset[0], value, offset[2]];
+        });
+        this.appendNumberField(container, "Offset Z", offset[2], 0.1, (value) => {
+          component.offset = [offset[0], offset[1], value];
+        });
+
+        const note = document.createElement("div");
+        note.className = "component-note";
+        note.textContent = "Trigger Volume does not block movement. Scripts receive enter/exit events in Play.";
+        container.appendChild(note);
         break;
       }
       case "Interactable": {
