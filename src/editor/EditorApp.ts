@@ -359,6 +359,13 @@ export class EditorApp {
       must<HTMLInputElement>(id).addEventListener("change", () => this.applyEnvironmentInputs());
     }
 
+    document.querySelectorAll<HTMLButtonElement>("[data-environment-preset]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const preset = button.dataset.environmentPreset;
+        if (preset) this.applyEnvironmentPreset(preset);
+      });
+    });
+
     must<HTMLInputElement>("prop-name").addEventListener("change", (event) => {
       if (!this.selectedId) return;
       const entity = this.forge.getEntity(this.selectedId);
@@ -1956,6 +1963,56 @@ Forge.onUpdate((dt) => {
     this.log(`Resized ${entity.name} to ${wanted.map((value) => value.toFixed(2)).join(" × ")}.`);
   }
 
+  private applyEnvironmentPreset(name: string): void {
+    if (this.mode !== "editor") return;
+
+    const presets: Record<string, {
+      skyColor: string;
+      ambientColor: string;
+      fogColor: string;
+      fogDensity: number;
+    }> = {
+      day: {
+        skyColor: "#7fb9e8",
+        ambientColor: "#d9e8f4",
+        fogColor: "#9fc6df",
+        fogDensity: 0
+      },
+      sunset: {
+        skyColor: "#d88463",
+        ambientColor: "#f0c39f",
+        fogColor: "#b8756a",
+        fogDensity: 0.004
+      },
+      night: {
+        skyColor: "#17263f",
+        ambientColor: "#6f86aa",
+        fogColor: "#263b59",
+        fogDensity: 0.006
+      },
+      foggy: {
+        skyColor: "#8c9aa3",
+        ambientColor: "#bac3c8",
+        fogColor: "#aab5bb",
+        fogDensity: 0.025
+      }
+    };
+
+    const preset = presets[name];
+    if (!preset) return;
+
+    this.checkpoint();
+    this.forge.document.environment = {
+      ...preset,
+      skyTexture: undefined,
+      skyTextureFileName: undefined
+    };
+    this.forge.applyEnvironment(this.forge.document.environment);
+    this.syncEnvironmentInputs();
+    this.canvas.dataset.environmentPreset = name;
+    this.log(`Environment preset: ${name}.`);
+  }
+
   private syncEnvironmentInputs(): void {
     const environment = this.forge.document.environment ?? {};
     must<HTMLInputElement>("env-sky").value = environment.skyColor ?? "#7fb9e8";
@@ -1970,7 +2027,9 @@ Forge.onUpdate((dt) => {
     if (this.mode !== "editor") return;
     this.checkpoint();
 
+    const current = this.forge.document.environment ?? {};
     this.forge.document.environment = {
+      ...current,
       skyColor: must<HTMLInputElement>("env-sky").value,
       ambientColor: must<HTMLInputElement>("env-ambient").value,
       fogColor: must<HTMLInputElement>("env-fog").value,
@@ -1978,6 +2037,7 @@ Forge.onUpdate((dt) => {
     };
 
     this.forge.applyEnvironment(this.forge.document.environment);
+    delete this.canvas.dataset.environmentPreset;
     this.log("Lighting / sky environment updated.");
   }
 

@@ -72,6 +72,8 @@ Current components:
 
 Environment supports skyColor, custom skyTexture, skyTextureFileName, ambientColor, fogColor and fogDensity.
 
+Studio lighting includes Day / Sunset / Night / Foggy presets. Manual lighting edits preserve an imported custom sky; choosing a preset intentionally returns to the generated color sky.
+
 ## Studio
 
 Implemented:
@@ -160,8 +162,13 @@ Movement now includes:
 - tuned jump arc
 - smoother facing
 - tighter release/landing behavior
+- sprint blending with subtle FOV response
+- landing compression feedback
+- distinct rise/fall animation states
+- first/third-person zoom preservation
+- protected third-person camera distance and vertical orbit limits
 
-Further feel tuning is expected.
+Further feel tuning and a stronger animation controller are still expected.
 
 ## Scripting
 

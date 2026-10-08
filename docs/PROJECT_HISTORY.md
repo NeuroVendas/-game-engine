@@ -519,3 +519,42 @@ Verification for code commit `5a26dfe1`:
 - Forge CI: success
 - Forge Cloud Smoke: success
 - Forge Browser Smoke: success (7/7)
+
+
+## 18. Forge v0.5 — Player feel and Studio environment pass
+
+A follow-up creator-quality branch `feature/v05-player-feel` was stacked on top of the Particle VFX/Core Relay acceptance work.
+
+### Player feel
+
+The Forge Classic controller now adds:
+
+- smoother walk/sprint speed transition
+- subtler classic walk animation
+- distinct jump-rise and jump-fall poses
+- landing compression feedback
+- sprint FOV response
+- third-person vertical orbit limits
+- a protected minimum third-person zoom distance so the camera does not collapse into the avatar
+- first/third-person switching that preserves the creator/player's previous third-person zoom instead of resetting to a fixed radius
+
+Browser regression coverage now checks sprint speed and first/third-person camera restoration in addition to the existing acceleration/jump assertions.
+
+### Studio environment workflow
+
+Lighting now exposes one-click presets:
+
+- Day
+- Sunset
+- Night
+- Foggy
+
+The preset path writes the same canonical `environment` scene data as manual editing.
+
+A bug was also fixed where manually changing environment values after importing a sky image could discard the imported sky fields. Manual edits now preserve custom sky metadata; choosing a preset intentionally clears the custom sky and returns to the generated color sky.
+
+Browser coverage verifies both behaviors.
+
+### Verification note
+
+Forge CI passes for this branch. Forge Cloud Smoke initially failed because the external Forge Supabase project had become inactive, not because of the code changes; the project was restored before final branch verification.
