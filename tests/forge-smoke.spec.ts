@@ -723,6 +723,12 @@ test("Studio visualizes colliders and round-trips custom prefab hierarchies", as
   expect(importedId).not.toBe(groupId);
   await expect(page.locator("#prop-parent")).toHaveValue(groupId!);
 
+  await page.locator("#player-collider-height").fill("2.4");
+  await page.locator("#player-collider-height").dispatchEvent("change");
+  await page.locator("#player-collider-radius").fill("0.35");
+  await page.locator("#player-collider-radius").dispatchEvent("change");
+  await expect(canvas).toHaveAttribute("data-scene-player-collider", "2.400,0.350");
+
   await page.locator("#collision-debug").click();
   await expect(canvas).toHaveAttribute("data-collision-debug", "true");
   await expect.poll(async () => Number(await canvas.getAttribute("data-collision-debug-count")))
@@ -732,6 +738,8 @@ test("Studio visualizes colliders and round-trips custom prefab hierarchies", as
   await page.locator("#play").click();
   await expect(page.locator("#mode-badge")).toHaveText("PLAY");
   await expect(canvas).toHaveAttribute("data-collision-debug", "false");
+  await expect(canvas).toHaveAttribute("data-player-collider-height", "2.400");
+  await expect(canvas).toHaveAttribute("data-player-collider-radius", "0.350");
 
   await page.locator("#stop").click();
   await expect(page.locator("#mode-badge")).toHaveText("EDITOR");
