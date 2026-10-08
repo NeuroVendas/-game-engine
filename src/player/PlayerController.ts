@@ -45,6 +45,7 @@ export class PlayerController {
   private autoRespawn = true;
   private dead = false;
   private deathTimer = 0;
+  private killY = -100;
 
   private readonly onKeyDown = (event: KeyboardEvent) => {
     if (["KeyW", "KeyA", "KeyS", "KeyD", "Space", "ShiftLeft", "ShiftRight"].includes(event.code)) {
@@ -109,6 +110,7 @@ export class PlayerController {
       jumpPower?: number;
       maxHealth?: number;
       autoRespawn?: boolean;
+      killY?: number;
     } = {}
   ) {
     const scene = forge.scene;
@@ -122,6 +124,7 @@ export class PlayerController {
     this.maxHealth = Math.min(100000, Math.max(1, Number(config.maxHealth) || 100));
     this.health = this.maxHealth;
     this.autoRespawn = config.autoRespawn ?? true;
+    this.killY = Math.min(100000, Math.max(-100000, Number(config.killY) || -100));
 
     this.body = MeshBuilder.CreateCapsule("__player-collider", {
       height: this.colliderHeight,
@@ -222,6 +225,7 @@ export class PlayerController {
     forge.canvas.dataset.playerWalkSpeed = this.walkSpeed.toFixed(3);
     forge.canvas.dataset.playerRunSpeed = this.runSpeed.toFixed(3);
     forge.canvas.dataset.playerJumpPower = this.jumpPower.toFixed(3);
+    forge.canvas.dataset.playerKillY = this.killY.toFixed(3);
     this.syncHealthDiagnostics();
 
     window.addEventListener("keydown", this.onKeyDown, { passive: false });
@@ -312,6 +316,11 @@ export class PlayerController {
       this.horizontalVelocity.z * dt
     );
     this.body.moveWithCollisions(frameMotion);
+
+    if (this.body.position.y < this.killY && !this.dead) {
+      this.damage(this.maxHealth);
+      this.forge.canvas.dataset.lastPlayerAction = "fall-death";
+    }
 
     const horizontalSpeed = Math.hypot(this.horizontalVelocity.x, this.horizontalVelocity.z);
     if (horizontalSpeed > 0.08) {
@@ -532,6 +541,7 @@ export class PlayerController {
     delete this.forge.canvas.dataset.playerWalkSpeed;
     delete this.forge.canvas.dataset.playerRunSpeed;
     delete this.forge.canvas.dataset.playerJumpPower;
+    delete this.forge.canvas.dataset.playerKillY;
     delete this.forge.canvas.dataset.playerCheckpoint;
     delete this.forge.canvas.dataset.playerHealth;
     delete this.forge.canvas.dataset.playerDead;
