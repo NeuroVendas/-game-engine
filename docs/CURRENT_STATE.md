@@ -424,3 +424,27 @@ Scene documents can optionally configure the runtime player capsule and movement
 - `player.jumpPower`
 
 Studio exposes all five under the Player service. Existing scenes remain compatible and default to height `3.05` / radius `0.45`, walk `5.05`, run `8`, jump `7.9`. Runtime clamps invalid values, keeps height large enough for the chosen radius and prevents run speed from falling below walk speed. Ground snapping and grounded probes use the configured capsule dimensions.
+
+
+## Asset Library
+
+Studio now has a persistent scene-level Asset Library for reusable project resources.
+
+Supported asset kinds:
+
+- Model / GLB
+- Texture
+- Audio
+
+Imports are registered in `forge.scene.assets` and deduplicated by kind + source. Existing scenes created before the registry are backward compatible: referenced model/audio/texture resources appear in Assets and are migrated into the persistent registry on the first new import.
+
+Creator workflow:
+
+- Model: Insert a new model instance without uploading again.
+- Audio: Insert another Sound object from the same source.
+- Texture: Apply the stored texture to the selected Forge primitive.
+- Search by asset/file name.
+- Filter by Models / Textures / Audio.
+- Remove from the Asset Library without modifying existing scene instances.
+
+Texture imports no longer require a selected object. With a compatible primitive selected, Forge imports and applies it; otherwise it is stored for later use.
