@@ -568,6 +568,10 @@ test("studio v0.5 supports resize, sky, UI, typed scripts, sound and lights", as
   await expect(canvas).toHaveAttribute("data-scene-contrast", "1.280");
   await expect(canvas).toHaveAttribute("data-scene-tone-mapping", "aces");
 
+  await page.locator("#render-quality").selectOption("high");
+  await expect(canvas).toHaveAttribute("data-render-quality", "high");
+  await expect(canvas).toHaveAttribute("data-render-scaling", "0.800");
+
   await page.locator("[data-primitive='box']").click();
   await expect(page.locator("#prop-parent")).toHaveValue("");
   await page.locator("#prop-material").selectOption("metal");
@@ -671,6 +675,8 @@ Forge.onClick(() => {
   await page.locator("#play").click();
   await expect(page.locator("#mode-badge")).toHaveText("PLAY");
   await expect(canvas).toHaveAttribute("data-local-shadow-lights", "1");
+  await expect(canvas).toHaveAttribute("data-render-quality", "high");
+  await expect(canvas).toHaveAttribute("data-render-scaling", "0.800");
 
   const uiButton = page.locator("#forge-ui-root .forge-ui-button");
   await expect(uiButton).toBeVisible();
