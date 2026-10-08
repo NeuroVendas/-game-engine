@@ -1416,6 +1416,24 @@ export class EditorApp {
     return asset;
   }
 
+  private renameSceneAsset(id: string, nextName: string): void {
+    if (this.mode !== "editor") return;
+    const asset = this.forge.document.assets?.find((candidate) => candidate.id === id);
+    if (!asset) return;
+
+    const clean = nextName.trim();
+    if (!clean || clean === asset.name) {
+      this.renderAssetLibrary();
+      return;
+    }
+
+    this.checkpoint();
+    const previous = asset.name;
+    asset.name = clean;
+    this.renderAssetLibrary();
+    this.log(`Renamed asset ${previous} → ${clean}.`);
+  }
+
   private removeSceneAsset(id: string): void {
     if (this.mode !== "editor") return;
     const assets = this.forge.document.assets ?? [];
@@ -1514,10 +1532,22 @@ export class EditorApp {
 
       const meta = document.createElement("div");
       meta.className = "asset-library-meta";
-      const name = document.createElement("div");
+      const name = document.createElement("input");
       name.className = "asset-library-name";
-      name.textContent = entry.name;
+      name.type = "text";
+      name.value = entry.name;
       name.title = entry.fileName ?? entry.name;
+      name.readOnly = !entry.id;
+      if (entry.id) {
+        name.dataset.assetName = entry.id;
+        name.addEventListener("change", () => this.renameSceneAsset(entry.id, name.value));
+        name.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            name.blur();
+          }
+        });
+      }
       const type = document.createElement("div");
       type.className = "asset-library-type";
       type.textContent = entry.kind;
