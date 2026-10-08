@@ -2727,6 +2727,11 @@ Forge.onUpdate((dt) => {
       }
     );
 
+    this.forge.scripts.setPlayerAPI({
+      setCheckpoint: (idOrName) => this.player?.setCheckpoint(idOrName) ?? false,
+      respawn: () => this.player?.respawn() ?? false
+    });
+
     // Scripts start only after the player and gameplay camera exist.
     this.forge.startRuntimeScripts();
 
