@@ -281,14 +281,15 @@ async function moveTowardWorldPoint(
 
       const forwardAmount = dx * axes.forward[0] + dz * axes.forward[1];
       const rightAmount = dx * axes.right[0] + dz * axes.right[1];
-      const deadZone = 0.18;
       const wanted: string[] = [];
 
-      if (forwardAmount > deadZone) wanted.push("KeyW");
-      else if (forwardAmount < -deadZone) wanted.push("KeyS");
-
-      if (rightAmount > deadZone) wanted.push("KeyD");
-      else if (rightAmount < -deadZone) wanted.push("KeyA");
+      // Move on the strongest camera-relative axis only. This avoids diagonal
+      // collision resolution pinning the controller against nearby geometry.
+      if (Math.abs(forwardAmount) >= Math.abs(rightAmount)) {
+        wanted.push(forwardAmount >= 0 ? "KeyW" : "KeyS");
+      } else {
+        wanted.push(rightAmount >= 0 ? "KeyD" : "KeyA");
+      }
 
       await syncKeys(wanted);
       await page.waitForTimeout(55);
@@ -828,7 +829,8 @@ test("Studio imports GLB animations and audio assets", async ({ page }) => {
   await expect(clip.locator("option")).toContainText(["First clip (Bounce)", "Bounce"]);
   await clip.selectOption("Bounce");
 
-  await page.locator("[data-model-animation-autoplay]").check();
+  await page.locator("[data-model-animation-autoplay]").click();
+  await expect(page.locator("[data-model-animation-autoplay]")).toBeChecked();
   await page.locator("[data-model-animation-speed]").fill("1.5");
   await page.locator("[data-model-animation-speed]").dispatchEvent("change");
 
