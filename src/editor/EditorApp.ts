@@ -802,7 +802,7 @@ export class EditorApp {
       objectType === "spawn" ? "cylinder" : "empty",
       names[objectType] ?? "Object"
     );
-    entity.parentId = resolvedTargetId ?? undefined;
+    entity.parentId = this.selectedId ?? undefined;
     entity.components = {};
 
     if (objectType === "spawn") {
@@ -916,7 +916,7 @@ export class EditorApp {
       const modelName = file.name.replace(/\.glb$/i, "") || "Model";
       this.registerSceneAsset("model", modelName, dataUrl, file.name);
       const entity = this.forge.createPrimitive("model", modelName);
-      entity.parentId = resolvedTargetId ?? undefined;
+      entity.parentId = this.selectedId ?? undefined;
       entity.components = {
         Model: {
           src: dataUrl,
