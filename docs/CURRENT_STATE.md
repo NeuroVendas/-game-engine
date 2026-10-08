@@ -425,6 +425,7 @@ Current scene-level settings:
 - `player.jumpPower`
 - `player.maxHealth`
 - `player.autoRespawn`
+- `player.killY`
 
 Defaults remain compatible with existing scenes: height 3.05, radius 0.45, walk 5.05, run 8 and jump 7.9. Values are clamped at authoring/runtime boundaries, capsule height cannot collapse below its radius, and grounded/safe-ground probes use the configured capsule dimensions.
 
@@ -471,3 +472,10 @@ Authoring settings:
 - Interval
 
 Adding Hazard automatically adds a default Trigger Volume when one is not already present. Each active hazard tracks its own runtime timer and deals damage through the built-in player health system while the player remains inside the Trigger.
+
+
+## Fall death / Kill Y
+
+The Player service exposes a scene-level `Kill Y` threshold (default -100).
+
+If the runtime player capsule falls below this height, Forge routes the fall through the normal health/death path. This means manual respawn, auto-respawn and the current checkpoint all work without a separate fall-reset script.

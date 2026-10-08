@@ -395,7 +395,8 @@ export class EditorApp {
       "player-walk-speed",
       "player-run-speed",
       "player-jump-power",
-      "player-max-health"
+      "player-max-health",
+      "player-kill-y"
     ]) {
       must<HTMLInputElement>(id).addEventListener("change", () => this.applyPlayerInputs());
     }
@@ -2581,6 +2582,7 @@ Forge.onUpdate((dt) => {
     const jumpPower = player.jumpPower ?? 7.9;
     const maxHealth = player.maxHealth ?? 100;
     const autoRespawn = player.autoRespawn ?? true;
+    const killY = player.killY ?? -100;
 
     must<HTMLInputElement>("player-collider-height").value = String(colliderHeight);
     must<HTMLInputElement>("player-collider-radius").value = String(colliderRadius);
@@ -2588,6 +2590,7 @@ Forge.onUpdate((dt) => {
     must<HTMLInputElement>("player-run-speed").value = String(runSpeed);
     must<HTMLInputElement>("player-jump-power").value = String(jumpPower);
     must<HTMLInputElement>("player-max-health").value = String(maxHealth);
+    must<HTMLInputElement>("player-kill-y").value = String(killY);
     must<HTMLInputElement>("player-auto-respawn").checked = autoRespawn;
 
     this.canvas.dataset.scenePlayerCollider =
@@ -2596,6 +2599,7 @@ Forge.onUpdate((dt) => {
       `${Number(walkSpeed).toFixed(3)},${Number(runSpeed).toFixed(3)},${Number(jumpPower).toFixed(3)}`;
     this.canvas.dataset.scenePlayerHealth =
       `${Number(maxHealth).toFixed(3)},${String(autoRespawn)}`;
+    this.canvas.dataset.scenePlayerKillY = Number(killY).toFixed(3);
   }
 
   private applyPlayerInputs(): void {
@@ -2608,6 +2612,7 @@ Forge.onUpdate((dt) => {
     const runInput = must<HTMLInputElement>("player-run-speed");
     const jumpInput = must<HTMLInputElement>("player-jump-power");
     const maxHealthInput = must<HTMLInputElement>("player-max-health");
+    const killYInput = must<HTMLInputElement>("player-kill-y");
     const autoRespawnInput = must<HTMLInputElement>("player-auto-respawn");
 
     const radius = Math.min(2, Math.max(0.2, Number(radiusInput.value) || 0.45));
@@ -2617,6 +2622,10 @@ Forge.onUpdate((dt) => {
     const runSpeed = Math.min(30, Math.max(walkSpeed, Number(runInput.value) || 8));
     const jumpPower = Math.min(20, Math.max(1, Number(jumpInput.value) || 7.9));
     const maxHealth = Math.min(100000, Math.max(1, Number(maxHealthInput.value) || 100));
+    const requestedKillY = Number(killYInput.value);
+    const killY = Number.isFinite(requestedKillY)
+      ? Math.min(100000, Math.max(-100000, requestedKillY))
+      : -100;
     const autoRespawn = autoRespawnInput.checked;
 
     this.forge.document.player = {
@@ -2627,7 +2636,8 @@ Forge.onUpdate((dt) => {
       runSpeed,
       jumpPower,
       maxHealth,
-      autoRespawn
+      autoRespawn,
+      killY
     };
 
     heightInput.value = String(height);
@@ -2636,16 +2646,18 @@ Forge.onUpdate((dt) => {
     runInput.value = String(runSpeed);
     jumpInput.value = String(jumpPower);
     maxHealthInput.value = String(maxHealth);
+    killYInput.value = String(killY);
 
     this.canvas.dataset.scenePlayerCollider = `${height.toFixed(3)},${radius.toFixed(3)}`;
     this.canvas.dataset.scenePlayerMovement =
       `${walkSpeed.toFixed(3)},${runSpeed.toFixed(3)},${jumpPower.toFixed(3)}`;
     this.canvas.dataset.scenePlayerHealth = `${maxHealth.toFixed(3)},${String(autoRespawn)}`;
+    this.canvas.dataset.scenePlayerKillY = killY.toFixed(3);
 
     this.log(
       `Player settings updated: collider ${height.toFixed(2)} × ${radius.toFixed(2)} • `
       + `walk ${walkSpeed.toFixed(2)} • run ${runSpeed.toFixed(2)} • jump ${jumpPower.toFixed(2)} • `
-      + `health ${maxHealth.toFixed(0)} • auto-respawn ${autoRespawn ? "on" : "off"}.`
+      + `health ${maxHealth.toFixed(0)} • kill Y ${killY.toFixed(1)} • auto-respawn ${autoRespawn ? "on" : "off"}.`
     );
   }
 
@@ -2780,7 +2792,8 @@ Forge.onUpdate((dt) => {
         runSpeed: this.forge.document.player?.runSpeed,
         jumpPower: this.forge.document.player?.jumpPower,
         maxHealth: this.forge.document.player?.maxHealth,
-        autoRespawn: this.forge.document.player?.autoRespawn
+        autoRespawn: this.forge.document.player?.autoRespawn,
+        killY: this.forge.document.player?.killY
       }
     );
 

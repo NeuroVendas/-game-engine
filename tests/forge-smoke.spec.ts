@@ -1175,6 +1175,63 @@ test("Hazard component creates a Trigger and deals repeated player damage", asyn
   expect(await canvas.getAttribute("data-runtime-error")).toBeNull();
 });
 
+test("Player Kill Y routes fall death through health and checkpoint respawn", async ({ page }) => {
+  await page.goto("/");
+  await page.locator("[data-launch-tab='develop']").click();
+  await page.locator("#new-place").click();
+  await page.locator("#new-place-name").fill("Kill Plane Place");
+  await page.locator("#confirm-create-place").click();
+
+  const canvas = page.locator("#viewport");
+
+  await page.locator("#player-max-health").fill("40");
+  await page.locator("#player-max-health").dispatchEvent("change");
+  await page.locator("#player-kill-y").fill("0");
+  await page.locator("#player-kill-y").dispatchEvent("change");
+  await page.locator("#player-auto-respawn").check();
+
+  await expect(canvas).toHaveAttribute("data-scene-player-kill-y", "0.000");
+
+  await page.locator(".scene-item", { hasText: "Baseplate" }).click();
+  await page.locator("[data-object='script']").click();
+  await page.locator("#code-selected").click();
+  await page.locator("#script-source").fill(`
+Forge.onKeyDown((code) => {
+  if (code !== "KeyF") return;
+  const player = Forge.player.get();
+  if (!player) return;
+  player.setPosition(0, -20, 10);
+  Forge.log("PLAYER_DROPPED");
+});
+`);
+  await page.locator("#script-save").click();
+  await page.locator("#script-close").click();
+
+  await page.locator("#play").click();
+  await expect(page.locator("#mode-badge")).toHaveText("PLAY");
+  await expect(canvas).toHaveAttribute("data-player-kill-y", "0.000");
+  await expect(canvas).toHaveAttribute("data-player-health", "40.000,40.000");
+
+  await page.keyboard.press("KeyF");
+  await expect(page.locator("#output-log")).toContainText("PLAYER_DROPPED");
+  await expect.poll(async () => canvas.getAttribute("data-last-player-action"), {
+    timeout: 1000,
+    intervals: [30, 50, 75]
+  }).toBe("fall-death");
+  await expect(canvas).toHaveAttribute("data-player-dead", "true");
+
+  await expect.poll(async () => canvas.getAttribute("data-player-dead"), {
+    timeout: 2500,
+    intervals: [100, 150, 200]
+  }).toBe("false");
+  await expect(canvas).toHaveAttribute("data-player-health", "40.000,40.000");
+  await expect(canvas).toHaveAttribute("data-last-player-action", "respawn");
+
+  const positionRaw = (await canvas.getAttribute("data-player-position"))!;
+  expect(Number(positionRaw.split(",")[1])).toBeGreaterThan(0);
+  expect(await canvas.getAttribute("data-runtime-error")).toBeNull();
+});
+
 test("ModuleScript libraries can be required by gameplay scripts", async ({ page }) => {
   await page.goto("/");
   await page.locator("[data-launch-tab='develop']").click();

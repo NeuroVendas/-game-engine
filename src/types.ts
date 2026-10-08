@@ -138,6 +138,7 @@ export interface ForgeSceneDocument {
     jumpPower?: number;
     maxHealth?: number;
     autoRespawn?: boolean;
+    killY?: number;
   };
   prefabs?: ForgePrefabDocument[];
   environment?: {

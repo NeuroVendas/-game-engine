@@ -836,3 +836,27 @@ Every active Hazard Trigger tracks an independent damage timer. The engine aggre
 ### Acceptance coverage
 
 Browser Smoke creates a 30-health player and a Hazard at the blank-scene spawn, verifies the automatic Trigger, configures 8 damage every 0.15 seconds and confirms the player reaches the dead state through repeated hazard ticks.
+
+
+## 28. Forge v0.5 — Kill plane
+
+Forge's built-in player can now die naturally from falling out of the playable world.
+
+### Scene setting
+
+The Player service exposes `Kill Y`, persisted as `player.killY` with a default of -100.
+
+### Runtime behavior
+
+After collision movement, the PlayerController checks the capsule's world Y position. Crossing below Kill Y applies lethal damage through the same player-health path used by Hazards.
+
+Because it uses the shared death system:
+
+- Auto respawn works
+- Manual respawn works
+- The current checkpoint is respected
+- Health is restored consistently
+
+### Acceptance coverage
+
+Browser Smoke sets Kill Y to 0, uses a gameplay script to move the player below the world, confirms `fall-death`, then validates automatic checkpoint respawn and full health restoration.
