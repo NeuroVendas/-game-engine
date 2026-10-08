@@ -43,6 +43,7 @@ export class EditorApp {
   private editorOrbitLastX = 0;
   private editorOrbitLastY = 0;
   private draggedEntityId: string | null = null;
+  private draggedAssetId: string | null = null;
   private transformSpace: "world" | "local" = "world";
   private snapEnabled = true;
   private collisionDebug = false;
@@ -430,10 +431,12 @@ export class EditorApp {
 
     const workspaceRoot = must<HTMLDivElement>("workspace-root");
     workspaceRoot.addEventListener("dragover", (event) => {
+      const assetId = event.dataTransfer?.getData("application/x-forge-asset")
+        || this.draggedAssetId;
       const draggedId = event.dataTransfer?.getData("application/x-forge-entity")
         || event.dataTransfer?.getData("text/plain")
         || this.draggedEntityId;
-      if (!draggedId) return;
+      if (!assetId && !draggedId) return;
       event.preventDefault();
       workspaceRoot.classList.add("drop-target");
     });
@@ -441,6 +444,15 @@ export class EditorApp {
     workspaceRoot.addEventListener("drop", (event) => {
       event.preventDefault();
       workspaceRoot.classList.remove("drop-target");
+
+      const assetId = event.dataTransfer?.getData("application/x-forge-asset")
+        || this.draggedAssetId;
+      if (assetId) {
+        const asset = this.forge.document.assets?.find((candidate) => candidate.id === assetId);
+        if (asset) this.reuseSceneAsset(asset, null);
+        return;
+      }
+
       const draggedId = event.dataTransfer?.getData("application/x-forge-entity")
         || event.dataTransfer?.getData("text/plain")
         || this.draggedEntityId;
@@ -790,7 +802,7 @@ export class EditorApp {
       objectType === "spawn" ? "cylinder" : "empty",
       names[objectType] ?? "Object"
     );
-    entity.parentId = this.selectedId ?? undefined;
+    entity.parentId = resolvedTargetId ?? undefined;
     entity.components = {};
 
     if (objectType === "spawn") {
@@ -904,7 +916,7 @@ export class EditorApp {
       const modelName = file.name.replace(/\.glb$/i, "") || "Model";
       this.registerSceneAsset("model", modelName, dataUrl, file.name);
       const entity = this.forge.createPrimitive("model", modelName);
-      entity.parentId = this.selectedId ?? undefined;
+      entity.parentId = resolvedTargetId ?? undefined;
       entity.components = {
         Model: {
           src: dataUrl,
@@ -1276,6 +1288,14 @@ export class EditorApp {
         button.classList.remove("dragging");
       });
       button.addEventListener("dragover", (event) => {
+        const assetId = event.dataTransfer?.getData("application/x-forge-asset")
+          || this.draggedAssetId;
+        if (assetId) {
+          event.preventDefault();
+          button.classList.add("drop-target");
+          return;
+        }
+
         const draggedId = event.dataTransfer?.getData("application/x-forge-entity")
           || event.dataTransfer?.getData("text/plain")
           || this.draggedEntityId;
@@ -1287,6 +1307,15 @@ export class EditorApp {
       button.addEventListener("drop", (event) => {
         event.preventDefault();
         button.classList.remove("drop-target");
+
+        const assetId = event.dataTransfer?.getData("application/x-forge-asset")
+          || this.draggedAssetId;
+        if (assetId) {
+          const asset = this.forge.document.assets?.find((candidate) => candidate.id === assetId);
+          if (asset) this.reuseSceneAsset(asset, entity.id);
+          return;
+        }
+
         const draggedId = event.dataTransfer?.getData("application/x-forge-entity")
           || event.dataTransfer?.getData("text/plain")
           || this.draggedEntityId;
@@ -1568,7 +1597,21 @@ export class EditorApp {
       const row = document.createElement("div");
       row.className = "asset-library-item";
       row.dataset.assetKind = entry.kind;
-      if (entry.id) row.dataset.assetId = entry.id;
+      if (entry.id) {
+        row.dataset.assetId = entry.id;
+        row.draggable = true;
+        row.addEventListener("dragstart", (event) => {
+          this.draggedAssetId = entry.id;
+          event.dataTransfer?.setData("application/x-forge-asset", entry.id);
+          event.dataTransfer?.setData("text/plain", entry.id);
+          if (event.dataTransfer) event.dataTransfer.effectAllowed = "copy";
+          row.classList.add("dragging");
+        });
+        row.addEventListener("dragend", () => {
+          this.draggedAssetId = null;
+          row.classList.remove("dragging");
+        });
+      }
 
       const meta = document.createElement("div");
       meta.className = "asset-library-meta";
@@ -1636,16 +1679,17 @@ export class EditorApp {
     }
   }
 
-  private reuseSceneAsset(asset: ForgeAsset): void {
+  private reuseSceneAsset(asset: ForgeAsset, targetId?: string | null): void {
     if (this.mode !== "editor") return;
+    const resolvedTargetId = targetId === undefined ? this.selectedId : targetId;
 
     if (asset.kind === "texture") {
-      if (!this.selectedId) {
+      if (!resolvedTargetId) {
         this.log("Select a Forge primitive before applying a texture asset.");
         return;
       }
 
-      const selected = this.forge.getEntity(this.selectedId);
+      const selected = this.forge.getEntity(resolvedTargetId);
       if (!selected || selected.kind === "empty" || selected.kind === "model") {
         this.log("Texture assets can be applied to Forge primitive objects.");
         return;
