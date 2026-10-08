@@ -221,6 +221,7 @@ export class ForgeEngine {
     for (const id of [...this.entityParticles.keys()]) this.disposeEntityParticle(id);
     for (const id of [...this.entityAnimations.keys()]) this.disposeEntityAnimations(id);
     this.entityColliderProxies.clear();
+    this.refreshColliderProxyDiagnostics();
 
     // Detach Forge entity roots first so disposing one parent cannot accidentally
     // dispose another tracked Forge entity before its own cleanup pass.
@@ -428,6 +429,7 @@ export class ForgeEngine {
     this.disposeEntityAnimations(id);
     this.pendingAnimationPlays.delete(id);
     this.entityColliderProxies.delete(id);
+    this.refreshColliderProxyDiagnostics();
 
     const oldMesh = this.entityMeshes.get(id);
     if (oldMesh) this.unregisterShadowCaster(oldMesh, true);
@@ -522,6 +524,7 @@ export class ForgeEngine {
     this.disposeEntityAnimations(id);
     this.pendingAnimationPlays.delete(id);
     this.entityColliderProxies.delete(id);
+    this.refreshColliderProxyDiagnostics();
 
     const forgeChildren = this.document.entities
       .filter((candidate) => candidate.parentId === id)
@@ -1194,7 +1197,10 @@ export class ForgeEngine {
     this.entityColliderProxies.delete(entity.id);
 
     const collider = entity.components?.Collider;
-    if (!collider?.enabled || (collider.mode ?? "mesh") !== "box") return;
+    if (!collider?.enabled || (collider.mode ?? "mesh") !== "box") {
+      this.refreshColliderProxyDiagnostics();
+      return;
+    }
 
     const fallbackSize = entity.size ?? [1, 1, 1];
     const size = collider.size ?? fallbackSize;
@@ -1226,7 +1232,12 @@ export class ForgeEngine {
     proxy.material = material;
 
     this.entityColliderProxies.set(entity.id, proxy);
+    this.refreshColliderProxyDiagnostics();
+  }
+
+  private refreshColliderProxyDiagnostics(): void {
     this.canvas.dataset.colliderProxyCount = String(this.entityColliderProxies.size);
+    this.canvas.dataset.colliderProxyIds = [...this.entityColliderProxies.keys()].join(",");
   }
 
   private applyColliderDebug(entity: ForgeEntity, root: Mesh): boolean {
