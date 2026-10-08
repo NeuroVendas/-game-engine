@@ -670,3 +670,14 @@ Diagnostics expose proxy count/IDs for regression coverage.
 ### Acceptance coverage
 
 Browser Smoke configures a custom Box Proxy, exports it inside a Forge prefab, imports a second copy and verifies that mode, size, offset and distinct proxy instances survive the round-trip. The animated-GLB fixture also enables Box Proxy and validates Auto-fit against the imported triangle's visual bounds before continuing animation playback tests.
+
+
+## 22. Forge v0.5 — Scene-configurable player collider
+
+Player collision is no longer hard-coded to one capsule size.
+
+Creators can edit scene-level collider height/radius under the Player service. Play mode forwards those values into the PlayerController, which rebuilds its invisible capsule, Babylon ellipsoid, safe-ground snap and grounded probe from the configured dimensions.
+
+Legacy scenes retain the original 3.05 / 0.45 defaults.
+
+Browser acceptance coverage changes the scene collider dimensions, enters Play and verifies the runtime controller reports the configured height/radius.
