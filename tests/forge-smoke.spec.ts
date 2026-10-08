@@ -252,24 +252,15 @@ async function moveTowardWorldPoint(
   _axes: { forward: [number, number]; right: [number, number] },
   target: [number, number],
   tolerance = 0.45,
-  timeout = 12000
+  timeout = 15000
 ): Promise<void> {
-  const held = new Set<string>();
   const started = Date.now();
+  let activeKey: string | null = null;
 
-  const syncKeys = async (wanted: string[]) => {
-    for (const key of [...held]) {
-      if (!wanted.includes(key)) {
-        await page.keyboard.up(key);
-        held.delete(key);
-      }
-    }
-    for (const key of wanted) {
-      if (!held.has(key)) {
-        await page.keyboard.down(key);
-        held.add(key);
-      }
-    }
+  const releaseKey = async () => {
+    if (!activeKey) return;
+    await page.keyboard.up(activeKey);
+    activeKey = null;
   };
 
   try {
@@ -277,45 +268,58 @@ async function moveTowardWorldPoint(
       const [x, z] = await readPlayerXZ(page);
       const dx = target[0] - x;
       const dz = target[1] - z;
-      if (Math.hypot(dx, dz) <= tolerance) return;
+      const distance = Math.hypot(dx, dz);
+      if (distance <= tolerance) return;
 
       const cameraForwardRaw = await page.locator("#viewport").getAttribute("data-camera-forward");
       if (!cameraForwardRaw) {
-        await syncKeys([]);
-        await page.waitForTimeout(40);
+        await releaseKey();
+        await page.waitForTimeout(50);
         continue;
       }
 
       const [rawX, rawZ] = cameraForwardRaw.split(",").map(Number);
       const length = Math.hypot(rawX, rawZ);
       if (length < 0.001) {
-        await syncKeys([]);
-        await page.waitForTimeout(40);
+        await releaseKey();
+        await page.waitForTimeout(50);
         continue;
       }
 
-      const forwardX = rawX / length;
-      const forwardZ = rawZ / length;
-      const rightX = forwardZ;
-      const rightZ = -forwardX;
-      const forwardAmount = dx * forwardX + dz * forwardZ;
-      const rightAmount = dx * rightX + dz * rightZ;
-      const wanted: string[] = [];
+      const fx = rawX / length;
+      const fz = rawZ / length;
+      const rx = fz;
+      const rz = -fx;
+      const desiredX = dx / distance;
+      const desiredZ = dz / distance;
 
-      // Read the live camera basis every iteration and use only the strongest
-      // axis to avoid diagonal collision resolution pinning the controller.
-      if (Math.abs(forwardAmount) >= Math.abs(rightAmount)) {
-        wanted.push(forwardAmount >= 0 ? "KeyW" : "KeyS");
-      } else {
-        wanted.push(rightAmount >= 0 ? "KeyD" : "KeyA");
-      }
+      const candidates = [
+        { key: "KeyW", x: fx, z: fz },
+        { key: "KeyS", x: -fx, z: -fz },
+        { key: "KeyD", x: rx, z: rz },
+        { key: "KeyA", x: -rx, z: -rz }
+      ];
 
-      await syncKeys(wanted);
-      await page.waitForTimeout(45);
+      candidates.sort(
+        (a, b) =>
+          (b.x * desiredX + b.z * desiredZ)
+          - (a.x * desiredX + a.z * desiredZ)
+      );
+
+      await releaseKey();
+      activeKey = candidates[0].key;
+      await page.keyboard.down(activeKey);
+
+      // Short pulses prevent acceleration/deceleration inertia from creating
+      // a permanent orbit around a waypoint while still exercising real WASD.
+      const pulse = distance > 2 ? 130 : distance > 0.9 ? 75 : 40;
+      await page.waitForTimeout(pulse);
+      await releaseKey();
+      await page.waitForTimeout(distance > 1 ? 65 : 95);
     }
   } finally {
-    await syncKeys([]);
-    await page.waitForTimeout(180);
+    await releaseKey();
+    await page.waitForTimeout(140);
   }
 
   const [x, z] = await readPlayerXZ(page);
@@ -924,7 +928,7 @@ Forge.onStart(() => {
 
 
 test("Core Relay template is a playable complete-game benchmark", async ({ page }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(120_000);
   await page.goto("/");
   await page.locator("[data-launch-tab='develop']").click();
   await page.locator("[data-develop-view='templates']").click();
