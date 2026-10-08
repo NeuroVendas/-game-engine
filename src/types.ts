@@ -131,6 +131,8 @@ export interface ForgeSceneDocument {
     walkSpeed?: number;
     runSpeed?: number;
     jumpPower?: number;
+    maxHealth?: number;
+    autoRespawn?: boolean;
   };
   prefabs?: ForgePrefabDocument[];
   environment?: {
