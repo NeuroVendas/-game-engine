@@ -558,3 +558,37 @@ Browser coverage verifies both behaviors.
 ### Verification note
 
 Forge CI passes for this branch. Forge Cloud Smoke initially failed because the external Forge Supabase project had become inactive, not because of the code changes; the project was restored before final branch verification.
+
+
+## 19. Forge v0.5 — Collider visibility and custom prefabs
+
+The next creator-quality slice focuses on authoring confidence and reuse.
+
+### Collider visibility
+
+Studio gained a **Colliders On / Off** viewport toggle.
+
+- collider-enabled objects render a dedicated edge overlay in Editor mode
+- imported model child meshes participate in the same visualization
+- the overlay is disabled during Play
+- returning to Editor restores the creator's previous collider-debug state
+- diagnostics expose the active state and visible collider count for regression tests
+
+This avoids using object-selection bounding boxes as a substitute for physics visualization.
+
+### Custom prefab workflow
+
+Forge now has a canonical reusable prefab document:
+
+- `format: "forge.prefab"`
+- `version: 1`
+- selected object/group plus descendants
+- export to `.forge-prefab.json`
+- import into the current scene
+- hierarchy is preserved
+- entity IDs are remapped on every import to avoid collisions
+- custom script names that track generated entity IDs are remapped with the new IDs
+- prefab root position is normalized to the local origin
+- importing while an object is selected parents the prefab root under that object
+
+This is intentionally the first reusable-prefab layer, not yet a full asset-library/package system.
