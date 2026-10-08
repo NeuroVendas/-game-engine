@@ -40,6 +40,11 @@ export class PlayerController {
   private runSpeed = 8.0;
   private jumpPower = 7.9;
   private checkpointPosition = Vector3.Zero();
+  private maxHealth = 100;
+  private health = 100;
+  private autoRespawn = true;
+  private dead = false;
+  private deathTimer = 0;
 
   private readonly onKeyDown = (event: KeyboardEvent) => {
     if (["KeyW", "KeyA", "KeyS", "KeyD", "Space", "ShiftLeft", "ShiftRight"].includes(event.code)) {
@@ -102,6 +107,8 @@ export class PlayerController {
       walkSpeed?: number;
       runSpeed?: number;
       jumpPower?: number;
+      maxHealth?: number;
+      autoRespawn?: boolean;
     } = {}
   ) {
     const scene = forge.scene;
@@ -112,6 +119,9 @@ export class PlayerController {
     this.walkSpeed = Math.min(20, Math.max(1, Number(config.walkSpeed) || 5.05));
     this.runSpeed = Math.min(30, Math.max(this.walkSpeed, Number(config.runSpeed) || 8.0));
     this.jumpPower = Math.min(20, Math.max(1, Number(config.jumpPower) || 7.9));
+    this.maxHealth = Math.min(100000, Math.max(1, Number(config.maxHealth) || 100));
+    this.health = this.maxHealth;
+    this.autoRespawn = config.autoRespawn ?? true;
 
     this.body = MeshBuilder.CreateCapsule("__player-collider", {
       height: this.colliderHeight,
@@ -212,6 +222,7 @@ export class PlayerController {
     forge.canvas.dataset.playerWalkSpeed = this.walkSpeed.toFixed(3);
     forge.canvas.dataset.playerRunSpeed = this.runSpeed.toFixed(3);
     forge.canvas.dataset.playerJumpPower = this.jumpPower.toFixed(3);
+    this.syncHealthDiagnostics();
 
     window.addEventListener("keydown", this.onKeyDown, { passive: false });
     window.addEventListener("keyup", this.onKeyUp);
@@ -221,6 +232,21 @@ export class PlayerController {
   }
 
   update(dt: number): void {
+    if (this.dead) {
+      this.horizontalVelocity.copyFromFloats(0, 0, 0);
+      this.verticalVelocity = 0;
+      this.jumpBuffer = 0;
+      this.coyoteTime = 0;
+
+      if (this.autoRespawn) {
+        this.deathTimer = Math.max(0, this.deathTimer - dt);
+        if (this.deathTimer <= 0) this.respawn();
+      }
+
+      this.forge.canvas.dataset.playerMovementState = "dead";
+      return;
+    }
+
     const forward = this.camera.getForwardRay().direction.clone();
     forward.y = 0;
     if (forward.lengthSquared() < 0.001) forward.z = 1;
@@ -373,6 +399,57 @@ export class PlayerController {
     return current + difference * Math.min(1, Math.max(0, t));
   }
 
+  getHealth(): number {
+    return this.health;
+  }
+
+  getMaxHealth(): number {
+    return this.maxHealth;
+  }
+
+  isDead(): boolean {
+    return this.dead;
+  }
+
+  damage(amount: number): number {
+    if (this.dead) return this.health;
+    const damage = Math.max(0, Number(amount) || 0);
+    if (damage <= 0) return this.health;
+
+    this.health = Math.max(0, this.health - damage);
+    this.forge.canvas.dataset.lastPlayerAction = `damage:${damage.toFixed(2)}`;
+
+    if (this.health <= 0) {
+      this.dead = true;
+      this.deathTimer = 0.85;
+      this.keys.clear();
+      this.horizontalVelocity.copyFromFloats(0, 0, 0);
+      this.verticalVelocity = 0;
+      this.forge.canvas.dataset.lastPlayerAction =
+        this.autoRespawn ? "death:auto-respawn" : "death";
+    }
+
+    this.syncHealthDiagnostics();
+    return this.health;
+  }
+
+  heal(amount: number): number {
+    if (this.dead) return this.health;
+    const healing = Math.max(0, Number(amount) || 0);
+    if (healing <= 0) return this.health;
+
+    this.health = Math.min(this.maxHealth, this.health + healing);
+    this.forge.canvas.dataset.lastPlayerAction = `heal:${healing.toFixed(2)}`;
+    this.syncHealthDiagnostics();
+    return this.health;
+  }
+
+  private syncHealthDiagnostics(): void {
+    this.forge.canvas.dataset.playerHealth =
+      `${this.health.toFixed(3)},${this.maxHealth.toFixed(3)}`;
+    this.forge.canvas.dataset.playerDead = String(this.dead);
+  }
+
   setCheckpoint(idOrName?: string): boolean {
     let checkpoint = this.body.position.clone();
 
@@ -401,6 +478,10 @@ export class PlayerController {
   respawn(): boolean {
     if (!Number.isFinite(this.checkpointPosition.x)) return false;
 
+    this.dead = false;
+    this.deathTimer = 0;
+    this.health = this.maxHealth;
+    this.keys.clear();
     this.horizontalVelocity.copyFromFloats(0, 0, 0);
     this.verticalVelocity = 0;
     this.jumpBuffer = 0;
@@ -418,6 +499,7 @@ export class PlayerController {
       this.body.position.z.toFixed(3)
     ].join(",");
     this.forge.canvas.dataset.lastPlayerAction = "respawn";
+    this.syncHealthDiagnostics();
     return true;
   }
 
@@ -451,6 +533,8 @@ export class PlayerController {
     delete this.forge.canvas.dataset.playerRunSpeed;
     delete this.forge.canvas.dataset.playerJumpPower;
     delete this.forge.canvas.dataset.playerCheckpoint;
+    delete this.forge.canvas.dataset.playerHealth;
+    delete this.forge.canvas.dataset.playerDead;
     delete this.forge.canvas.dataset.lastPlayerAction;
     delete this.forge.canvas.dataset.playerMovementState;
     delete this.forge.canvas.dataset.avatarRig;
