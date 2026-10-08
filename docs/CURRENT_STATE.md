@@ -93,6 +93,8 @@ Implemented:
 - primitive/semantic creation palettes
 - hierarchy/parenting
 - Groups
+- collider visualization toggle in the Studio viewport
+- custom prefab export/import for selected hierarchies (`.forge-prefab.json`)
 - Explorer drag/drop reparenting
 - cycle prevention
 - world-transform preservation while reparenting
