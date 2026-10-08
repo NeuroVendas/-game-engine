@@ -647,6 +647,7 @@ Box Proxy supports:
 - local Size X / Y / Z
 - local Offset X / Y / Z
 - Auto-fit to current visual bounds, including imported GLB geometry
+- Reset Proxy back to default entity size / zero offset
 - parent transform inheritance
 - Editor collider visualization
 - Play-mode invisibility
