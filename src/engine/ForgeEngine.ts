@@ -50,6 +50,7 @@ export class ForgeEngine {
   private readonly entitySounds = new Map<string, Sound>();
   private readonly entityParticles = new Map<string, ParticleSystem>();
   private readonly entityAnimations = new Map<string, AnimationGroup[]>();
+  private readonly entityColliderProxies = new Map<string, Mesh>();
   private readonly pendingAnimationPlays = new Map<string, string | undefined>();
   private readonly hemi: HemisphericLight;
   private readonly key: DirectionalLight;
@@ -219,6 +220,7 @@ export class ForgeEngine {
     for (const id of [...this.entitySounds.keys()]) this.disposeEntitySound(id);
     for (const id of [...this.entityParticles.keys()]) this.disposeEntityParticle(id);
     for (const id of [...this.entityAnimations.keys()]) this.disposeEntityAnimations(id);
+    this.entityColliderProxies.clear();
 
     // Detach Forge entity roots first so disposing one parent cannot accidentally
     // dispose another tracked Forge entity before its own cleanup pass.
@@ -425,6 +427,7 @@ export class ForgeEngine {
     this.disposeEntityParticle(id);
     this.disposeEntityAnimations(id);
     this.pendingAnimationPlays.delete(id);
+    this.entityColliderProxies.delete(id);
 
     const oldMesh = this.entityMeshes.get(id);
     if (oldMesh) this.unregisterShadowCaster(oldMesh, true);
@@ -518,6 +521,7 @@ export class ForgeEngine {
     this.disposeEntityParticle(id);
     this.disposeEntityAnimations(id);
     this.pendingAnimationPlays.delete(id);
+    this.entityColliderProxies.delete(id);
 
     const forgeChildren = this.document.entities
       .filter((candidate) => candidate.parentId === id)
@@ -789,7 +793,9 @@ export class ForgeEngine {
     mesh.rotation = vec3(entity.rotation, [0, 0, 0]).scale(Math.PI / 180);
     mesh.scaling = vec3(entity.scale, [1, 1, 1]);
     mesh.metadata = { forgeEntityId: entity.id, forgeEntityName: entity.name };
-    mesh.checkCollisions = entity.components?.Collider?.enabled ?? false;
+    const collider = entity.components?.Collider;
+    const usesBoxProxy = collider?.enabled === true && (collider.mode ?? "mesh") === "box";
+    mesh.checkCollisions = Boolean(collider?.enabled && !usesBoxProxy);
 
     if (entity.kind !== "empty" && entity.kind !== "model") {
       mesh.isPickable = true;
@@ -838,6 +844,7 @@ export class ForgeEngine {
     }
 
     this.entityMeshes.set(entity.id, mesh);
+    this.createColliderProxy(entity, mesh);
     this.applyColliderDebug(entity, mesh);
 
     if (entity.kind !== "empty" && entity.kind !== "model") {
@@ -1048,7 +1055,10 @@ export class ForgeEngine {
           forgeEntityName: entity.name
         };
         imported.isPickable = true;
-        imported.checkCollisions = entity.components?.Collider?.enabled ?? false;
+        imported.checkCollisions = Boolean(
+          entity.components?.Collider?.enabled
+          && (entity.components.Collider.mode ?? "mesh") !== "box"
+        );
         imported.receiveShadows = true;
         this.registerShadowCaster(imported, false);
         if (!imported.parent) imported.parent = root;
@@ -1178,12 +1188,74 @@ export class ForgeEngine {
       .join(",");
   }
 
+  private createColliderProxy(entity: ForgeEntity, root: Mesh): void {
+    const previous = this.entityColliderProxies.get(entity.id);
+    previous?.dispose(false, true);
+    this.entityColliderProxies.delete(entity.id);
+
+    const collider = entity.components?.Collider;
+    if (!collider?.enabled || (collider.mode ?? "mesh") !== "box") return;
+
+    const fallbackSize = entity.size ?? [1, 1, 1];
+    const size = collider.size ?? fallbackSize;
+    const offset = collider.offset ?? [0, 0, 0];
+
+    const proxy = MeshBuilder.CreateBox(`${entity.id}__collider`, {
+      width: Math.max(0.05, Math.abs(size[0])),
+      height: Math.max(0.05, Math.abs(size[1])),
+      depth: Math.max(0.05, Math.abs(size[2]))
+    }, this.scene);
+
+    proxy.parent = root;
+    proxy.position = new Vector3(offset[0], offset[1], offset[2]);
+    proxy.isPickable = false;
+    proxy.checkCollisions = true;
+    proxy.visibility = 0;
+    proxy.metadata = {
+      forgeEntityId: entity.id,
+      forgeEntityName: entity.name,
+      forgeColliderProxy: true
+    };
+
+    const material = new StandardMaterial(`${entity.id}-collider-proxy-mat`, this.scene);
+    material.diffuseColor = new Color3(0.32, 0.95, 0.24);
+    material.emissiveColor = new Color3(0.12, 0.38, 0.08);
+    material.alpha = 0.24;
+    material.wireframe = true;
+    material.disableLighting = true;
+    proxy.material = material;
+
+    this.entityColliderProxies.set(entity.id, proxy);
+    this.canvas.dataset.colliderProxyCount = String(this.entityColliderProxies.size);
+  }
+
   private applyColliderDebug(entity: ForgeEntity, root: Mesh): boolean {
     const enabled = !this.runtimeMode
       && this.collisionDebugEnabled
       && Boolean(entity.components?.Collider?.enabled);
+    const mode = entity.components?.Collider?.mode ?? "mesh";
+    const proxy = this.entityColliderProxies.get(entity.id);
+
+    if (mode === "box" && proxy) {
+      proxy.visibility = enabled ? 0.32 : 0;
+      if (enabled) {
+        proxy.enableEdgesRendering();
+        proxy.edgesWidth = 3;
+        proxy.edgesColor = new Color4(0.55, 1, 0.18, 1);
+      } else {
+        proxy.disableEdgesRendering();
+      }
+      return enabled;
+    }
+
+    if (proxy) {
+      proxy.visibility = 0;
+      proxy.disableEdgesRendering();
+    }
+
     const modelMeshes = root.getChildMeshes(false).filter(
       (target) => target.metadata?.forgeEntityId === entity.id
+        && target.metadata?.forgeColliderProxy !== true
     );
     const targets: AbstractMesh[] = [root, ...modelMeshes];
 
