@@ -452,3 +452,22 @@ Creator workflow:
 - Remove from the Asset Library without modifying existing scene instances.
 
 Texture imports no longer require a selected object. With a compatible primitive selected, Forge imports and applies it; otherwise it is stored for later use.
+
+
+## Visual quality controls
+
+Lighting / Environment supports post-processing controls:
+
+- Exposure
+- Contrast
+- Tone mapping: Standard / ACES
+- Day / Sunset / Night / Foggy / Studio / Cinematic presets
+
+Forge primitives now render with PBR materials while retaining the familiar Plastic / Matte / Metal / Glass / Neon presets. Per-object surface overrides support:
+
+- Roughness
+- Metallic
+- Texture tiling U/V
+- Reset Surface to preset defaults
+
+Point and Spot lights can optionally cast shadows with Low (512), Medium (1024) or High (2048) local shadow maps. Local shadows default to off for performance and are lifecycle-managed across rebuild/delete/Play transitions.
