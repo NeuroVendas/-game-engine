@@ -873,6 +873,11 @@ test("Studio imports GLB animations and audio assets", async ({ page }) => {
   await expect(page.locator("#scene-tree")).toContainText("animated-triangle");
   await expect.poll(async () => page.locator("#output-log").textContent())
     .toContain("Loaded model animated-triangle");
+  const modelLoadCount = async () => {
+    const output = await page.locator("#output-log").textContent() ?? "";
+    return (output.match(/Loaded model animated-triangle/g) ?? []).length;
+  };
+  await expect.poll(modelLoadCount).toBe(1);
   await expect.poll(async () => canvas.getAttribute("data-model-animation-groups"))
     .toBe("1");
   await expect(page.locator("#component-list")).toContainText("Clips: Bounce");
@@ -893,6 +898,7 @@ test("Studio imports GLB animations and audio assets", async ({ page }) => {
   await expect.poll(async () => canvas.getAttribute("data-model-animation-groups"), {
     timeout: 10000
   }).toBe("1");
+  await expect.poll(modelLoadCount).toBe(1);
 
   const clip = page.locator("[data-model-animation-clip]");
   await expect(clip.locator("option")).toContainText(["First clip (Bounce)", "Bounce"]);
