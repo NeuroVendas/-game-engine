@@ -16,6 +16,8 @@ export interface ForgeScript {
   onStart?(): void;
   onUpdate?(dt: number): void;
   onInteract?(actor: AbstractMesh): void;
+  onTriggerEnter?(actor: AbstractMesh): void;
+  onTriggerExit?(actor: AbstractMesh): void;
   onClick?(): void;
   onKeyDown?(code: string): void;
   onKeyUp?(code: string): void;
@@ -70,6 +72,11 @@ interface RuntimeAnimationAPI {
   stop(idOrName: string, clipName?: string): boolean;
 }
 
+interface RuntimePlayerAPI {
+  setCheckpoint(idOrName?: string): boolean;
+  respawn(): boolean;
+}
+
 interface ForgeUserAPI {
   readonly self: ForgeNodeAPI;
   readonly parent: ForgeNodeAPI | null;
@@ -90,6 +97,8 @@ interface ForgeUserAPI {
   };
   readonly player: {
     get(): ForgeNodeAPI | null;
+    setCheckpoint(idOrName?: string): boolean;
+    respawn(): boolean;
   };
   readonly camera: {
     getFov(): number;
@@ -114,6 +123,8 @@ interface ForgeUserAPI {
   onStart(callback: () => void): void;
   onUpdate(callback: (dt: number) => void): void;
   onInteract(callback: ScriptCallback): void;
+  onTriggerEnter(callback: ScriptCallback): void;
+  onTriggerExit(callback: ScriptCallback): void;
   onClick(callback: () => void): void;
   onKeyDown(callback: (code: string) => void): void;
   onKeyUp(callback: (code: string) => void): void;
@@ -161,6 +172,10 @@ export class ScriptRuntime {
     play: () => false,
     stop: () => false
   };
+  private playerApi: RuntimePlayerAPI = {
+    setCheckpoint: () => false,
+    respawn: () => false
+  };
   private worldMutationApi: RuntimeWorldMutationAPI = {
     create: () => null,
     clone: () => null,
@@ -206,6 +221,10 @@ export class ScriptRuntime {
 
   setAnimationAPI(api: RuntimeAnimationAPI): void {
     this.animationApi = api;
+  }
+
+  setPlayerAPI(api: RuntimePlayerAPI): void {
+    this.playerApi = api;
   }
 
   setWorldMutationAPI(api: RuntimeWorldMutationAPI): void {
@@ -297,6 +316,22 @@ export class ScriptRuntime {
     }
   }
 
+  triggerEnter(entityId: string, actor: AbstractMesh): void {
+    for (const scriptId of this.eventScriptIds(entityId)) {
+      const script = this.active.get(scriptId);
+      if (!script) continue;
+      this.safeCall(scriptId, "onTriggerEnter", () => script.onTriggerEnter?.(actor));
+    }
+  }
+
+  triggerExit(entityId: string, actor: AbstractMesh): void {
+    for (const scriptId of this.eventScriptIds(entityId)) {
+      const script = this.active.get(scriptId);
+      if (!script) continue;
+      this.safeCall(scriptId, "onTriggerExit", () => script.onTriggerExit?.(actor));
+    }
+  }
+
   uiClick(entityId: string): void {
     for (const scriptId of this.eventScriptIds(entityId)) {
       const script = this.active.get(scriptId);
@@ -358,7 +393,9 @@ export class ScriptRuntime {
         isDown: (code: string) => this.keys.has(code)
       },
       player: {
-        get: () => this.findNode("__player-collider")
+        get: () => this.findNode("__player-collider"),
+        setCheckpoint: (idOrName?: string) => this.playerApi.setCheckpoint(idOrName),
+        respawn: () => this.playerApi.respawn()
       },
       camera: {
         getFov: () => {
@@ -422,6 +459,12 @@ export class ScriptRuntime {
       },
       onInteract: (callback: ScriptCallback) => {
         script.onInteract = callback as (actor: AbstractMesh) => void;
+      },
+      onTriggerEnter: (callback: ScriptCallback) => {
+        script.onTriggerEnter = callback as (actor: AbstractMesh) => void;
+      },
+      onTriggerExit: (callback: ScriptCallback) => {
+        script.onTriggerExit = callback as (actor: AbstractMesh) => void;
       },
       onClick: (callback: () => void) => {
         script.onClick = callback;

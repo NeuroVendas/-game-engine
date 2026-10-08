@@ -119,6 +119,7 @@ export class EditorApp {
     this.renderInspector();
     this.renderProjectPrefabs();
     this.syncEnvironmentInputs();
+    this.syncPlayerInputs();
     this.forge.mountUI(this.uiRoot, false);
     this.updateHistoryUI();
     this.startLoop();
@@ -134,6 +135,7 @@ export class EditorApp {
     this.renderInspector();
     this.renderProjectPrefabs();
     this.syncEnvironmentInputs();
+    this.syncPlayerInputs();
     this.forge.mountUI(this.uiRoot, false);
     this.updateHistoryUI();
     this.forge.resize();
@@ -171,6 +173,7 @@ export class EditorApp {
       try {
         if (this.mode === "play") {
           this.player?.update(dt);
+          if (this.player) this.forge.updateTriggers(this.player.body);
           this.forge.scripts.tick(dt);
         } else {
           this.updateEditorCamera(dt);
@@ -380,6 +383,16 @@ export class EditorApp {
 
     for (const id of ["env-sky", "env-ambient", "env-fog", "env-fog-density"]) {
       must<HTMLInputElement>(id).addEventListener("change", () => this.applyEnvironmentInputs());
+    }
+
+    for (const id of [
+      "player-collider-height",
+      "player-collider-radius",
+      "player-walk-speed",
+      "player-run-speed",
+      "player-jump-power"
+    ]) {
+      must<HTMLInputElement>(id).addEventListener("change", () => this.applyPlayerInputs());
     }
 
     document.querySelectorAll<HTMLButtonElement>("[data-environment-preset]").forEach((button) => {
@@ -1465,6 +1478,15 @@ export class EditorApp {
           offset: [0, 0, 0]
         };
         break;
+      case "Trigger":
+        components.Trigger = {
+          enabled: true,
+          size: entity.kind === "empty"
+            ? [4, 4, 4]
+            : entity.size ? [...entity.size] : [4, 4, 4],
+          offset: [0, 0, 0]
+        };
+        break;
       case "Interactable":
         components.Interactable = { enabled: true, prompt: "E • Interact" };
         break;
@@ -1525,6 +1547,11 @@ export class EditorApp {
           source: this.defaultScriptSource("Script")
         };
         break;
+    }
+
+    if (type === "Trigger") {
+      this.forge.rebuildEntity(entity.id);
+      this.setSelection(entity.id);
     }
 
     this.renderInspector();
@@ -1657,7 +1684,20 @@ export class EditorApp {
             this.renderInspector();
             this.log(`Collider fitted to visual bounds: ${entity.name}.`);
           });
-          actions.appendChild(fit);
+
+          const reset = document.createElement("button");
+          reset.type = "button";
+          reset.dataset.colliderReset = entity.id;
+          reset.textContent = "Reset Proxy";
+          reset.addEventListener("click", () => {
+            this.checkpoint();
+            if (!this.forge.resetBoxCollider(entity.id)) return;
+            this.setSelection(entity.id);
+            this.renderInspector();
+            this.log(`Collider reset: ${entity.name}.`);
+          });
+
+          actions.append(fit, reset);
           container.appendChild(actions);
 
           const note = document.createElement("div");
@@ -1666,6 +1706,44 @@ export class EditorApp {
           container.appendChild(note);
         }
 
+        break;
+      }
+      case "Trigger": {
+        const component = components.Trigger;
+        if (!component) return;
+
+        this.appendCheckboxField(container, "Enabled", component.enabled, (value) => {
+          component.enabled = value;
+        });
+
+        const size = component.size ?? (entity.size ? [...entity.size] : [4, 4, 4]);
+        const offset = component.offset ?? [0, 0, 0];
+        component.size = size;
+        component.offset = offset;
+
+        this.appendNumberField(container, "Size X", size[0], 0.1, (value) => {
+          component.size = [Math.max(0.05, Math.abs(value)), size[1], size[2]];
+        });
+        this.appendNumberField(container, "Size Y", size[1], 0.1, (value) => {
+          component.size = [size[0], Math.max(0.05, Math.abs(value)), size[2]];
+        });
+        this.appendNumberField(container, "Size Z", size[2], 0.1, (value) => {
+          component.size = [size[0], size[1], Math.max(0.05, Math.abs(value))];
+        });
+        this.appendNumberField(container, "Offset X", offset[0], 0.1, (value) => {
+          component.offset = [value, offset[1], offset[2]];
+        });
+        this.appendNumberField(container, "Offset Y", offset[1], 0.1, (value) => {
+          component.offset = [offset[0], value, offset[2]];
+        });
+        this.appendNumberField(container, "Offset Z", offset[2], 0.1, (value) => {
+          component.offset = [offset[0], offset[1], value];
+        });
+
+        const note = document.createElement("div");
+        note.className = "component-note";
+        note.textContent = "Trigger Volume does not block movement. Scripts receive enter/exit events in Play.";
+        container.appendChild(note);
         break;
       }
       case "Interactable": {
@@ -2459,6 +2537,68 @@ Forge.onUpdate((dt) => {
       environment.skyTextureFileName ? `Sky: ${environment.skyTextureFileName}` : "Color sky";
   }
 
+  private syncPlayerInputs(): void {
+    const player = this.forge.document.player ?? {};
+    const colliderHeight = player.colliderHeight ?? 3.05;
+    const colliderRadius = player.colliderRadius ?? 0.45;
+    const walkSpeed = player.walkSpeed ?? 5.05;
+    const runSpeed = player.runSpeed ?? 8;
+    const jumpPower = player.jumpPower ?? 7.9;
+
+    must<HTMLInputElement>("player-collider-height").value = String(colliderHeight);
+    must<HTMLInputElement>("player-collider-radius").value = String(colliderRadius);
+    must<HTMLInputElement>("player-walk-speed").value = String(walkSpeed);
+    must<HTMLInputElement>("player-run-speed").value = String(runSpeed);
+    must<HTMLInputElement>("player-jump-power").value = String(jumpPower);
+
+    this.canvas.dataset.scenePlayerCollider =
+      `${Number(colliderHeight).toFixed(3)},${Number(colliderRadius).toFixed(3)}`;
+    this.canvas.dataset.scenePlayerMovement =
+      `${Number(walkSpeed).toFixed(3)},${Number(runSpeed).toFixed(3)},${Number(jumpPower).toFixed(3)}`;
+  }
+
+  private applyPlayerInputs(): void {
+    if (this.mode !== "editor") return;
+    this.checkpoint();
+
+    const radiusInput = must<HTMLInputElement>("player-collider-radius");
+    const heightInput = must<HTMLInputElement>("player-collider-height");
+    const walkInput = must<HTMLInputElement>("player-walk-speed");
+    const runInput = must<HTMLInputElement>("player-run-speed");
+    const jumpInput = must<HTMLInputElement>("player-jump-power");
+
+    const radius = Math.min(2, Math.max(0.2, Number(radiusInput.value) || 0.45));
+    const requestedHeight = Math.min(8, Math.max(1, Number(heightInput.value) || 3.05));
+    const height = Math.max(requestedHeight, radius * 2.1);
+    const walkSpeed = Math.min(20, Math.max(1, Number(walkInput.value) || 5.05));
+    const runSpeed = Math.min(30, Math.max(walkSpeed, Number(runInput.value) || 8));
+    const jumpPower = Math.min(20, Math.max(1, Number(jumpInput.value) || 7.9));
+
+    this.forge.document.player = {
+      ...(this.forge.document.player ?? {}),
+      colliderHeight: height,
+      colliderRadius: radius,
+      walkSpeed,
+      runSpeed,
+      jumpPower
+    };
+
+    heightInput.value = String(height);
+    radiusInput.value = String(radius);
+    walkInput.value = String(walkSpeed);
+    runInput.value = String(runSpeed);
+    jumpInput.value = String(jumpPower);
+
+    this.canvas.dataset.scenePlayerCollider = `${height.toFixed(3)},${radius.toFixed(3)}`;
+    this.canvas.dataset.scenePlayerMovement =
+      `${walkSpeed.toFixed(3)},${runSpeed.toFixed(3)},${jumpPower.toFixed(3)}`;
+
+    this.log(
+      `Player settings updated: collider ${height.toFixed(2)} × ${radius.toFixed(2)} • `
+      + `walk ${walkSpeed.toFixed(2)} • run ${runSpeed.toFixed(2)} • jump ${jumpPower.toFixed(2)}.`
+    );
+  }
+
   private applyEnvironmentInputs(): void {
     if (this.mode !== "editor") return;
     this.checkpoint();
@@ -2540,6 +2680,7 @@ Forge.onUpdate((dt) => {
     this.forge.loadDocument(sceneDocument, false);
     this.forge.mountUI(this.uiRoot, false);
     this.syncEnvironmentInputs();
+    this.syncPlayerInputs();
 
     if (wantedSelection && this.forge.getEntity(wantedSelection)) {
       this.setSelection(wantedSelection);
@@ -2581,8 +2722,20 @@ Forge.onUpdate((dt) => {
       this.forge,
       spawn,
       (message) => this.log(message),
-      (text, locked) => this.setInteractionPrompt(text, locked)
+      (text, locked) => this.setInteractionPrompt(text, locked),
+      {
+        colliderHeight: this.forge.document.player?.colliderHeight,
+        colliderRadius: this.forge.document.player?.colliderRadius,
+        walkSpeed: this.forge.document.player?.walkSpeed,
+        runSpeed: this.forge.document.player?.runSpeed,
+        jumpPower: this.forge.document.player?.jumpPower
+      }
     );
+
+    this.forge.scripts.setPlayerAPI({
+      setCheckpoint: (idOrName) => this.player?.setCheckpoint(idOrName) ?? false,
+      respawn: () => this.player?.respawn() ?? false
+    });
 
     // Scripts start only after the player and gameplay camera exist.
     this.forge.startRuntimeScripts();
@@ -2607,6 +2760,7 @@ Forge.onUpdate((dt) => {
     if (this.playSnapshot) {
       this.forge.loadDocument(this.playSnapshot, false);
       this.forge.mountUI(this.uiRoot, false);
+      this.syncPlayerInputs();
       this.playSnapshot = null;
     }
 
@@ -2679,6 +2833,7 @@ Forge.onUpdate((dt) => {
     this.forge.loadDocument(sceneDocument, false);
     this.forge.mountUI(this.uiRoot, false);
     this.syncEnvironmentInputs();
+    this.syncPlayerInputs();
     this.renderTree();
     this.renderInspector();
     this.renderProjectPrefabs();

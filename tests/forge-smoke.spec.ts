@@ -881,6 +881,166 @@ test("Project prefab library persists and inserts reusable hierarchies", async (
   expect(blocks.every((entity: any) => groups.some((group: any) => group.id === entity.parentId))).toBe(true);
 });
 
+test("Trigger volumes fire enter and exit hooks without blocking the player", async ({ page }) => {
+  await page.goto("/");
+  await page.locator("[data-launch-tab='develop']").click();
+  await page.locator("#new-place").click();
+  await page.locator("#new-place-name").fill("Trigger Volume Place");
+  await page.locator("#confirm-create-place").click();
+
+  const canvas = page.locator("#viewport");
+
+  await page.locator("[data-object='empty']").click();
+  await page.locator("#prop-name").fill("Checkpoint Zone");
+  await page.locator("#prop-name").dispatchEvent("change");
+  const zoneId = await page.locator(".scene-item.selected").getAttribute("data-entity-id");
+  expect(zoneId).toBeTruthy();
+
+  await page.locator("#pos-x").fill("0");
+  await page.locator("#pos-x").dispatchEvent("change");
+  await page.locator("#pos-y").fill("2");
+  await page.locator("#pos-y").dispatchEvent("change");
+  await page.locator("#pos-z").fill("10");
+  await page.locator("#pos-z").dispatchEvent("change");
+
+  await page.locator("#component-type").selectOption("Trigger");
+  await page.locator("#add-component").click();
+  const triggerCard = page.locator(".component").filter({ hasText: "Trigger" }).first();
+  await expect(triggerCard).toContainText("Trigger Volume does not block movement");
+  await expect(canvas).toHaveAttribute("data-trigger-volume-count", "1");
+
+  await page.locator("#collision-debug").click();
+  await expect(canvas).toHaveAttribute("data-trigger-debug-count", "1");
+  await page.locator("#collision-debug").click();
+
+  await page.locator(".scene-item", { hasText: "Checkpoint Zone" }).click();
+  await page.locator("[data-object='script']").click();
+  await page.locator("#code-selected").click();
+  await page.locator("#script-source").fill(`
+Forge.onTriggerEnter(() => {
+  const saved = Forge.player.setCheckpoint();
+  Forge.log("TRIGGER_ENTER");
+  Forge.log("CHECKPOINT_SAVED:" + saved);
+});
+
+Forge.onTriggerExit(() => {
+  Forge.log("TRIGGER_EXIT");
+});
+
+Forge.onKeyDown((code) => {
+  if (code !== "KeyR") return;
+  Forge.log("RESPAWN_OK:" + Forge.player.respawn());
+});
+`);
+  await page.locator("#script-check").click();
+  await expect(page.locator("#status")).toContainText("syntax OK");
+  await page.locator("#script-save").click();
+  await page.locator("#script-close").click();
+
+  await page.locator("#play").click();
+  await expect(page.locator("#mode-badge")).toHaveText("PLAY");
+  await expect(page.locator("#output-log")).toContainText("TRIGGER_ENTER");
+  await expect(page.locator("#output-log")).toContainText("CHECKPOINT_SAVED:true");
+  await expect(canvas).toHaveAttribute("data-last-player-action", "checkpoint:current");
+  await expect(canvas).toHaveAttribute("data-last-trigger-action", `enter:${zoneId}`);
+  await expect(canvas).toHaveAttribute("data-active-trigger-count", "1");
+  const checkpoint = await canvas.getAttribute("data-player-checkpoint");
+  expect(checkpoint).toBeTruthy();
+
+  await page.keyboard.down("KeyW");
+  await page.waitForTimeout(1700);
+  await page.keyboard.up("KeyW");
+
+  await expect(page.locator("#output-log")).toContainText("TRIGGER_EXIT");
+  await expect(canvas).toHaveAttribute("data-last-trigger-action", `exit:${zoneId}`);
+  await expect(canvas).toHaveAttribute("data-active-trigger-count", "0");
+
+  await page.keyboard.press("KeyR");
+  await expect(page.locator("#output-log")).toContainText("RESPAWN_OK:true");
+  await expect.poll(async () => {
+    const positionRaw = await canvas.getAttribute("data-player-position");
+    if (!positionRaw || !checkpoint) return Number.POSITIVE_INFINITY;
+    const position = positionRaw.split(",").map(Number);
+    const saved = checkpoint.split(",").map(Number);
+    return Math.hypot(
+      position[0] - saved[0],
+      position[1] - saved[1],
+      position[2] - saved[2]
+    );
+  }, {
+    timeout: 3000,
+    intervals: [40, 60, 80]
+  }).toBeLessThan(0.35);
+  await expect.poll(async () => canvas.getAttribute("data-active-trigger-count"), {
+    timeout: 3000
+  }).toBe("1");
+  await expect(canvas).toHaveAttribute("data-last-trigger-action", `enter:${zoneId}`);
+
+  expect(await canvas.getAttribute("data-runtime-error")).toBeNull();
+});
+
+test("Studio Player settings configure the runtime capsule and movement", async ({ page }) => {
+  await page.goto("/");
+  await page.locator("[data-launch-tab='develop']").click();
+  await page.locator("#new-place").click();
+  await page.locator("#new-place-name").fill("Player Physics Place");
+  await page.locator("#confirm-create-place").click();
+
+  const canvas = page.locator("#viewport");
+  await expect(canvas).toHaveAttribute("data-scene-player-collider", "3.050,0.450");
+  await expect(canvas).toHaveAttribute("data-scene-player-movement", "5.050,8.000,7.900");
+
+  await page.locator("#player-collider-height").fill("2.4");
+  await page.locator("#player-collider-height").dispatchEvent("change");
+  await page.locator("#player-collider-radius").fill("0.35");
+  await page.locator("#player-collider-radius").dispatchEvent("change");
+  await page.locator("#player-walk-speed").fill("4.2");
+  await page.locator("#player-walk-speed").dispatchEvent("change");
+  await page.locator("#player-run-speed").fill("6.8");
+  await page.locator("#player-run-speed").dispatchEvent("change");
+  await page.locator("#player-jump-power").fill("6.5");
+  await page.locator("#player-jump-power").dispatchEvent("change");
+
+  await expect(canvas).toHaveAttribute("data-scene-player-collider", "2.400,0.350");
+  await expect(canvas).toHaveAttribute("data-scene-player-movement", "4.200,6.800,6.500");
+
+  await page.locator("#play").click();
+  await expect(page.locator("#mode-badge")).toHaveText("PLAY");
+  await expect(canvas).toHaveAttribute("data-player-collider-height", "2.400");
+  await expect(canvas).toHaveAttribute("data-player-collider-radius", "0.350");
+  await expect(canvas).toHaveAttribute("data-player-walk-speed", "4.200");
+  await expect(canvas).toHaveAttribute("data-player-run-speed", "6.800");
+  await expect(canvas).toHaveAttribute("data-player-jump-power", "6.500");
+
+  await page.keyboard.down("KeyW");
+  await page.waitForTimeout(700);
+  const walkVelocityRaw = (await canvas.getAttribute("data-player-velocity"))!;
+  const walkVelocity = Math.hypot(
+    Number(walkVelocityRaw.split(",")[0]),
+    Number(walkVelocityRaw.split(",")[2])
+  );
+  expect(walkVelocity).toBeGreaterThan(3.5);
+  expect(walkVelocity).toBeLessThanOrEqual(4.3);
+
+  await page.keyboard.down("ShiftLeft");
+  await page.waitForTimeout(450);
+  const runVelocityRaw = (await canvas.getAttribute("data-player-velocity"))!;
+  const runVelocity = Math.hypot(
+    Number(runVelocityRaw.split(",")[0]),
+    Number(runVelocityRaw.split(",")[2])
+  );
+  expect(runVelocity).toBeGreaterThan(walkVelocity + 1.5);
+  expect(runVelocity).toBeLessThanOrEqual(6.9);
+  await page.keyboard.up("ShiftLeft");
+  await page.keyboard.up("KeyW");
+
+  await page.locator("#stop").click();
+  await expect(page.locator("#mode-badge")).toHaveText("EDITOR");
+  await expect(page.locator("#player-collider-height")).toHaveValue("2.4");
+  await expect(page.locator("#player-run-speed")).toHaveValue("6.8");
+  expect(await canvas.getAttribute("data-runtime-error")).toBeNull();
+});
+
 test("ModuleScript libraries can be required by gameplay scripts", async ({ page }) => {
   await page.goto("/");
   await page.locator("[data-launch-tab='develop']").click();
@@ -961,6 +1121,26 @@ test("Studio imports GLB animations and audio assets", async ({ page }) => {
   await expect(page.locator("#output-log"))
     .toContainText("Collider fitted to visual bounds: animated-triangle");
   await expect(canvas).toHaveAttribute("data-collider-proxy-count", "1");
+  await expect(canvas).toHaveAttribute(
+    "data-collider-proxies",
+    /:1\.00:1\.00:0\.05:0\.50:0\.50:0\.00/
+  );
+  await expect.poll(async () => canvas.getAttribute("data-model-animation-groups"), {
+    timeout: 10000
+  }).toBe("1");
+
+  await modelCollider.locator("[data-collider-reset]").click();
+  await expect(canvas).toHaveAttribute("data-last-collider-reset", /animated-triangle/);
+  await expect(canvas).toHaveAttribute(
+    "data-collider-proxies",
+    /:1\.00:1\.00:1\.00:0\.00:0\.00:0\.00/
+  );
+  await expect.poll(async () => canvas.getAttribute("data-model-animation-groups"), {
+    timeout: 10000
+  }).toBe("1");
+
+  const refreshedCollider = page.locator(".component").filter({ hasText: "Collider" }).first();
+  await refreshedCollider.locator("[data-collider-fit]").click();
   await expect(canvas).toHaveAttribute(
     "data-collider-proxies",
     /:1\.00:1\.00:0\.05:0\.50:0\.50:0\.00/

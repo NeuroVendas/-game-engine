@@ -51,6 +51,8 @@ export class ForgeEngine {
   private readonly entityParticles = new Map<string, ParticleSystem>();
   private readonly entityAnimations = new Map<string, AnimationGroup[]>();
   private readonly entityColliderProxies = new Map<string, Mesh>();
+  private readonly entityTriggerVolumes = new Map<string, Mesh>();
+  private readonly activeTriggerIds = new Set<string>();
   private readonly pendingAnimationPlays = new Map<string, string | undefined>();
   private readonly hemi: HemisphericLight;
   private readonly key: DirectionalLight;
@@ -222,6 +224,9 @@ export class ForgeEngine {
     for (const id of [...this.entityAnimations.keys()]) this.disposeEntityAnimations(id);
     this.entityColliderProxies.clear();
     this.refreshColliderProxyDiagnostics();
+    this.entityTriggerVolumes.clear();
+    this.activeTriggerIds.clear();
+    this.refreshTriggerDiagnostics();
 
     // Detach Forge entity roots first so disposing one parent cannot accidentally
     // dispose another tracked Forge entity before its own cleanup pass.
@@ -386,15 +391,18 @@ export class ForgeEngine {
     this.collisionDebugEnabled = enabled;
     const active = enabled && !this.runtimeMode;
     let visibleCount = 0;
+    let triggerCount = 0;
 
     for (const entity of this.document.entities) {
       const mesh = this.entityMeshes.get(entity.id);
       if (!mesh) continue;
       if (this.applyColliderDebug(entity, mesh)) visibleCount += 1;
+      if (this.applyTriggerDebug(entity)) triggerCount += 1;
     }
 
     this.canvas.dataset.collisionDebug = String(active);
     this.canvas.dataset.collisionDebugCount = String(active ? visibleCount : 0);
+    this.canvas.dataset.triggerDebugCount = String(active ? triggerCount : 0);
   }
 
   duplicateEntity(id: string): ForgeEntity | null {
@@ -429,6 +437,7 @@ export class ForgeEngine {
     this.disposeEntityAnimations(id);
     this.pendingAnimationPlays.delete(id);
     this.disposeColliderProxy(id);
+    this.disposeTriggerVolume(id);
 
     const oldMesh = this.entityMeshes.get(id);
     if (oldMesh) this.unregisterShadowCaster(oldMesh, true);
@@ -459,6 +468,7 @@ export class ForgeEngine {
             mesh !== proxy
             && mesh.metadata?.forgeEntityId === id
             && mesh.metadata?.forgeColliderProxy !== true
+            && mesh.metadata?.forgeTriggerVolume !== true
             && mesh.getTotalVertices() > 0
         )
       : [root];
@@ -508,6 +518,24 @@ export class ForgeEngine {
     collider.offset = [center.x, center.y, center.z];
 
     this.rebuildEntity(id);
+    return true;
+  }
+
+  resetBoxCollider(id: string): boolean {
+    const entity = this.getEntity(id);
+    const collider = entity?.components?.Collider;
+    if (!entity || !collider || (collider.mode ?? "mesh") !== "box") return false;
+
+    const fallback = entity.size ?? [1, 1, 1];
+    collider.size = [
+      Math.max(0.05, Math.abs(fallback[0] || 1)),
+      Math.max(0.05, Math.abs(fallback[1] || 1)),
+      Math.max(0.05, Math.abs(fallback[2] || 1))
+    ];
+    collider.offset = [0, 0, 0];
+
+    this.rebuildEntity(id);
+    this.canvas.dataset.lastColliderReset = id;
     return true;
   }
 
@@ -588,6 +616,7 @@ export class ForgeEngine {
     this.disposeEntityAnimations(id);
     this.pendingAnimationPlays.delete(id);
     this.disposeColliderProxy(id);
+    this.disposeTriggerVolume(id);
 
     const forgeChildren = this.document.entities
       .filter((candidate) => candidate.parentId === id)
@@ -909,7 +938,9 @@ export class ForgeEngine {
 
     this.entityMeshes.set(entity.id, mesh);
     this.configureCollider(entity, mesh);
+    this.configureTrigger(entity, mesh);
     this.applyColliderDebug(entity, mesh);
+    this.applyTriggerDebug(entity);
 
     if (entity.kind !== "empty" && entity.kind !== "model") {
       mesh.receiveShadows = true;
@@ -1252,6 +1283,115 @@ export class ForgeEngine {
       .join(",");
   }
 
+  private disposeTriggerVolume(id: string): void {
+    const volume = this.entityTriggerVolumes.get(id);
+    this.activeTriggerIds.delete(id);
+    if (!volume) {
+      this.refreshTriggerDiagnostics();
+      return;
+    }
+
+    this.entityTriggerVolumes.delete(id);
+    if (!volume.isDisposed()) volume.dispose(false, true);
+    this.refreshTriggerDiagnostics();
+  }
+
+  private configureTrigger(entity: ForgeEntity, root: Mesh): void {
+    this.disposeTriggerVolume(entity.id);
+
+    const trigger = entity.components?.Trigger;
+    if (!trigger?.enabled) return;
+
+    const fallback = entity.size ?? [2, 2, 2];
+    const size = trigger.size ?? fallback;
+    const offset = trigger.offset ?? [0, 0, 0];
+
+    const volume = MeshBuilder.CreateBox(`__forge-trigger-${entity.id}`, {
+      width: Math.max(0.05, Math.abs(size[0] || fallback[0] || 1)),
+      height: Math.max(0.05, Math.abs(size[1] || fallback[1] || 1)),
+      depth: Math.max(0.05, Math.abs(size[2] || fallback[2] || 1))
+    }, this.scene);
+
+    volume.parent = root;
+    volume.position = vec3(offset, [0, 0, 0]);
+    volume.isPickable = false;
+    volume.checkCollisions = false;
+    volume.visibility = 0;
+    volume.metadata = {
+      forgeEntityId: entity.id,
+      forgeEntityName: entity.name,
+      forgeTriggerVolume: true
+    };
+
+    const material = new StandardMaterial(`__forge-trigger-mat-${entity.id}`, this.scene);
+    material.diffuseColor = new Color3(0.78, 0.20, 0.92);
+    material.emissiveColor = new Color3(0.42, 0.08, 0.56);
+    material.alpha = 0.14;
+    material.disableLighting = true;
+    volume.material = material;
+
+    this.entityTriggerVolumes.set(entity.id, volume);
+    this.refreshTriggerDiagnostics();
+  }
+
+  private applyTriggerDebug(entity: ForgeEntity): boolean {
+    const volume = this.entityTriggerVolumes.get(entity.id);
+    if (!volume) return false;
+
+    const enabled = !this.runtimeMode
+      && this.collisionDebugEnabled
+      && Boolean(entity.components?.Trigger?.enabled);
+
+    volume.visibility = enabled ? 0.14 : 0;
+    if (enabled) {
+      volume.enableEdgesRendering();
+      volume.edgesWidth = 3;
+      volume.edgesColor = new Color4(0.92, 0.32, 1, 0.98);
+    } else {
+      volume.disableEdgesRendering();
+    }
+
+    return enabled;
+  }
+
+  updateTriggers(actor: AbstractMesh): void {
+    if (!this.runtimeMode) return;
+
+    const insideNow = new Set<string>();
+
+    for (const [id, volume] of this.entityTriggerVolumes) {
+      if (volume.isDisposed()) continue;
+      const entity = this.getEntity(id);
+      if (!entity?.components?.Trigger?.enabled) continue;
+
+      volume.computeWorldMatrix(true);
+      actor.computeWorldMatrix(true);
+      const inside = volume.intersectsMesh(actor, false);
+      if (!inside) continue;
+
+      insideNow.add(id);
+      if (!this.activeTriggerIds.has(id)) {
+        this.activeTriggerIds.add(id);
+        this.scripts.triggerEnter(id, actor);
+        this.canvas.dataset.lastTriggerAction = `enter:${id}`;
+      }
+    }
+
+    for (const id of [...this.activeTriggerIds]) {
+      if (insideNow.has(id)) continue;
+      this.activeTriggerIds.delete(id);
+      this.scripts.triggerExit(id, actor);
+      this.canvas.dataset.lastTriggerAction = `exit:${id}`;
+    }
+
+    this.refreshTriggerDiagnostics();
+  }
+
+  private refreshTriggerDiagnostics(): void {
+    this.canvas.dataset.triggerVolumeCount = String(this.entityTriggerVolumes.size);
+    this.canvas.dataset.activeTriggerCount = String(this.activeTriggerIds.size);
+  }
+
   private disposeColliderProxy(id: string): void {
     const proxy = this.entityColliderProxies.get(id);
     if (!proxy) return;
@@ -1343,6 +1483,7 @@ export class ForgeEngine {
         target !== proxy
         && target.metadata?.forgeEntityId === entity.id
         && target.metadata?.forgeColliderProxy !== true
+        && target.metadata?.forgeTriggerVolume !== true
     );
     const meshTargets: AbstractMesh[] = [root, ...modelMeshes];
 

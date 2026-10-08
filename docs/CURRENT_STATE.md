@@ -97,6 +97,7 @@ Implemented:
 - collider mode selection: visible Mesh collision or editable Box Proxy collision
 - Box Proxy local size and offset authoring, including prefab persistence
 - automatic Box Proxy fitting to the current visible geometry, including imported GLB bounds
+- Reset Proxy action to restore entity-default size and zero local offset
 - custom prefab export/import for selected hierarchies (`.forge-prefab.json`)
 - project-scoped Prefab Library stored inside the Forge scene document
 - one-click Save Selection / Insert / Delete for reusable project prefabs
@@ -106,6 +107,7 @@ Implemented:
 - material presets
 - transparency/textures/emissive
 - Spawn
+- Trigger Volume with non-blocking player enter/exit events
 - Light
 - Sound
 - Particle VFX
@@ -158,6 +160,8 @@ Forge Classic currently has:
 - sprint
 - jump
 - E interaction
+- scene-configurable capsule height/radius
+- scene-configurable walk/run/jump values
 
 Movement now includes:
 
@@ -189,6 +193,8 @@ Major current creator/runtime capabilities:
 
 - lifecycle hooks
 - interaction
+- trigger enter/exit events
+- player checkpoint / respawn control
 - input/events
 - UI click events
 - object lookup
@@ -402,3 +408,29 @@ Do not describe these as finished:
 The goal is no longer "add buttons."
 
 A creator should be able to make a game that looks intentional, feels natural, uses assets/scripts/audio/UI, playtests instantly, saves/publishes and can be played by someone else.
+
+
+## Player scene settings
+
+Forge scenes can author runtime player physics directly from the Player service in Studio.
+
+Current scene-level settings:
+
+- `player.colliderHeight`
+- `player.colliderRadius`
+- `player.walkSpeed`
+- `player.runSpeed`
+- `player.jumpPower`
+
+Defaults remain compatible with existing scenes: height 3.05, radius 0.45, walk 5.05, run 8 and jump 7.9. Values are clamped at authoring/runtime boundaries, capsule height cannot collapse below its radius, and grounded/safe-ground probes use the configured capsule dimensions.
+
+
+## Checkpoints / respawn
+
+Runtime scripts can use the Player API to build checkpoint loops without directly manipulating the player mesh:
+
+- `Forge.player.setCheckpoint()` saves the player's current runtime position.
+- `Forge.player.setCheckpoint("Object Name")` uses a scene object's position as the checkpoint.
+- `Forge.player.respawn()` clears current motion and returns the runtime player to the saved checkpoint.
+
+The initial checkpoint is the resolved player spawn. This combines naturally with Trigger volumes for checkpoints, platformers, obbies and hazard/respawn gameplay.
