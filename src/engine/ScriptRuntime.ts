@@ -72,6 +72,11 @@ interface RuntimeAnimationAPI {
   stop(idOrName: string, clipName?: string): boolean;
 }
 
+interface RuntimePlayerAPI {
+  setCheckpoint(idOrName?: string): boolean;
+  respawn(): boolean;
+}
+
 interface ForgeUserAPI {
   readonly self: ForgeNodeAPI;
   readonly parent: ForgeNodeAPI | null;
@@ -92,6 +97,8 @@ interface ForgeUserAPI {
   };
   readonly player: {
     get(): ForgeNodeAPI | null;
+    setCheckpoint(idOrName?: string): boolean;
+    respawn(): boolean;
   };
   readonly camera: {
     getFov(): number;
@@ -165,6 +172,10 @@ export class ScriptRuntime {
     play: () => false,
     stop: () => false
   };
+  private playerApi: RuntimePlayerAPI = {
+    setCheckpoint: () => false,
+    respawn: () => false
+  };
   private worldMutationApi: RuntimeWorldMutationAPI = {
     create: () => null,
     clone: () => null,
@@ -210,6 +221,10 @@ export class ScriptRuntime {
 
   setAnimationAPI(api: RuntimeAnimationAPI): void {
     this.animationApi = api;
+  }
+
+  setPlayerAPI(api: RuntimePlayerAPI): void {
+    this.playerApi = api;
   }
 
   setWorldMutationAPI(api: RuntimeWorldMutationAPI): void {
@@ -378,7 +393,9 @@ export class ScriptRuntime {
         isDown: (code: string) => this.keys.has(code)
       },
       player: {
-        get: () => this.findNode("__player-collider")
+        get: () => this.findNode("__player-collider"),
+        setCheckpoint: (idOrName?: string) => this.playerApi.setCheckpoint(idOrName),
+        respawn: () => this.playerApi.respawn()
       },
       camera: {
         getFov: () => {
