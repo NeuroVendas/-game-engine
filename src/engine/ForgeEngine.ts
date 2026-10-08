@@ -447,6 +447,60 @@ export class ForgeEngine {
     return this.entityMeshes.get(id);
   }
 
+  fitBoxColliderToVisual(id: string): boolean {
+    const entity = this.getEntity(id);
+    const root = this.getMesh(id);
+    const collider = entity?.components?.Collider;
+    if (!entity || !root || !collider || (collider.mode ?? "mesh") !== "box") return false;
+
+    root.computeWorldMatrix(true);
+    const inverseRoot = root.getWorldMatrix().clone();
+    inverseRoot.invert();
+
+    const candidates: AbstractMesh[] = [
+      root,
+      ...root.getChildMeshes(false).filter(
+        (mesh) => mesh.metadata?.forgeEntityId === entity.id
+          && mesh.metadata?.forgeColliderProxy !== true
+      )
+    ].filter((mesh) => mesh.getTotalVertices() > 0);
+
+    if (candidates.length === 0) return false;
+
+    let min = new Vector3(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY);
+    let max = new Vector3(Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY);
+
+    for (const mesh of candidates) {
+      mesh.computeWorldMatrix(true);
+      const corners = mesh.getBoundingInfo().boundingBox.vectorsWorld;
+      for (const corner of corners) {
+        const local = Vector3.TransformCoordinates(corner, inverseRoot);
+        min = Vector3.Minimize(min, local);
+        max = Vector3.Maximize(max, local);
+      }
+    }
+
+    const size = max.subtract(min);
+    const center = min.add(max).scale(0.5);
+    if (![size.x, size.y, size.z, center.x, center.y, center.z].every(Number.isFinite)) return false;
+
+    collider.size = [
+      Math.max(0.05, Math.abs(size.x)),
+      Math.max(0.05, Math.abs(size.y)),
+      Math.max(0.05, Math.abs(size.z))
+    ];
+    collider.offset = [center.x, center.y, center.z];
+
+    this.createColliderProxy(entity, root);
+    this.applyColliderDebug(entity, root);
+    this.canvas.dataset.lastColliderFit = [
+      entity.id,
+      ...collider.size.map((value) => value.toFixed(3)),
+      ...collider.offset.map((value) => value.toFixed(3))
+    ].join(":");
+    return true;
+  }
+
   syncEntityFromMesh(id: string): void {
     const entity = this.getEntity(id);
     const mesh = this.getMesh(id);
