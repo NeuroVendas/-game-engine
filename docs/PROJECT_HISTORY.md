@@ -720,3 +720,39 @@ Trigger state is evaluated after player movement and before normal script `onUpd
 ### Acceptance coverage
 
 Browser Smoke creates a trigger around the blank-scene player spawn, verifies ENTER on Play, walks out using real WASD and verifies EXIT while confirming the volume never blocks player movement.
+
+
+## 24. Forge v0.5 — Player physics authoring
+
+Forge absorbed the complementary player-physics work from the parallel collider branch without duplicating its proxy-collider implementation.
+
+### Scene player configuration
+
+Studio's Player service now authors:
+
+- collider height
+- collider radius
+- walk speed
+- run speed
+- jump power
+
+The values serialize on `ForgeSceneDocument.player`, survive normal scene persistence, and are passed into `PlayerController` when Play begins.
+
+### Runtime capsule
+
+The Forge Classic controller now derives:
+
+- capsule dimensions
+- Babylon collision ellipsoid
+- safe-ground snap height
+- grounded ray origin
+- walk/run target velocity
+- jump vertical impulse
+
+from the scene configuration.
+
+Invalid values are clamped, run speed cannot fall below walk speed and height is kept physically compatible with the chosen radius.
+
+### Acceptance coverage
+
+Browser Smoke changes the Player service values, enters Play, verifies the runtime capsule configuration and measures real walking/running velocity through WASD input before returning to Editor.
