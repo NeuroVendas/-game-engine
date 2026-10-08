@@ -1708,31 +1708,41 @@ export class EditorApp {
         clipLabel.appendChild(clipSelect);
         container.appendChild(clipLabel);
 
-        const autoplayLabel = document.createElement("label");
-        autoplayLabel.textContent = "Autoplay in Play";
+        const autoplayRow = document.createElement("div");
+        autoplayRow.className = "component-checkbox-row";
         const autoplay = document.createElement("input");
         autoplay.type = "checkbox";
+        autoplay.id = `model-animation-autoplay-${entity.id}`;
         autoplay.dataset.modelAnimationAutoplay = entity.id;
         autoplay.checked = component.animationAutoplay ?? false;
         autoplay.addEventListener("change", () => {
           this.checkpoint();
           component.animationAutoplay = autoplay.checked;
+          this.log(`Animation autoplay: ${autoplay.checked ? "on" : "off"}.`);
         });
-        autoplayLabel.appendChild(autoplay);
-        container.appendChild(autoplayLabel);
+        const autoplayLabel = document.createElement("label");
+        autoplayLabel.htmlFor = autoplay.id;
+        autoplayLabel.textContent = "Autoplay in Play";
+        autoplayRow.append(autoplayLabel, autoplay);
+        container.appendChild(autoplayRow);
 
-        const loopLabel = document.createElement("label");
-        loopLabel.textContent = "Loop";
+        const loopRow = document.createElement("div");
+        loopRow.className = "component-checkbox-row";
         const loop = document.createElement("input");
         loop.type = "checkbox";
+        loop.id = `model-animation-loop-${entity.id}`;
         loop.dataset.modelAnimationLoop = entity.id;
         loop.checked = component.animationLoop ?? true;
         loop.addEventListener("change", () => {
           this.checkpoint();
           component.animationLoop = loop.checked;
+          this.log(`Animation loop: ${loop.checked ? "on" : "off"}.`);
         });
-        loopLabel.appendChild(loop);
-        container.appendChild(loopLabel);
+        const loopLabel = document.createElement("label");
+        loopLabel.htmlFor = loop.id;
+        loopLabel.textContent = "Loop";
+        loopRow.append(loopLabel, loop);
+        container.appendChild(loopRow);
 
         const speedLabel = document.createElement("label");
         speedLabel.textContent = "Animation speed";
