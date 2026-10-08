@@ -6,9 +6,17 @@ It combines approachable classic creation with modern TypeScript/Babylon.js rend
 
 Project Helios is the first benchmark game.
 
+## Continue current development
+
+> **AI/Work/developer continuation:** read [`CONTINUE_HERE.md`](CONTINUE_HERE.md) first.
+>
+> **Current stacked development tip:** `feature/v05-studio-quick-actions`
+>
+> Do not restart current v0.5 work from `main` or `forge-v0.5`; the handoff file records the active PR stack, verification state, current Browser Smoke failures, and exact next steps.
+
 > Current package version: **0.5.0**
 >
-> Active creator-quality branch: **forge-v0.5**
+> `forge-v0.5` is the historical root of the active v0.5 creator-quality stack.
 >
 > `forge-v0.4` is retained as the historical platform/creator-foundation branch.
 
@@ -119,6 +127,7 @@ Visual editor, creator code and AI all edit the same canonical project.
 
 Start with:
 
+- `CONTINUE_HERE.md` — live continuation point, active branch/PR stack, failing checks and next work
 - `docs/CURRENT_STATE.md` — current capability/limitation inventory
 - `docs/PROJECT_HISTORY.md` — history from repository creation onward
 - `docs/RECOVERY.md` — disaster-recovery/handoff guide
