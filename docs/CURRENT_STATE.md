@@ -98,6 +98,8 @@ Implemented:
 - Box Proxy local size and offset authoring, including prefab persistence
 - automatic Box Proxy fitting to the current visible geometry, including imported GLB bounds
 - custom prefab export/import for selected hierarchies (`.forge-prefab.json`)
+- project-scoped Prefab Library stored inside the Forge scene document
+- one-click Save Selection / Insert / Delete for reusable project prefabs
 - Explorer drag/drop reparenting
 - cycle prevention
 - world-transform preservation while reparenting
