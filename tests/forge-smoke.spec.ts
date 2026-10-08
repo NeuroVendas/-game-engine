@@ -918,11 +918,18 @@ test("Trigger volumes fire enter and exit hooks without blocking the player", as
   await page.locator("#code-selected").click();
   await page.locator("#script-source").fill(`
 Forge.onTriggerEnter(() => {
+  const saved = Forge.player.setCheckpoint();
   Forge.log("TRIGGER_ENTER");
+  Forge.log("CHECKPOINT_SAVED:" + saved);
 });
 
 Forge.onTriggerExit(() => {
   Forge.log("TRIGGER_EXIT");
+});
+
+Forge.onKeyDown((code) => {
+  if (code !== "KeyR") return;
+  Forge.log("RESPAWN_OK:" + Forge.player.respawn());
 });
 `);
   await page.locator("#script-check").click();
@@ -933,8 +940,12 @@ Forge.onTriggerExit(() => {
   await page.locator("#play").click();
   await expect(page.locator("#mode-badge")).toHaveText("PLAY");
   await expect(page.locator("#output-log")).toContainText("TRIGGER_ENTER");
+  await expect(page.locator("#output-log")).toContainText("CHECKPOINT_SAVED:true");
+  await expect(canvas).toHaveAttribute("data-last-player-action", "checkpoint:current");
   await expect(canvas).toHaveAttribute("data-last-trigger-action", `enter:${zoneId}`);
   await expect(canvas).toHaveAttribute("data-active-trigger-count", "1");
+  const checkpoint = await canvas.getAttribute("data-player-checkpoint");
+  expect(checkpoint).toBeTruthy();
 
   await page.keyboard.down("KeyW");
   await page.waitForTimeout(1700);
@@ -943,6 +954,17 @@ Forge.onTriggerExit(() => {
   await expect(page.locator("#output-log")).toContainText("TRIGGER_EXIT");
   await expect(canvas).toHaveAttribute("data-last-trigger-action", `exit:${zoneId}`);
   await expect(canvas).toHaveAttribute("data-active-trigger-count", "0");
+
+  await page.keyboard.press("KeyR");
+  await expect(page.locator("#output-log")).toContainText("RESPAWN_OK:true");
+  await expect(canvas).toHaveAttribute("data-last-player-action", "respawn");
+  await expect.poll(async () => canvas.getAttribute("data-player-position"), {
+    timeout: 3000
+  }).toBe(checkpoint);
+  await expect.poll(async () => canvas.getAttribute("data-active-trigger-count"), {
+    timeout: 3000
+  }).toBe("1");
+  await expect(canvas).toHaveAttribute("data-last-trigger-action", `enter:${zoneId}`);
 
   expect(await canvas.getAttribute("data-runtime-error")).toBeNull();
 });
