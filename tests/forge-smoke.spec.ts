@@ -629,6 +629,13 @@ Forge.onClick(() => {
   await page.locator(".scene-item", { hasText: "Baseplate" }).click();
   await page.locator("[data-object='light']").click();
   await expect(page.locator("#scene-tree")).toContainText("Point Light");
+  await expect(canvas).toHaveAttribute("data-local-lights", "1");
+  await expect(canvas).toHaveAttribute("data-local-shadow-lights", "0");
+
+  await page.getByLabel("Cast shadows").check();
+  await expect(canvas).toHaveAttribute("data-local-shadow-lights", "1");
+  await page.getByLabel("Shadow quality").selectOption("high");
+  await expect(canvas).toHaveAttribute("data-local-shadow-lights", "1");
 
   await page.locator(".scene-item", { hasText: "Baseplate" }).click();
   await page.locator("[data-object='sound']").click();
@@ -643,6 +650,7 @@ Forge.onClick(() => {
 
   await page.locator("#play").click();
   await expect(page.locator("#mode-badge")).toHaveText("PLAY");
+  await expect(canvas).toHaveAttribute("data-local-shadow-lights", "1");
 
   const uiButton = page.locator("#forge-ui-root .forge-ui-button");
   await expect(uiButton).toBeVisible();
