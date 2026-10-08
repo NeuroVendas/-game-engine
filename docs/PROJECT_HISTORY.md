@@ -681,3 +681,35 @@ Creators can edit scene-level collider height/radius plus walk speed, run speed 
 Legacy scenes retain the original 3.05 / 0.45 collider and 5.05 / 8 / 7.9 movement defaults.
 
 Browser acceptance coverage changes collider and movement values, enters Play and verifies the runtime controller reports the configured settings.
+
+
+## 23. Forge v0.5 — Persistent Asset Library
+
+Forge Studio gained a project-scoped Assets service instead of treating imports as one-off editor actions.
+
+### Persistent registry
+
+`forge.scene` can store reusable assets with:
+
+- stable asset ID
+- kind: model / texture / audio
+- display name
+- source
+- original filename
+
+The first new import into a legacy scene migrates already referenced resources into the registry so older projects do not lose their imported content.
+
+### Reuse
+
+Creators can:
+
+- Insert another instance of an imported GLB
+- Insert another Sound object from imported audio
+- Apply an imported texture to a selected primitive
+- Search assets
+- Filter by asset kind
+- Remove assets from the library without mutating existing scene instances
+
+### Acceptance coverage
+
+The browser smoke imports a real animated GLB, WAV and PNG, reuses all three through Assets, verifies deduplication and persistent registry counts, exercises search/type filtering, and confirms removing the texture asset does not remove the texture already applied to a scene object.
