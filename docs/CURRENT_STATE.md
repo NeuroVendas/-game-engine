@@ -96,6 +96,7 @@ Implemented:
 - collider visualization toggle in the Studio viewport
 - Collider component modes: Mesh or Box Proxy
 - editable Box Proxy size and local offset
+- Auto-fit Box Proxy from current visual/model bounds
 - custom prefab export/import for selected hierarchies (`.forge-prefab.json`)
 - Explorer drag/drop reparenting
 - cycle prevention
@@ -408,4 +409,4 @@ The Collider component supports two modes:
 - **Mesh** — the visible primitive/model meshes participate directly in Babylon collisions.
 - **Box Proxy** — Forge creates a separate invisible box collider parented to the entity root.
 
-Box Proxy exposes local size and offset controls in the Inspector. The proxy stays invisible in Play mode and is rendered only by the Studio **Colliders On** visualization. Proxy settings serialize with the scene/prefab and are recreated across reload, rebuild, Play/Stop and prefab import.
+Box Proxy exposes local size and offset controls in the Inspector plus **Auto-fit to Visual**, which computes a local bounding box from the entity's rendered primitive/GLB geometry. The proxy stays invisible in Play mode and is rendered only by the Studio **Colliders On** visualization. Proxy settings serialize with the scene/prefab and are recreated across reload, rebuild, Play/Stop and prefab import.
