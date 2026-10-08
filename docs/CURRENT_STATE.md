@@ -461,6 +461,7 @@ Lighting / Environment supports post-processing controls:
 - Exposure
 - Contrast
 - Tone mapping: Standard / ACES
+- Rendering Quality: Low / Medium / High internal resolution scaling
 - Day / Sunset / Night / Foggy / Studio / Cinematic presets
 
 Forge primitives now render with PBR materials while retaining the familiar Plastic / Matte / Metal / Glass / Neon presets. Per-object surface overrides support:
