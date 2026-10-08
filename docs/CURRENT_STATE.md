@@ -226,6 +226,7 @@ Current authoring supports:
 - playback speed
 - editor Preview / Stop
 - script control through `Forge.animation.play/stop`
+- queued script playback while an async GLB load is still pending
 - animation-group lifecycle cleanup across rebuild/delete/Play transitions
 
 This is clip playback, not yet the planned full animation controller/state machine.
