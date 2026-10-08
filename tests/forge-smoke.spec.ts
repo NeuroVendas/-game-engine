@@ -214,29 +214,37 @@ async function holdMovement(page: any, keys: string[], milliseconds: number): Pr
 }
 
 async function calibratePlayerAxes(page: any): Promise<{ forward: [number, number]; right: [number, number] }> {
-  const before = await readPlayerXZ(page);
-  await holdMovement(page, ["KeyW"], 220);
-  const after = await readPlayerXZ(page);
-  const dx = after[0] - before[0];
-  const dz = after[1] - before[1];
-  const length = Math.hypot(dx, dz);
-  if (length < 0.05) throw new Error("Could not calibrate player movement.");
+  const waitForSettle = async () => {
+    await expect.poll(async () => {
+      const raw = await page.locator("#viewport").getAttribute("data-player-velocity");
+      if (!raw) return 999;
+      const [vx, , vz] = raw.split(",").map(Number);
+      return Math.hypot(vx, vz);
+    }, {
+      timeout: 2200,
+      intervals: [60, 80, 100]
+    }).toBeLessThan(0.35);
+  };
 
-  const forward: [number, number] = [dx / length, dz / length];
-  const right: [number, number] = [forward[1], -forward[0]];
+  const measureKey = async (key: string): Promise<[number, number]> => {
+    const before = await readPlayerXZ(page);
+    await holdMovement(page, [key], 260);
+    const after = await readPlayerXZ(page);
+    await waitForSettle();
 
-  // Do not start route navigation while the calibration impulse is still
-  // carrying momentum into the opposite direction.
-  await expect.poll(async () => {
-    const raw = await page.locator("#viewport").getAttribute("data-player-velocity");
-    if (!raw) return 999;
-    const [vx, , vz] = raw.split(",").map(Number);
-    return Math.hypot(vx, vz);
-  }, {
-    timeout: 1800,
-    intervals: [60, 80, 100]
-  }).toBeLessThan(0.35);
+    const dx = after[0] - before[0];
+    const dz = after[1] - before[1];
+    const length = Math.hypot(dx, dz);
+    if (length < 0.05) {
+      throw new Error(`Could not calibrate player movement for ${key}.`);
+    }
+    return [dx / length, dz / length];
+  };
 
+  // Measure both axes from real controller output instead of deriving strafe
+  // mathematically from W. This remains correct if camera/movement conventions change.
+  const forward = await measureKey("KeyW");
+  const right = await measureKey("KeyD");
   return { forward, right };
 }
 
