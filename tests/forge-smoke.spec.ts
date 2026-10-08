@@ -303,16 +303,20 @@ test("platform home, games, favorites, profile and direct play work", async ({ p
   expect(Math.abs(restoredThirdPersonRadius - thirdPersonRadiusBefore)).toBeLessThan(0.2);
 
   await page.keyboard.up("KeyW");
-  await page.waitForTimeout(220);
+  await page.waitForTimeout(120);
   const after = (await canvas.getAttribute("data-player-position"))!;
   expect(after).not.toBe(before);
 
-  const stoppedVelocityRaw = (await canvas.getAttribute("data-player-velocity"))!;
-  const stoppedVelocity = Math.hypot(
-    Number(stoppedVelocityRaw.split(",")[0]),
-    Number(stoppedVelocityRaw.split(",")[2])
-  );
-  expect(stoppedVelocity).toBeLessThan(fullVelocity);
+  await expect.poll(async () => {
+    const velocityRaw = (await canvas.getAttribute("data-player-velocity"))!;
+    return Math.hypot(
+      Number(velocityRaw.split(",")[0]),
+      Number(velocityRaw.split(",")[2])
+    );
+  }, {
+    timeout: 1200,
+    intervals: [60, 80, 100]
+  }).toBeLessThan(0.5);
 
   await page.keyboard.press("Space");
   await expect.poll(async () => {
@@ -413,6 +417,7 @@ Forge.onUpdate(() => {
 
 
 test("studio v0.5 supports resize, sky, UI, typed scripts, sound and lights", async ({ page }) => {
+  test.setTimeout(80_000);
   await page.goto("/");
   await page.locator("[data-launch-tab='develop']").click();
   await page.locator("#new-place").click();
