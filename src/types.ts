@@ -120,6 +120,10 @@ export interface ForgeSceneDocument {
   version: 1;
   name: string;
   playerSpawn?: Vec3;
+  player?: {
+    colliderHeight?: number;
+    colliderRadius?: number;
+  };
   environment?: {
     skyColor?: string;
     skyTexture?: string;
