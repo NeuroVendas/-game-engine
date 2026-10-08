@@ -446,6 +446,32 @@ export class ForgeEngine {
     return this.entityMeshes.get(id);
   }
 
+  refreshEntityCollider(id: string): boolean {
+    const entity = this.getEntity(id);
+    const root = this.getMesh(id);
+    const collider = entity?.components?.Collider;
+    if (!entity || !root || !collider) return false;
+
+    const enabled = collider.enabled;
+    const mode = collider.mode ?? "mesh";
+
+    if (entity.kind === "model") {
+      const existingProxy = this.entityColliderProxies.get(id);
+      for (const mesh of root.getChildMeshes(false)) {
+        if (
+          mesh === existingProxy
+          || mesh.metadata?.forgeColliderProxy === true
+          || mesh.metadata?.forgeEntityId !== id
+        ) continue;
+        mesh.checkCollisions = enabled && mode === "mesh";
+      }
+    }
+
+    this.configureCollider(entity, root);
+    this.setCollisionDebug(this.collisionDebugEnabled);
+    return true;
+  }
+
   fitBoxColliderToVisual(id: string): boolean {
     const entity = this.getEntity(id);
     const root = this.getMesh(id);
@@ -507,7 +533,7 @@ export class ForgeEngine {
     ];
     collider.offset = [center.x, center.y, center.z];
 
-    this.rebuildEntity(id);
+    this.refreshEntityCollider(id);
     return true;
   }
 
