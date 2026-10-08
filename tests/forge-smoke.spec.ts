@@ -614,8 +614,17 @@ Forge.onClick(() => {
   await expect(canvas).toHaveAttribute("data-particle-systems", "1");
   await expect(canvas).toHaveAttribute("data-particle-presets", "energy");
 
+  await expect(page.locator("#player-collider-height")).toHaveValue("2.96");
+  await expect(page.locator("#player-collider-radius")).toHaveValue("0.52");
+  await page.locator("#player-collider-height").fill("3.4");
+  await page.locator("#player-collider-height").dispatchEvent("change");
+  await page.locator("#player-collider-radius").fill("0.64");
+  await page.locator("#player-collider-radius").dispatchEvent("change");
+
   await page.locator("#play").click();
   await expect(page.locator("#mode-badge")).toHaveText("PLAY");
+  await expect(canvas).toHaveAttribute("data-player-collider-height", "3.40");
+  await expect(canvas).toHaveAttribute("data-player-collider-radius", "0.64");
 
   const uiButton = page.locator("#forge-ui-root .forge-ui-button");
   await expect(uiButton).toBeVisible();
