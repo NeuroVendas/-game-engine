@@ -145,6 +145,63 @@ async function moveUntilCoordinate(
   await page.waitForTimeout(180);
 }
 
+async function moveTowardWorldPoint(
+  page: any,
+  axes: { forward: [number, number]; right: [number, number] },
+  target: [number, number],
+  tolerance = 0.45,
+  timeout = 9000
+): Promise<void> {
+  const held = new Set<string>();
+  const started = Date.now();
+
+  const syncKeys = async (wanted: string[]) => {
+    for (const key of [...held]) {
+      if (!wanted.includes(key)) {
+        await page.keyboard.up(key);
+        held.delete(key);
+      }
+    }
+    for (const key of wanted) {
+      if (!held.has(key)) {
+        await page.keyboard.down(key);
+        held.add(key);
+      }
+    }
+  };
+
+  try {
+    while (Date.now() - started < timeout) {
+      const [x, z] = await readPlayerXZ(page);
+      const dx = target[0] - x;
+      const dz = target[1] - z;
+      if (Math.hypot(dx, dz) <= tolerance) return;
+
+      const forwardAmount = dx * axes.forward[0] + dz * axes.forward[1];
+      const rightAmount = dx * axes.right[0] + dz * axes.right[1];
+      const deadZone = 0.18;
+      const wanted: string[] = [];
+
+      if (forwardAmount > deadZone) wanted.push("KeyW");
+      else if (forwardAmount < -deadZone) wanted.push("KeyS");
+
+      if (rightAmount > deadZone) wanted.push("KeyD");
+      else if (rightAmount < -deadZone) wanted.push("KeyA");
+
+      await syncKeys(wanted);
+      await page.waitForTimeout(55);
+    }
+  } finally {
+    await syncKeys([]);
+    await page.waitForTimeout(180);
+  }
+
+  const [x, z] = await readPlayerXZ(page);
+  throw new Error(
+    `Could not reach world point ${target.join(",")} from ${x.toFixed(2)},${z.toFixed(2)}.`
+  );
+}
+
 async function expectInteractionPrompt(page: any, promptText: string): Promise<void> {
   await expect(page.locator("#interaction-prompt")).toContainText(promptText);
 }
@@ -576,7 +633,7 @@ test("Studio imports real GLB and audio assets", async ({ page }) => {
 
 
 test("Core Relay template is a playable complete-game benchmark", async ({ page }) => {
-  test.setTimeout(70_000);
+  test.setTimeout(90_000);
   await page.goto("/");
   await page.locator("[data-launch-tab='develop']").click();
   await page.locator("[data-develop-view='templates']").click();
@@ -608,27 +665,25 @@ test("Core Relay template is a playable complete-game benchmark", async ({ page 
   expect(Math.abs(axes.forward[1])).toBeGreaterThan(0.75);
   expect(Math.abs(axes.right[0])).toBeGreaterThan(0.75);
 
-  const xPositive = axes.right[0] >= 0 ? "KeyD" : "KeyA";
-  const xNegative = xPositive === "KeyD" ? "KeyA" : "KeyD";
-  const zNegative = axes.forward[1] >= 0 ? "KeyS" : "KeyW";
-
-  // Relay A: walk laterally first so the central core is never on the route.
-  await moveUntilCoordinate(page, xNegative, ([x]) => x <= -6.6);
-  await moveUntilCoordinate(page, zNegative, ([, z]) => z <= -3.1);
+  // Closed-loop WASD navigation keeps the route in world space even when the
+  // player camera is not perfectly aligned to the X/Z axes.
+  // Relay A: use an open west lane and stop before the north collider face.
+  await moveTowardWorldPoint(page, axes, [-6.7, 2.0], 0.5);
+  await moveTowardWorldPoint(page, axes, [-7.0, -3.15], 0.45);
   await expectInteractionPrompt(page, "Relay A");
   await page.keyboard.press("KeyE");
   await expect(page.locator("#forge-ui-root")).toContainText("1 / 3 relays online");
 
   // Relay B: step away from A, descend the open lower lane, then approach from the west.
-  await moveUntilCoordinate(page, xPositive, ([x]) => x >= -3.8);
-  await moveUntilCoordinate(page, zNegative, ([, z]) => z <= -7.2);
-  await moveUntilCoordinate(page, xPositive, ([x]) => x >= -1.2);
+  await moveTowardWorldPoint(page, axes, [-3.8, -3.0], 0.5);
+  await moveTowardWorldPoint(page, axes, [-3.6, -7.2], 0.5);
+  await moveTowardWorldPoint(page, axes, [-1.2, -7.2], 0.4);
   await expectInteractionPrompt(page, "Relay B");
   await page.keyboard.press("KeyE");
   await expect(page.locator("#forge-ui-root")).toContainText("2 / 3 relays online");
 
   // Relay C: stay in the lower lane and approach from the west, before its collider face.
-  await moveUntilCoordinate(page, xPositive, ([x]) => x >= 4.4);
+  await moveTowardWorldPoint(page, axes, [4.35, -7.2], 0.45);
   await expectInteractionPrompt(page, "Relay C");
   await page.keyboard.press("KeyE");
   await expect(page.locator("#forge-ui-root")).toContainText("3 / 3 relays online");
