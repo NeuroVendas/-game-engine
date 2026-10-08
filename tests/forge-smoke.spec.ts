@@ -285,12 +285,15 @@ async function moveTowardWorldPoint(
       activeKey = key;
       await page.keyboard.down(activeKey);
 
-      // Short pulses prevent acceleration/deceleration inertia from producing
-      // a permanent orbit around a waypoint while still using real WASD.
-      const pulse = distance > 2 ? 130 : distance > 0.9 ? 75 : 40;
+      // Keep each pulse long enough to cross at least one Babylon render/update
+      // frame even on a busy headless CI runner. Shorter pulses can begin and
+      // end entirely between frames and never reach PlayerController.update().
+      const pulse = distance > 2 ? 300 : distance > 0.9 ? 250 : 220;
       await page.waitForTimeout(pulse);
       await releaseKey();
-      await page.waitForTimeout(distance > 1 ? 65 : 95);
+
+      // Let the controller's deceleration settle before choosing the next axis.
+      await page.waitForTimeout(distance > 1 ? 150 : 190);
     }
   } finally {
     await releaseKey();
