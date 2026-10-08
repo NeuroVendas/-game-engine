@@ -1017,7 +1017,7 @@ export class ForgeEngine {
   private async loadModel(entity: ForgeEntity, root: Mesh): Promise<void> {
     const component = entity.components?.Model;
     const source = component?.src?.trim();
-    if (!source) return;
+    if (!component || !source) return;
 
     try {
       const result = await SceneLoader.ImportMeshAsync(
