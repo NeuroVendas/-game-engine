@@ -173,7 +173,11 @@ export class EditorApp {
       try {
         if (this.mode === "play") {
           this.player?.update(dt);
-          if (this.player) this.forge.updateTriggers(this.player.body);
+          if (this.player) {
+            this.forge.updateTriggers(this.player.body);
+            const hazardDamage = this.forge.tickActiveHazards(dt);
+            if (hazardDamage > 0) this.player.damage(hazardDamage);
+          }
           this.forge.scripts.tick(dt);
         } else {
           this.updateEditorCamera(dt);
@@ -1489,6 +1493,20 @@ export class EditorApp {
           offset: [0, 0, 0]
         };
         break;
+      case "Hazard":
+        components.Hazard = {
+          enabled: true,
+          damage: 10,
+          interval: 1
+        };
+        components.Trigger ??= {
+          enabled: true,
+          size: entity.kind === "empty"
+            ? [4, 4, 4]
+            : entity.size ? [...entity.size] : [4, 4, 4],
+          offset: [0, 0, 0]
+        };
+        break;
       case "Interactable":
         components.Interactable = { enabled: true, prompt: "E • Interact" };
         break;
@@ -1740,6 +1758,26 @@ export class EditorApp {
         const note = document.createElement("div");
         note.className = "component-note";
         note.textContent = "Trigger Volume does not block movement. Scripts receive enter/exit events in Play.";
+        container.appendChild(note);
+        break;
+      }
+      case "Hazard": {
+        const component = components.Hazard;
+        if (!component) return;
+
+        this.appendCheckboxField(container, "Enabled", component.enabled, (value) => {
+          component.enabled = value;
+        });
+        this.appendNumberField(container, "Damage", component.damage ?? 10, 1, (value) => {
+          component.damage = Math.max(0, value);
+        });
+        this.appendNumberField(container, "Interval", component.interval ?? 1, 0.05, (value) => {
+          component.interval = Math.max(0.05, value);
+        });
+
+        const note = document.createElement("div");
+        note.className = "component-note";
+        note.textContent = "Hazard damages the runtime player while inside this object's Trigger Volume.";
         container.appendChild(note);
         break;
       }
