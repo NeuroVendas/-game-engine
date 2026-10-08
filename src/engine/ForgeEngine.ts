@@ -55,6 +55,7 @@ export class ForgeEngine {
   private skyTexture: DynamicTexture;
   private skyImageTexture: Texture | null = null;
   private runtimeMode = false;
+  private collisionDebugEnabled = false;
   private uiRoot: HTMLElement | null = null;
   private uiInteractive = false;
 
@@ -307,6 +308,78 @@ export class ForgeEngine {
     };
     this.createEntity(entity);
     return entity;
+  }
+
+  instantiatePrefab(templates: ForgeEntity[], parentId?: string): ForgeEntity | null {
+    if (templates.length === 0) return null;
+
+    const sourceIds = new Set(templates.map((entity) => entity.id));
+    const reservedIds = new Set(this.document.entities.map((entity) => entity.id));
+    const idMap = new Map<string, string>();
+
+    const reserveId = (name: string): string => {
+      const base = name
+        .trim()
+        .replace(/[^a-zA-Z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "")
+        .slice(0, 48) || "Entity";
+      let id = base;
+      let index = 2;
+      while (reservedIds.has(id)) {
+        id = `${base}_${index}`;
+        index += 1;
+      }
+      reservedIds.add(id);
+      return id;
+    };
+
+    for (const template of templates) {
+      idMap.set(template.id, reserveId(template.name));
+    }
+
+    const clones = templates.map((template) => {
+      const clone = structuredClone(template);
+      const oldId = template.id;
+      clone.id = idMap.get(oldId)!;
+
+      if (template.parentId && sourceIds.has(template.parentId)) {
+        clone.parentId = idMap.get(template.parentId);
+      } else {
+        clone.parentId = parentId;
+      }
+
+      const script = clone.components?.Script;
+      if (script?.name === `custom.${oldId}`) {
+        script.name = `custom.${clone.id}`;
+      }
+      return clone;
+    });
+
+    for (const clone of clones) this.document.entities.push(clone);
+    for (const clone of clones) this.createEntityMesh(clone, this.runtimeMode);
+    this.applyHierarchy();
+    this.refreshUI();
+
+    const root = clones.find((clone, index) => {
+      const source = templates[index];
+      return !source.parentId || !sourceIds.has(source.parentId);
+    }) ?? clones[0];
+
+    return root;
+  }
+
+  setCollisionDebug(enabled: boolean): void {
+    this.collisionDebugEnabled = enabled;
+    let visibleCount = 0;
+
+    for (const entity of this.document.entities) {
+      const mesh = this.entityMeshes.get(entity.id);
+      if (!mesh) continue;
+      if (this.applyColliderDebug(entity, mesh)) visibleCount += 1;
+    }
+
+    this.canvas.dataset.collisionDebug = String(enabled);
+    this.canvas.dataset.collisionDebugCount = String(enabled ? visibleCount : 0);
   }
 
   duplicateEntity(id: string): ForgeEntity | null {
@@ -749,6 +822,7 @@ export class ForgeEngine {
     }
 
     this.entityMeshes.set(entity.id, mesh);
+    this.applyColliderDebug(entity, mesh);
 
     if (entity.kind !== "empty" && entity.kind !== "model") {
       mesh.receiveShadows = true;
@@ -965,6 +1039,7 @@ export class ForgeEngine {
         modelLoaded: true,
         modelMeshCount: result.meshes.length
       };
+      this.applyColliderDebug(entity, root);
       this.log(`Loaded model ${entity.name} • ${result.meshes.length} meshes`);
     } catch (error) {
       root.metadata = {
@@ -973,6 +1048,25 @@ export class ForgeEngine {
       };
       this.log(`Model failed on ${entity.name}: ${error instanceof Error ? error.message : String(error)}`);
     }
+  }
+
+  private applyColliderDebug(entity: ForgeEntity, root: Mesh): boolean {
+    const enabled = !this.runtimeMode
+      && this.collisionDebugEnabled
+      && Boolean(entity.components?.Collider?.enabled);
+    const targets: AbstractMesh[] = [root, ...root.getChildMeshes(false)];
+
+    for (const target of targets) {
+      if (enabled && target.visibility !== 0) {
+        target.enableEdgesRendering();
+        target.edgesWidth = 2.5;
+        target.edgesColor = new Color4(0.55, 1, 0.18, 0.95);
+      } else {
+        target.disableEdgesRendering();
+      }
+    }
+
+    return enabled && targets.some((target) => target.visibility !== 0);
   }
 
   private applyHierarchy(): void {
