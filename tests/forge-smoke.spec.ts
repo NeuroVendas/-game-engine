@@ -72,6 +72,108 @@ function makeTriangleGlb(): Buffer {
   return glb;
 }
 
+
+function makeAnimatedTriangleGlb(): Buffer {
+  const binary = Buffer.alloc(76);
+
+  const positions = [
+    0, 0, 0,
+    1, 0, 0,
+    0, 1, 0
+  ];
+  positions.forEach((value, index) => binary.writeFloatLE(value, index * 4));
+
+  binary.writeUInt16LE(0, 36);
+  binary.writeUInt16LE(1, 38);
+  binary.writeUInt16LE(2, 40);
+
+  binary.writeFloatLE(0, 44);
+  binary.writeFloatLE(1, 48);
+
+  const translations = [
+    0, 0, 0,
+    0, 1, 0
+  ];
+  translations.forEach((value, index) => binary.writeFloatLE(value, 52 + index * 4));
+
+  const json = JSON.stringify({
+    asset: { version: "2.0" },
+    buffers: [{ byteLength: binary.length }],
+    bufferViews: [
+      { buffer: 0, byteOffset: 0, byteLength: 36, target: 34962 },
+      { buffer: 0, byteOffset: 36, byteLength: 6, target: 34963 },
+      { buffer: 0, byteOffset: 44, byteLength: 8 },
+      { buffer: 0, byteOffset: 52, byteLength: 24 }
+    ],
+    accessors: [
+      {
+        bufferView: 0,
+        componentType: 5126,
+        count: 3,
+        type: "VEC3",
+        min: [0, 0, 0],
+        max: [1, 1, 0]
+      },
+      {
+        bufferView: 1,
+        componentType: 5123,
+        count: 3,
+        type: "SCALAR",
+        min: [0],
+        max: [2]
+      },
+      {
+        bufferView: 2,
+        componentType: 5126,
+        count: 2,
+        type: "SCALAR",
+        min: [0],
+        max: [1]
+      },
+      {
+        bufferView: 3,
+        componentType: 5126,
+        count: 2,
+        type: "VEC3",
+        min: [0, 0, 0],
+        max: [0, 1, 0]
+      }
+    ],
+    meshes: [{ primitives: [{ attributes: { POSITION: 0 }, indices: 1 }] }],
+    nodes: [{ mesh: 0 }],
+    animations: [{
+      name: "Bounce",
+      samplers: [{ input: 2, output: 3, interpolation: "LINEAR" }],
+      channels: [{ sampler: 0, target: { node: 0, path: "translation" } }]
+    }],
+    scenes: [{ nodes: [0] }],
+    scene: 0
+  });
+
+  const jsonRaw = Buffer.from(json, "utf8");
+  const jsonLength = Math.ceil(jsonRaw.length / 4) * 4;
+  const jsonChunk = Buffer.alloc(jsonLength, 0x20);
+  jsonRaw.copy(jsonChunk);
+
+  const totalLength = 12 + 8 + jsonChunk.length + 8 + binary.length;
+  const glb = Buffer.alloc(totalLength);
+  let offset = 0;
+
+  glb.writeUInt32LE(0x46546c67, offset); offset += 4;
+  glb.writeUInt32LE(2, offset); offset += 4;
+  glb.writeUInt32LE(totalLength, offset); offset += 4;
+
+  glb.writeUInt32LE(jsonChunk.length, offset); offset += 4;
+  glb.writeUInt32LE(0x4e4f534a, offset); offset += 4;
+  jsonChunk.copy(glb, offset); offset += jsonChunk.length;
+
+  glb.writeUInt32LE(binary.length, offset); offset += 4;
+  glb.writeUInt32LE(0x004e4942, offset); offset += 4;
+  binary.copy(glb, offset);
+
+  return glb;
+}
+
 function makeSilentWav(): Buffer {
   const sampleRate = 8000;
   const samples = 400;
@@ -698,24 +800,55 @@ Forge.onStart(() => {
 });
 
 
-test("Studio imports real GLB and audio assets", async ({ page }) => {
+test("Studio imports GLB animations and audio assets", async ({ page }) => {
+  test.setTimeout(75_000);
   await page.goto("/");
   await page.locator("[data-launch-tab='develop']").click();
   await page.locator("#new-place").click();
   await page.locator("#new-place-name").fill("Asset Import Place");
   await page.locator("#confirm-create-place").click();
 
+  const canvas = page.locator("#viewport");
   await expect(page.locator("#scene-tree")).toContainText("Baseplate");
 
   await page.locator("#model-file-input").setInputFiles({
-    name: "triangle.glb",
+    name: "animated-triangle.glb",
     mimeType: "model/gltf-binary",
-    buffer: makeTriangleGlb()
+    buffer: makeAnimatedTriangleGlb()
   });
 
-  await expect(page.locator("#scene-tree")).toContainText("triangle");
-  await expect.poll(async () => page.locator("#output-log").textContent()).toContain("Loaded model triangle");
+  await expect(page.locator("#scene-tree")).toContainText("animated-triangle");
+  await expect.poll(async () => page.locator("#output-log").textContent())
+    .toContain("Loaded model animated-triangle");
+  await expect.poll(async () => canvas.getAttribute("data-model-animation-groups"))
+    .toBe("1");
+  await expect(page.locator("#component-list")).toContainText("Clips: Bounce");
 
+  const clip = page.locator("[data-model-animation-clip]");
+  await expect(clip.locator("option")).toContainText(["First clip (Bounce)", "Bounce"]);
+  await clip.selectOption("Bounce");
+
+  await page.locator("[data-model-animation-autoplay]").check();
+  await page.locator("[data-model-animation-speed]").fill("1.5");
+  await page.locator("[data-model-animation-speed]").dispatchEvent("change");
+
+  await page.locator("[data-model-animation-preview]").click();
+  await expect(canvas).toHaveAttribute("data-last-animation-action", /play:.*:Bounce/);
+
+  await page.locator("[data-model-animation-stop]").click();
+  await expect(canvas).toHaveAttribute("data-last-animation-action", /stop:.*:\*/);
+
+  await page.locator("#play").click();
+  await expect(page.locator("#mode-badge")).toHaveText("PLAY");
+  await expect.poll(async () => canvas.getAttribute("data-last-animation-action"))
+    .toMatch(/play:.*:Bounce/);
+
+  await page.locator("#stop").click();
+  await expect(page.locator("#mode-badge")).toHaveText("EDITOR");
+  await expect.poll(async () => canvas.getAttribute("data-model-animation-groups"))
+    .toBe("1");
+
+  await page.locator(".scene-item", { hasText: "Baseplate" }).click();
   await page.locator("#audio-file-input").setInputFiles({
     name: "silence.wav",
     mimeType: "audio/wav",
@@ -724,7 +857,7 @@ test("Studio imports real GLB and audio assets", async ({ page }) => {
 
   await expect(page.locator("#scene-tree")).toContainText("silence");
   await expect(page.locator("#component-list")).toContainText("Sound");
-  expect(await page.locator("#viewport").getAttribute("data-runtime-error")).toBeNull();
+  expect(await canvas.getAttribute("data-runtime-error")).toBeNull();
 });
 
 
