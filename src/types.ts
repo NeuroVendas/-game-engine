@@ -123,6 +123,9 @@ export interface ForgeSceneDocument {
   player?: {
     colliderHeight?: number;
     colliderRadius?: number;
+    walkSpeed?: number;
+    runSpeed?: number;
+    jumpPower?: number;
   };
   environment?: {
     skyColor?: string;
