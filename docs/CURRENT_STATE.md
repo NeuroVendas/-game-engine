@@ -108,6 +108,7 @@ Implemented:
 - transparency/textures/emissive
 - Spawn
 - Trigger Volume with non-blocking player enter/exit events
+- Hazard / Damage Zone using Trigger volumes with configurable damage interval
 - Light
 - Sound
 - Particle VFX
@@ -457,3 +458,16 @@ Script API:
 - `Forge.player.heal(amount)`
 
 Lethal damage freezes movement. With auto-respawn enabled the player returns to the current checkpoint after a short delay; with it disabled the player remains dead until `Forge.player.respawn()` is called.
+
+
+## Hazard / Damage Zones
+
+The Hazard component layers repeated player damage on top of the non-blocking Trigger system.
+
+Authoring settings:
+
+- Enabled
+- Damage
+- Interval
+
+Adding Hazard automatically adds a default Trigger Volume when one is not already present. Each active hazard tracks its own runtime timer and deals damage through the built-in player health system while the player remains inside the Trigger.
