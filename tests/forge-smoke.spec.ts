@@ -806,6 +806,81 @@ test("Studio visualizes colliders and round-trips custom prefab hierarchies", as
   await expect(page.locator("#collision-debug")).toHaveText("Colliders On");
 });
 
+test("Project prefab library persists and inserts reusable hierarchies", async ({ page }) => {
+  await page.goto("/");
+  await page.locator("[data-launch-tab='develop']").click();
+  await page.locator("#new-place").click();
+  await page.locator("#new-place-name").fill("Project Prefab Library");
+  await page.locator("#confirm-create-place").click();
+
+  const canvas = page.locator("#viewport");
+  await expect(canvas).toHaveAttribute("data-project-prefab-count", "0");
+  await expect(page.locator("#save-project-prefab")).toBeDisabled();
+
+  await page.locator("[data-object='group']").click();
+  await page.locator("#prop-name").fill("Library Assembly");
+  await page.locator("#prop-name").dispatchEvent("change");
+  const originalRootId = await page.locator(".scene-item.selected").getAttribute("data-entity-id");
+  expect(originalRootId).toBeTruthy();
+  await expect(page.locator("#save-project-prefab")).toBeEnabled();
+
+  await page.locator("[data-primitive='box']").click();
+  await page.locator("#prop-name").fill("Library Block");
+  await page.locator("#prop-name").dispatchEvent("change");
+  await page.locator(".scene-item", { hasText: "Library Block" }).dragTo(
+    page.locator(".scene-item", { hasText: "Library Assembly" }).first()
+  );
+
+  await page.locator(".scene-item", { hasText: "Library Assembly" }).first().click();
+  await page.locator("#save-project-prefab").click();
+
+  await expect(canvas).toHaveAttribute("data-project-prefab-count", "1");
+  await expect(page.locator("[data-project-prefab-name='Library Assembly']")).toHaveCount(1);
+  await expect(page.locator("[data-project-prefab-insert='Library Assembly']")).toBeVisible();
+
+  await page.locator("#save-local").click();
+  await expect(page.locator("#output-log")).toContainText("Saved Project Prefab Library in this browser");
+
+  await page.locator("[data-project-prefab-delete='Library Assembly']").click();
+  await expect(canvas).toHaveAttribute("data-project-prefab-count", "0");
+  await expect(page.locator("[data-project-prefab-name='Library Assembly']")).toHaveCount(0);
+
+  await page.locator("#load-local").click();
+  await expect(canvas).toHaveAttribute("data-project-prefab-count", "1");
+  await expect(page.locator("[data-project-prefab-name='Library Assembly']")).toHaveCount(1);
+
+  await page.locator("[data-project-prefab-insert='Library Assembly']").click();
+  await expect(page.locator(".scene-item", { hasText: "Library Assembly" })).toHaveCount(2);
+  await expect(page.locator(".scene-item", { hasText: "Library Block" })).toHaveCount(2);
+
+  const insertedRootId = await page.locator(".scene-item.selected").getAttribute("data-entity-id");
+  expect(insertedRootId).toBeTruthy();
+  expect(insertedRootId).not.toBe(originalRootId);
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.locator("#export-scene").click();
+  const download = await downloadPromise;
+  const stream = await download.createReadStream();
+  if (!stream) throw new Error("Scene download stream unavailable.");
+
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  const exportedScene = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+
+  expect(exportedScene.prefabs).toHaveLength(1);
+  expect(exportedScene.prefabs[0].name).toBe("Library Assembly");
+  expect(exportedScene.prefabs[0].entities).toHaveLength(2);
+
+  const groups = exportedScene.entities.filter((entity: any) => entity.name === "Library Assembly");
+  const blocks = exportedScene.entities.filter((entity: any) => entity.name === "Library Block");
+  expect(groups).toHaveLength(2);
+  expect(blocks).toHaveLength(2);
+  expect(new Set(groups.map((entity: any) => entity.id)).size).toBe(2);
+  expect(blocks.every((entity: any) => groups.some((group: any) => group.id === entity.parentId))).toBe(true);
+});
+
 test("ModuleScript libraries can be required by gameplay scripts", async ({ page }) => {
   await page.goto("/");
   await page.locator("[data-launch-tab='develop']").click();
