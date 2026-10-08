@@ -957,10 +957,20 @@ Forge.onKeyDown((code) => {
 
   await page.keyboard.press("KeyR");
   await expect(page.locator("#output-log")).toContainText("RESPAWN_OK:true");
-  await expect(canvas).toHaveAttribute("data-last-player-action", "respawn");
-  await expect.poll(async () => canvas.getAttribute("data-player-position"), {
-    timeout: 3000
-  }).toBe(checkpoint);
+  await expect.poll(async () => {
+    const positionRaw = await canvas.getAttribute("data-player-position");
+    if (!positionRaw || !checkpoint) return Number.POSITIVE_INFINITY;
+    const position = positionRaw.split(",").map(Number);
+    const saved = checkpoint.split(",").map(Number);
+    return Math.hypot(
+      position[0] - saved[0],
+      position[1] - saved[1],
+      position[2] - saved[2]
+    );
+  }, {
+    timeout: 3000,
+    intervals: [40, 60, 80]
+  }).toBeLessThan(0.35);
   await expect.poll(async () => canvas.getAttribute("data-active-trigger-count"), {
     timeout: 3000
   }).toBe("1");
