@@ -383,9 +383,18 @@ export class EditorApp {
       });
     }
 
-    for (const id of ["env-sky", "env-ambient", "env-fog", "env-fog-density"]) {
+    for (const id of [
+      "env-sky",
+      "env-ambient",
+      "env-fog",
+      "env-fog-density",
+      "env-exposure",
+      "env-contrast"
+    ]) {
       must<HTMLInputElement>(id).addEventListener("change", () => this.applyEnvironmentInputs());
     }
+    must<HTMLSelectElement>("env-tone-mapping")
+      .addEventListener("change", () => this.applyEnvironmentInputs());
 
     for (const id of [
       "player-collider-height",
@@ -2753,30 +2762,63 @@ Forge.onUpdate((dt) => {
       ambientColor: string;
       fogColor: string;
       fogDensity: number;
+      exposure: number;
+      contrast: number;
+      toneMapping: "standard" | "aces";
     }> = {
       day: {
         skyColor: "#7fb9e8",
         ambientColor: "#d9e8f4",
         fogColor: "#9fc6df",
-        fogDensity: 0
+        fogDensity: 0,
+        exposure: 1.05,
+        contrast: 1.05,
+        toneMapping: "aces"
       },
       sunset: {
         skyColor: "#d88463",
         ambientColor: "#f0c39f",
         fogColor: "#b8756a",
-        fogDensity: 0.004
+        fogDensity: 0.004,
+        exposure: 1.08,
+        contrast: 1.16,
+        toneMapping: "aces"
       },
       night: {
         skyColor: "#17263f",
         ambientColor: "#6f86aa",
         fogColor: "#263b59",
-        fogDensity: 0.006
+        fogDensity: 0.006,
+        exposure: 0.82,
+        contrast: 1.18,
+        toneMapping: "aces"
       },
       foggy: {
         skyColor: "#8c9aa3",
         ambientColor: "#bac3c8",
         fogColor: "#aab5bb",
-        fogDensity: 0.025
+        fogDensity: 0.025,
+        exposure: 0.95,
+        contrast: 0.9,
+        toneMapping: "standard"
+      },
+      studio: {
+        skyColor: "#b6c6d2",
+        ambientColor: "#f3f7fa",
+        fogColor: "#c8d2d9",
+        fogDensity: 0,
+        exposure: 1.0,
+        contrast: 1.0,
+        toneMapping: "aces"
+      },
+      cinematic: {
+        skyColor: "#354052",
+        ambientColor: "#93a4b8",
+        fogColor: "#49576a",
+        fogDensity: 0.008,
+        exposure: 1.12,
+        contrast: 1.28,
+        toneMapping: "aces"
       }
     };
 
@@ -2791,7 +2833,6 @@ Forge.onUpdate((dt) => {
     };
     this.forge.applyEnvironment(this.forge.document.environment);
     this.syncEnvironmentInputs();
-    this.syncPlayerInputs();
     this.canvas.dataset.environmentPreset = name;
     this.log(`Environment preset: ${name}.`);
   }
@@ -2802,6 +2843,9 @@ Forge.onUpdate((dt) => {
     must<HTMLInputElement>("env-ambient").value = environment.ambientColor ?? "#d9e8f4";
     must<HTMLInputElement>("env-fog").value = environment.fogColor ?? "#9fc6df";
     must<HTMLInputElement>("env-fog-density").value = String(environment.fogDensity ?? 0);
+    must<HTMLInputElement>("env-exposure").value = String(environment.exposure ?? 1);
+    must<HTMLInputElement>("env-contrast").value = String(environment.contrast ?? 1);
+    must<HTMLSelectElement>("env-tone-mapping").value = environment.toneMapping ?? "standard";
     must<HTMLDivElement>("sky-file-label").textContent =
       environment.skyTextureFileName ? `Sky: ${environment.skyTextureFileName}` : "Color sky";
   }
@@ -2858,14 +2902,31 @@ Forge.onUpdate((dt) => {
     this.checkpoint();
 
     const current = this.forge.document.environment ?? {};
+    const exposure = Math.min(3, Math.max(
+      0.25,
+      Number(must<HTMLInputElement>("env-exposure").value) || 1
+    ));
+    const contrast = Math.min(2, Math.max(
+      0.5,
+      Number(must<HTMLInputElement>("env-contrast").value) || 1
+    ));
+    const toneMapping = must<HTMLSelectElement>("env-tone-mapping").value === "aces"
+      ? "aces"
+      : "standard";
+
     this.forge.document.environment = {
       ...current,
       skyColor: must<HTMLInputElement>("env-sky").value,
       ambientColor: must<HTMLInputElement>("env-ambient").value,
       fogColor: must<HTMLInputElement>("env-fog").value,
-      fogDensity: Math.min(0.1, Math.max(0, Number(must<HTMLInputElement>("env-fog-density").value) || 0))
+      fogDensity: Math.min(0.1, Math.max(0, Number(must<HTMLInputElement>("env-fog-density").value) || 0)),
+      exposure,
+      contrast,
+      toneMapping
     };
 
+    must<HTMLInputElement>("env-exposure").value = String(exposure);
+    must<HTMLInputElement>("env-contrast").value = String(contrast);
     this.forge.applyEnvironment(this.forge.document.environment);
     delete this.canvas.dataset.environmentPreset;
     this.log("Lighting / sky environment updated.");
