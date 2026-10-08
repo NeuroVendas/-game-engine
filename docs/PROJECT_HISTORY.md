@@ -761,3 +761,23 @@ Browser Smoke changes the Player service values, enters Play, verifies the runti
 ### Proxy reset integration
 
 The complementary **Reset Proxy** action from the parallel physics work was also adopted without replacing Forge's existing proxy implementation. Reset Proxy returns an authored box collider to the entity's canonical size with zero offset, rebuilds the entity safely and preserves imported GLB animation loading across the rebuild.
+
+
+## 25. Forge v0.5 — Checkpoint / respawn loop
+
+Trigger volumes now connect directly to a reusable player checkpoint flow.
+
+### Runtime Player API
+
+Creator scripts can call:
+
+- `Forge.player.setCheckpoint(idOrName?)`
+- `Forge.player.respawn()`
+
+Calling `setCheckpoint()` with no target saves the current player position. A named/id target resolves its Forge entity and stores a capsule-safe position above that object. The initial runtime checkpoint is the player spawn.
+
+Respawn clears horizontal/vertical motion, jump buffer and coyote state before moving the capsule and camera target back to the checkpoint.
+
+### Acceptance coverage
+
+Browser Smoke creates a Trigger checkpoint around the blank-scene spawn, saves the checkpoint on ENTER, walks out using real WASD, verifies EXIT, then uses a script key handler to respawn and verifies the player returns to the checkpoint and re-enters the Trigger.
