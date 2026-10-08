@@ -174,6 +174,13 @@ function makeAnimatedTriangleGlb(): Buffer {
   return glb;
 }
 
+function makeTinyPng(): Buffer {
+  return Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl7g1cAAAAASUVORK5CYII=",
+    "base64"
+  );
+}
+
 function makeSilentWav(): Buffer {
   const sampleRate = 8000;
   const samples = 400;
@@ -827,6 +834,9 @@ test("Studio imports GLB animations and audio assets", async ({ page }) => {
   await expect.poll(async () => canvas.getAttribute("data-model-animation-groups"))
     .toBe("1");
   await expect(page.locator("#component-list")).toContainText("Clips: Bounce");
+  await expect(page.locator("#asset-library")).toContainText("animated-triangle");
+  await expect(canvas).toHaveAttribute("data-asset-library-count", "1");
+  await expect(page.locator("#asset-library [data-asset-kind='model']")).toHaveCount(1);
 
   await page.locator("#component-type").selectOption("Collider");
   await page.locator("#add-component").click();
@@ -924,6 +934,13 @@ Forge.onStart(() => {
   await page.locator("#stop").click();
   await expect(page.locator("#mode-badge")).toHaveText("EDITOR");
 
+  // Reuse the same imported GLB without uploading it again.
+  await page.locator(".scene-item", { hasText: "Baseplate" }).click();
+  const modelAsset = page.locator("#asset-library .asset-library-item").filter({ hasText: "animated-triangle" });
+  await modelAsset.locator("[data-asset-action='model']").click();
+  await expect(page.locator(".scene-item", { hasText: "animated-triangle" })).toHaveCount(2);
+  await expect(canvas).toHaveAttribute("data-asset-library-count", "1");
+
   await page.locator(".scene-item", { hasText: "Baseplate" }).click();
   await page.locator("#audio-file-input").setInputFiles({
     name: "silence.wav",
@@ -933,6 +950,35 @@ Forge.onStart(() => {
 
   await expect(page.locator("#scene-tree")).toContainText("silence");
   await expect(page.locator("#component-list")).toContainText("Sound");
+  await expect(page.locator("#asset-library")).toContainText("silence");
+  await expect(canvas).toHaveAttribute("data-asset-library-count", "2");
+
+  // Reuse audio from the library.
+  await page.locator(".scene-item", { hasText: "Baseplate" }).click();
+  const audioAsset = page.locator("#asset-library .asset-library-item").filter({ hasText: "silence" });
+  await audioAsset.locator("[data-asset-action='audio']").click();
+  await expect(page.locator(".scene-item", { hasText: "silence" })).toHaveCount(2);
+  await expect(canvas).toHaveAttribute("data-asset-library-count", "2");
+
+  // Texture import becomes a reusable asset too.
+  await page.locator(".scene-item", { hasText: "Baseplate" }).click();
+  await page.locator("#texture-file-input").setInputFiles({
+    name: "pixel.png",
+    mimeType: "image/png",
+    buffer: makeTinyPng()
+  });
+  await expect(page.locator("#asset-library")).toContainText("pixel");
+  await expect(canvas).toHaveAttribute("data-asset-library-count", "3");
+
+  await page.locator("[data-primitive='box']").click();
+  await page.locator("#prop-name").fill("Texture Target");
+  await page.locator("#prop-name").dispatchEvent("change");
+
+  const textureAsset = page.locator("#asset-library .asset-library-item").filter({ hasText: "pixel" });
+  await textureAsset.locator("[data-asset-action='texture']").click();
+  await expect.poll(async () => page.locator("#prop-texture").inputValue())
+    .toMatch(/^data:image\/png;base64,/);
+
   expect(await canvas.getAttribute("data-runtime-error")).toBeNull();
 });
 
