@@ -1315,6 +1315,55 @@ test("Studio clipboard duplicates and pastes full hierarchies with fresh IDs", a
   expect(new Set(positions).size).toBeGreaterThanOrEqual(3);
 });
 
+test("Studio quick actions expose toolbar clipboard and F2 rename", async ({ page }) => {
+  await page.goto("/");
+  await page.locator("[data-launch-tab='develop']").click();
+  await page.locator("#new-place").click();
+  await page.locator("#new-place-name").fill("Quick Actions Place");
+  await page.locator("#confirm-create-place").click();
+
+  const canvas = page.locator("#viewport");
+
+  await expect(page.locator("#copy-selected")).toBeDisabled();
+  await expect(page.locator("#paste-selected")).toBeDisabled();
+  await expect(page.locator("#rename-selected")).toBeDisabled();
+
+  await page.locator("[data-primitive='box']").click();
+  await page.locator("#prop-name").fill("Quick Box");
+  await page.locator("#prop-name").dispatchEvent("change");
+
+  await expect(page.locator("#copy-selected")).toBeEnabled();
+  await expect(page.locator("#rename-selected")).toBeEnabled();
+
+  await page.locator("#copy-selected").click();
+  await expect(page.locator("#paste-selected")).toBeEnabled();
+  await expect(canvas).toHaveAttribute("data-editor-clipboard-count", "1");
+
+  await page.locator("#paste-selected").click();
+  await expect(page.locator(".scene-item", { hasText: "Quick Box" })).toHaveCount(2);
+
+  await page.keyboard.press("F2");
+  await expect(page.locator("#prop-name")).toBeFocused();
+  await expect(canvas).toHaveAttribute("data-editor-rename-target", /Quick_Box/);
+  await page.locator("#prop-name").fill("Quick Box Renamed");
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".scene-item", { hasText: "Quick Box Renamed" })).toHaveCount(1);
+
+  await page.locator("#rename-selected").click();
+  await expect(page.locator("#prop-name")).toBeFocused();
+  await page.keyboard.press("Escape");
+
+  await page.locator("#play").click();
+  await expect(page.locator("#mode-badge")).toHaveText("PLAY");
+  await expect(page.locator("#copy-selected")).toBeDisabled();
+  await expect(page.locator("#paste-selected")).toBeDisabled();
+  await expect(page.locator("#rename-selected")).toBeDisabled();
+
+  await page.locator("#stop").click();
+  await expect(page.locator("#mode-badge")).toHaveText("EDITOR");
+  expect(await canvas.getAttribute("data-runtime-error")).toBeNull();
+});
+
 test("ModuleScript libraries can be required by gameplay scripts", async ({ page }) => {
   await page.goto("/");
   await page.locator("[data-launch-tab='develop']").click();

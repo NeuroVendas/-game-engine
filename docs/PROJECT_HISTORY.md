@@ -879,3 +879,28 @@ Each paste offsets the root in local X/Z so new copies are visible instead of st
 ### Acceptance coverage
 
 Browser Smoke builds a Group + child Block, verifies hierarchy-aware Ctrl+D, performs repeated Ctrl+C/Ctrl+V, exports the scene and validates fresh IDs, preserved parent-child relationships and distinct copy positions.
+
+
+## 30. Forge v0.5 — Studio quick actions
+
+The hierarchy clipboard is now exposed as a first-class Studio workflow instead of requiring memorized keyboard shortcuts.
+
+### Toolbar
+
+Studio exposes:
+
+- Copy
+- Paste
+- Duplicate
+- Rename
+- Delete
+
+The buttons reflect current Editor/Play state and selection availability. Paste becomes available only after a hierarchy has been copied.
+
+### Rename workflow
+
+`F2` focuses and selects the current object's Name field in the Inspector. Enter commits the rename through the existing scene/history path; Escape restores the original visible name.
+
+### Acceptance coverage
+
+Browser Smoke validates toolbar enable/disable state, Copy/Paste, F2 rename, Rename button focus and automatic disabling of editing actions during Play.
