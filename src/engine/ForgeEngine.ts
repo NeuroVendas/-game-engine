@@ -500,6 +500,22 @@ export class ForgeEngine {
     ].join(":");
     return true;
   }
+  resetBoxCollider(id: string): boolean {
+    const entity = this.getEntity(id);
+    const root = this.getMesh(id);
+    const collider = entity?.components?.Collider;
+    if (!entity || !root || !collider || (collider.mode ?? "mesh") !== "box") return false;
+
+    const fallbackSize = entity.size ?? [1, 1, 1];
+    collider.size = [...fallbackSize];
+    collider.offset = [0, 0, 0];
+
+    this.createColliderProxy(entity, root);
+    this.applyColliderDebug(entity, root);
+    this.canvas.dataset.lastColliderReset = entity.id;
+    return true;
+  }
+
 
   syncEntityFromMesh(id: string): void {
     const entity = this.getEntity(id);
