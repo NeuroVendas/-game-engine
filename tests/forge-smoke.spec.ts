@@ -727,7 +727,14 @@ test("Studio visualizes colliders and round-trips custom prefab hierarchies", as
   await page.locator("#player-collider-height").dispatchEvent("change");
   await page.locator("#player-collider-radius").fill("0.35");
   await page.locator("#player-collider-radius").dispatchEvent("change");
+  await page.locator("#player-walk-speed").fill("4.2");
+  await page.locator("#player-walk-speed").dispatchEvent("change");
+  await page.locator("#player-run-speed").fill("6.8");
+  await page.locator("#player-run-speed").dispatchEvent("change");
+  await page.locator("#player-jump-power").fill("6.5");
+  await page.locator("#player-jump-power").dispatchEvent("change");
   await expect(canvas).toHaveAttribute("data-scene-player-collider", "2.400,0.350");
+  await expect(canvas).toHaveAttribute("data-scene-player-movement", "4.200,6.800,6.500");
 
   await page.locator("#collision-debug").click();
   await expect(canvas).toHaveAttribute("data-collision-debug", "true");
@@ -740,6 +747,9 @@ test("Studio visualizes colliders and round-trips custom prefab hierarchies", as
   await expect(canvas).toHaveAttribute("data-collision-debug", "false");
   await expect(canvas).toHaveAttribute("data-player-collider-height", "2.400");
   await expect(canvas).toHaveAttribute("data-player-collider-radius", "0.350");
+  await expect(canvas).toHaveAttribute("data-player-walk-speed", "4.200");
+  await expect(canvas).toHaveAttribute("data-player-run-speed", "6.800");
+  await expect(canvas).toHaveAttribute("data-player-jump-power", "6.500");
 
   await page.locator("#stop").click();
   await expect(page.locator("#mode-badge")).toHaveText("EDITOR");
