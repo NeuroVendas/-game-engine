@@ -1281,10 +1281,18 @@ input, textarea { cursor: text; }
   font-size: 8px;
   text-transform: uppercase;
 }
+.asset-library-actions {
+  display: flex;
+  gap: 3px;
+}
 .asset-library-item button {
   min-width: 48px;
   padding: 4px 6px;
   font-size: 9px;
+}
+.asset-library-item [data-asset-remove] {
+  min-width: 24px;
+  padding-inline: 5px;
 }
 
 .component-note {
