@@ -174,18 +174,25 @@ export class EditorApp {
 
     this.forge.engine.runRenderLoop(() => {
       const now = performance.now();
-      const dt = Math.min((now - previous) / 1000, 0.05);
+      // Keep real elapsed time at low FPS, but bound catch-up after a paused tab.
+      const elapsed = Math.min(Math.max((now - previous) / 1000, 0), 0.25);
+      const dt = Math.min(elapsed, 0.05);
       previous = now;
 
       try {
         if (this.mode === "play") {
-          this.player?.update(dt);
-          if (this.player) {
-            this.forge.updateTriggers(this.player.body);
-            const hazardDamage = this.forge.tickActiveHazards(dt);
-            if (hazardDamage > 0) this.player.damage(hazardDamage);
+          // Split slow frames into collision-safe steps instead of discarding time.
+          const steps = Math.max(1, Math.ceil(elapsed / 0.05));
+          const step = elapsed / steps;
+          for (let i = 0; i < steps; i += 1) {
+            this.player?.update(step);
+            if (this.player) {
+              this.forge.updateTriggers(this.player.body);
+              const hazardDamage = this.forge.tickActiveHazards(step);
+              if (hazardDamage > 0) this.player.damage(hazardDamage);
+            }
+            this.forge.scripts.tick(step);
           }
-          this.forge.scripts.tick(dt);
         } else {
           this.updateEditorCamera(dt);
           if (this.selectedId) {
@@ -424,8 +431,10 @@ export class EditorApp {
       const entity = this.forge.getEntity(this.selectedId);
       if (!entity) return;
 
+      const nextName = (event.target as HTMLInputElement).value.trim() || entity.name;
+      if (nextName === entity.name) return;
       this.checkpoint();
-      entity.name = (event.target as HTMLInputElement).value.trim() || entity.name;
+      entity.name = nextName;
       this.renderTree();
       this.renderInspector();
       this.log(`Renamed to ${entity.name}`);
@@ -1716,6 +1725,8 @@ export class EditorApp {
         break;
     }
 
+    this.forge.rebuildEntity(entity.id);
+    this.setSelection(entity.id);
     this.renderInspector();
     this.log(`Added ${type} to ${entity.name}.`);
   }
@@ -1835,7 +1846,10 @@ export class EditorApp {
           const fit = document.createElement("button");
           fit.type = "button";
           fit.dataset.colliderFit = entity.id;
-          fit.textContent = "Fit Proxy To Visual";
+          const loadingModel = entity.kind === "model"
+            && this.forge.getMesh(entity.id)?.metadata?.modelLoaded !== true;
+          fit.disabled = loadingModel;
+          fit.textContent = loadingModel ? "Loading model…" : "Fit Proxy To Visual";
           fit.addEventListener("click", () => {
             this.checkpoint();
             if (!this.forge.fitBoxColliderToVisual(entity.id)) {
@@ -2460,6 +2474,7 @@ Forge.onUpdate((dt) => {
         input.value = String(value);
         return;
       }
+      if (!input.isConnected || next === value) return;
       this.checkpoint();
       apply(next);
       if (this.selectedId) {

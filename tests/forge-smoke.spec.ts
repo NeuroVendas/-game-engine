@@ -722,7 +722,7 @@ test("Studio visualizes colliders and round-trips custom prefab hierarchies", as
   await expect(canvas).toHaveAttribute("data-collider-proxy-count", "1");
   await expect(canvas).toHaveAttribute(
     "data-collider-proxies",
-    /Prefab_Block:3\.50:4\.25:2\.75:0\.50:1\.25:-0\.75/
+    /Block:3\.50:4\.25:2\.75:0\.50:1\.25:-0\.75/
   );
 
   await page.locator(".scene-item", { hasText: "Prefab Block" }).dragTo(

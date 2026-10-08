@@ -250,7 +250,7 @@ export class PlayerController {
         if (this.deathTimer <= 0) this.respawn();
       }
 
-      this.forge.canvas.dataset.playerMovementState = "dead";
+      this.forge.canvas.dataset.playerMovementState = this.dead ? "dead" : "idle";
       return;
     }
 
