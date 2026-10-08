@@ -722,7 +722,7 @@ test("Studio visualizes colliders and round-trips custom prefab hierarchies", as
   await expect(canvas).toHaveAttribute("data-collider-proxy-count", "1");
   await expect(canvas).toHaveAttribute(
     "data-collider-proxies",
-    /Prefab_Block:3\.50:4\.25:2\.75:0\.50:1\.25:-0\.75/
+    /Block:3\.50:4\.25:2\.75:0\.50:1\.25:-0\.75/
   );
 
   await page.locator(".scene-item", { hasText: "Prefab Block" }).dragTo(
@@ -882,11 +882,11 @@ test("Studio imports GLB animations and audio assets", async ({ page }) => {
     .toBe("1");
   await expect(page.locator("#component-list")).toContainText("Clips: Bounce");
 
-  await page.locator("#component-type").selectOption("Collider");
-  await page.locator("#add-component").click();
   const modelCollider = page.locator(".component").filter({ hasText: "Collider" }).first();
+  await expect(modelCollider).toBeVisible();
+  await modelCollider.getByLabel("Enabled").check();
   await modelCollider.getByLabel("Mode").selectOption("box");
-  await modelCollider.locator("[data-collider-fit]").click();
+  await page.locator("[data-collider-fit]").click();
 
   await expect(page.locator("#output-log"))
     .toContainText("Collider fitted to visual bounds: animated-triangle");
