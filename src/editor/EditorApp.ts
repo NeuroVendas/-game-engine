@@ -1328,7 +1328,12 @@ export class EditorApp {
 
     switch (type) {
       case "Collider":
-        components.Collider = { enabled: true };
+        components.Collider = {
+          enabled: true,
+          mode: "mesh",
+          size: entity.size ? [...entity.size] : [2, 2, 2],
+          offset: [0, 0, 0]
+        };
         break;
       case "Interactable":
         components.Interactable = { enabled: true, prompt: "E • Interact" };
@@ -1463,9 +1468,54 @@ export class EditorApp {
       case "Collider": {
         const component = components.Collider;
         if (!component) return;
+
         this.appendCheckboxField(container, "Enabled", component.enabled, (value) => {
           component.enabled = value;
         });
+
+        this.appendSelectField(container, "Mode", component.mode ?? "mesh", [
+          ["mesh", "Mesh"],
+          ["box", "Box Proxy"]
+        ], (value) => {
+          component.mode = value as "mesh" | "box";
+          if (component.mode === "box") {
+            component.size ??= entity.size ? [...entity.size] : [2, 2, 2];
+            component.offset ??= [0, 0, 0];
+          }
+        });
+
+        if ((component.mode ?? "mesh") === "box") {
+          const size = component.size ?? (entity.size ? [...entity.size] : [2, 2, 2]);
+          const offset = component.offset ?? [0, 0, 0];
+          component.size = size;
+          component.offset = offset;
+
+          this.appendNumberField(container, "Size X", size[0], 0.1, (value) => {
+            component.size = [Math.max(0.05, Math.abs(value)), size[1], size[2]];
+          });
+          this.appendNumberField(container, "Size Y", size[1], 0.1, (value) => {
+            component.size = [size[0], Math.max(0.05, Math.abs(value)), size[2]];
+          });
+          this.appendNumberField(container, "Size Z", size[2], 0.1, (value) => {
+            component.size = [size[0], size[1], Math.max(0.05, Math.abs(value))];
+          });
+
+          this.appendNumberField(container, "Offset X", offset[0], 0.1, (value) => {
+            component.offset = [value, offset[1], offset[2]];
+          });
+          this.appendNumberField(container, "Offset Y", offset[1], 0.1, (value) => {
+            component.offset = [offset[0], value, offset[2]];
+          });
+          this.appendNumberField(container, "Offset Z", offset[2], 0.1, (value) => {
+            component.offset = [offset[0], offset[1], value];
+          });
+
+          const note = document.createElement("div");
+          note.className = "component-note";
+          note.textContent = "Box Proxy uses this local volume for collisions instead of the visible mesh.";
+          container.appendChild(note);
+        }
+
         break;
       }
       case "Interactable": {
