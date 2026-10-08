@@ -1439,12 +1439,19 @@ export class EditorApp {
     const entity = this.forge.getEntity(this.selectedId);
     if (!entity) return;
 
-    this.checkpoint();
-    if (!this.forge.dropEntityToGround(entity.id)) {
-      this.log(`No surface found below ${entity.name}.`);
+    const before = this.forge.exportDocument();
+    const result = this.forge.dropEntityToGround(entity.id);
+    if (result !== "moved") {
+      this.log(result === "unchanged"
+        ? `${entity.name} is already on the surface.`
+        : `No surface found below ${entity.name}.`);
       return;
     }
 
+    // Commit the pre-edit snapshot only after a real move. Failed/no-op drops
+    // must preserve the redo stack and must not consume undo history.
+    this.history.checkpoint(before);
+    this.updateHistoryUI();
     this.renderTree();
     this.renderInspector();
     this.log(`Dropped ${entity.name} to ground.`);

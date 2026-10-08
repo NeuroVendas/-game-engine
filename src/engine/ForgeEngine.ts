@@ -542,10 +542,11 @@ export class ForgeEngine {
     return true;
   }
 
-  dropEntityToGround(id: string): boolean {
+  dropEntityToGround(id: string): "moved" | "unchanged" | "no-surface" {
+    if (this.runtimeMode) return "no-surface";
     const entity = this.getEntity(id);
     const root = this.getMesh(id);
-    if (!entity || !root) return false;
+    if (!entity || !root) return "no-surface";
 
     const subtreeIds = new Set<string>();
     const visit = (entityId: string) => {
@@ -575,7 +576,7 @@ export class ForgeEngine {
       }
     }
 
-    if (visualMeshes.length === 0) return false;
+    if (visualMeshes.length === 0) return "no-surface";
 
     const minimum = new Vector3(
       Number.POSITIVE_INFINITY,
@@ -599,7 +600,7 @@ export class ForgeEngine {
       !Number.isFinite(minimum.x)
       || !Number.isFinite(minimum.y)
       || !Number.isFinite(minimum.z)
-    ) return false;
+    ) return "no-surface";
 
     const centerX = (minimum.x + maximum.x) * 0.5;
     const centerZ = (minimum.z + maximum.z) * 0.5;
@@ -621,10 +622,13 @@ export class ForgeEngine {
       return mesh.visibility > 0.001 && mesh.getTotalVertices() > 0;
     });
 
-    if (!hit?.hit || !hit.pickedPoint) return false;
+    if (!hit?.hit || !hit.pickedPoint) return "no-surface";
 
     const deltaY = hit.pickedPoint.y - minimum.y;
-    if (deltaY > 0.12) return false;
+    if (deltaY > 0.12) return "no-surface";
+
+    // Do not generate a history entry or round-trip transforms for a no-op.
+    if (Math.abs(deltaY) < 0.0001) return "unchanged";
 
     const absolute = root.getAbsolutePosition().clone();
     root.setAbsolutePosition(absolute.add(new Vector3(0, deltaY, 0)));
@@ -633,7 +637,7 @@ export class ForgeEngine {
 
     this.canvas.dataset.lastDropToGround =
       `${id}:${deltaY.toFixed(3)}:${hit.pickedPoint.y.toFixed(3)}`;
-    return true;
+    return "moved";
   }
 
   syncEntityFromMesh(id: string): void {
