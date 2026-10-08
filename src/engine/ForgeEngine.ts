@@ -16,6 +16,7 @@ import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
+import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture";
 import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import { Sound } from "@babylonjs/core/Audio/sound";
@@ -888,47 +889,58 @@ export class ForgeEngine {
 
     if (entity.kind !== "empty" && entity.kind !== "model") {
       mesh.isPickable = true;
-      const material = new StandardMaterial(`${entity.id}-mat`, this.scene);
+      const material = new PBRMaterial(`${entity.id}-mat`, this.scene);
       const baseColor = safeColor(entity.color, "#8796a3");
       const preset = entity.material ?? "plastic";
+      const surface = entity.surface ?? {};
 
-      material.diffuseColor = baseColor;
+      const presetSurface: Record<NonNullable<ForgeEntity["material"]>, {
+        roughness: number;
+        metallic: number;
+      }> = {
+        plastic: { roughness: 0.48, metallic: 0.02 },
+        matte: { roughness: 0.94, metallic: 0 },
+        metal: { roughness: 0.22, metallic: 0.88 },
+        glass: { roughness: 0.08, metallic: 0 },
+        neon: { roughness: 0.42, metallic: 0 }
+      };
+      const baseSurface = presetSurface[preset];
+
+      material.albedoColor = baseColor;
+      material.roughness = Math.min(1, Math.max(0, surface.roughness ?? baseSurface.roughness));
+      material.metallic = Math.min(1, Math.max(0, surface.metallic ?? baseSurface.metallic));
       material.alpha = 1 - Math.min(1, Math.max(0, entity.transparency ?? 0));
 
-      if (preset === "matte") {
-        material.roughness = 1;
-        material.specularColor = Color3.Black();
-        material.specularPower = 8;
-      } else if (preset === "metal") {
-        material.roughness = 0.18;
-        material.specularColor = new Color3(0.82, 0.84, 0.86);
-        material.specularPower = 128;
-      } else if (preset === "glass") {
-        material.roughness = 0.12;
-        material.specularColor = new Color3(0.92, 0.95, 1);
-        material.specularPower = 160;
+      if (preset === "glass") {
         material.alpha = Math.min(material.alpha, 0.42);
-      } else if (preset === "neon") {
-        material.roughness = 1;
-        material.specularColor = Color3.Black();
-        material.emissiveColor = baseColor;
-      } else {
-        material.roughness = 0.58;
-        material.specularColor = new Color3(0.18, 0.20, 0.22);
-        material.specularPower = 48;
+        material.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND;
+        material.indexOfRefraction = 1.45;
       }
 
-      if (entity.emissive) material.emissiveColor = safeColor(entity.emissive, "#000000");
+      if (preset === "neon") {
+        material.emissiveColor = baseColor;
+        material.emissiveIntensity = 1.35;
+      }
+
+      if (entity.emissive) {
+        material.emissiveColor = safeColor(entity.emissive, "#000000");
+        material.emissiveIntensity = Math.max(material.emissiveIntensity, 1);
+      }
+
       if (entity.texture?.trim()) {
         try {
           const texture = new Texture(entity.texture, this.scene, false, true);
           texture.hasAlpha = true;
-          material.diffuseTexture = texture;
-          material.useAlphaFromDiffuseTexture = true;
+          const textureScale = surface.textureScale ?? [1, 1];
+          texture.uScale = Math.max(0.01, Math.abs(textureScale[0]));
+          texture.vScale = Math.max(0.01, Math.abs(textureScale[1]));
+          material.albedoTexture = texture;
+          material.useAlphaFromAlbedoTexture = true;
         } catch (error) {
           this.log(`Texture failed on ${entity.name}: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
+
       mesh.material = material;
     }
 
