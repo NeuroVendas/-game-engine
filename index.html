@@ -471,11 +471,21 @@
                 <button type="button" data-environment-preset="sunset" title="Warm sunset atmosphere">Sunset</button>
                 <button type="button" data-environment-preset="night" title="Dark blue night lighting">Night</button>
                 <button type="button" data-environment-preset="foggy" title="Dense overcast fog">Foggy</button>
+                <button type="button" data-environment-preset="studio" title="Clean neutral authoring light">Studio</button>
+                <button type="button" data-environment-preset="cinematic" title="ACES contrast with atmospheric depth">Cinematic</button>
               </div>
               <label>Sky <input id="env-sky" type="color" value="#7fb9e8" /></label>
               <label>Ambient <input id="env-ambient" type="color" value="#d9e8f4" /></label>
               <label>Fog <input id="env-fog" type="color" value="#9fc6df" /></label>
               <label>Fog density <input id="env-fog-density" type="number" min="0" max="0.1" step="0.001" value="0" /></label>
+              <label>Exposure <input id="env-exposure" type="number" min="0.25" max="3" step="0.05" value="1" /></label>
+              <label>Contrast <input id="env-contrast" type="number" min="0.5" max="2" step="0.05" value="1" /></label>
+              <label>Tone mapping
+                <select id="env-tone-mapping">
+                  <option value="standard">Standard</option>
+                  <option value="aces">ACES</option>
+                </select>
+              </label>
               <div class="lighting-actions">
                 <button id="import-sky" type="button">Import Sky Image</button>
                 <button id="clear-sky" type="button">Use Color Sky</button>
