@@ -52,6 +52,8 @@ export class EditorApp {
 
   private readonly tree = must<HTMLDivElement>("scene-tree");
   private readonly assetLibrary = must<HTMLDivElement>("asset-library");
+  private readonly assetSearch = must<HTMLInputElement>("asset-search");
+  private readonly assetKindFilter = must<HTMLSelectElement>("asset-kind-filter");
   private readonly status = must<HTMLSpanElement>("status");
   private readonly outputLog = must<HTMLDivElement>("output-log");
   private readonly fps = must<HTMLDivElement>("fps");
@@ -200,6 +202,9 @@ export class EditorApp {
   }
 
   private bindUI(): void {
+    this.assetSearch.addEventListener("input", () => this.renderAssetLibrary());
+    this.assetKindFilter.addEventListener("change", () => this.renderAssetLibrary());
+
     must<HTMLButtonElement>("tool-select").addEventListener("click", () => this.setTool("select"));
     must<HTMLButtonElement>("tool-move").addEventListener("click", () => this.setTool("move"));
     must<HTMLButtonElement>("tool-rotate").addEventListener("click", () => this.setTool("rotate"));
@@ -1474,6 +1479,17 @@ export class EditorApp {
     this.canvas.dataset.assetLibraryCount = String(entries.size);
     this.canvas.dataset.assetRegistryCount = String(this.forge.document.assets?.length ?? 0);
 
+    const query = this.assetSearch.value.trim().toLowerCase();
+    const kindFilter = this.assetKindFilter.value as ForgeAssetKind | "all";
+    const visibleEntries = [...entries.values()].filter((entry) => {
+      const kindMatches = kindFilter === "all" || entry.kind === kindFilter;
+      const textMatches = !query
+        || entry.name.toLowerCase().includes(query)
+        || (entry.fileName ?? "").toLowerCase().includes(query);
+      return kindMatches && textMatches;
+    });
+    this.canvas.dataset.assetLibraryVisibleCount = String(visibleEntries.length);
+
     if (entries.size === 0) {
       const empty = document.createElement("div");
       empty.className = "asset-library-empty";
@@ -1482,7 +1498,15 @@ export class EditorApp {
       return;
     }
 
-    for (const entry of entries.values()) {
+    if (visibleEntries.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "asset-library-empty";
+      empty.textContent = "No assets match this search/filter.";
+      this.assetLibrary.appendChild(empty);
+      return;
+    }
+
+    for (const entry of visibleEntries) {
       const row = document.createElement("div");
       row.className = "asset-library-item";
       row.dataset.assetKind = entry.kind;
