@@ -659,3 +659,34 @@ The existing Colliders toggle now displays the actual box proxy volume when Box 
 ### Persistence
 
 Proxy mode, size and offset are canonical scene data and survive custom prefab export/import. Browser acceptance coverage validates authoring, diagnostics, prefab round-trip and Editor -> Play -> Editor state.
+
+
+## 22. Forge v0.5 — Project Prefab Library
+
+Forge now supports reusable prefabs that live inside a project instead of requiring a download/import round-trip for every reuse.
+
+### Project-scoped library
+
+`ForgeSceneDocument` can persist a `prefabs` collection of canonical `forge.prefab` documents.
+
+Studio exposes a Project Prefabs shelf with:
+
+- Save Selection
+- Insert
+- Delete
+
+Saving captures the selected object/group and all descendants, normalizes the prefab root to local origin, and generates a unique project-prefab name when needed.
+
+### Persistence and reuse
+
+Project prefabs:
+
+- participate in Undo / Redo
+- survive browser Save / Load
+- export inside `.forge.json`
+- are included in the same scene JSON uploaded to Forge Cloud
+- instantiate through the existing ID-remapping prefab path
+- preserve internal hierarchy and gameplay components
+- can be inserted under the currently selected parent
+
+Browser acceptance coverage validates browser persistence, scene export, hierarchy reuse and fresh entity IDs.
