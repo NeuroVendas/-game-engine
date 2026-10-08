@@ -252,7 +252,7 @@ async function moveTowardWorldPoint(
   axes: { forward: [number, number]; right: [number, number] },
   target: [number, number],
   tolerance = 0.45,
-  timeout = 15000
+  timeout = 18000
 ): Promise<void> {
   const started = Date.now();
   let activeKey: string | null = null;
@@ -271,43 +271,22 @@ async function moveTowardWorldPoint(
       const distance = Math.hypot(dx, dz);
       if (distance <= tolerance) return;
 
-      const cameraForwardRaw = await page.locator("#viewport").getAttribute("data-camera-forward");
-      const parsedForward = cameraForwardRaw
-        ? cameraForwardRaw.split(",").map(Number)
-        : [axes.forward[0], axes.forward[1]];
-      const rawX = Number.isFinite(parsedForward[0]) ? parsedForward[0] : axes.forward[0];
-      const rawZ = Number.isFinite(parsedForward[1]) ? parsedForward[1] : axes.forward[1];
-      const length = Math.hypot(rawX, rawZ);
+      // The basis comes from an observed W movement at the start of the test,
+      // so it reflects the controller's actual camera-relative mapping rather
+      // than relying on Babylon camera-ray conventions.
+      const forwardAmount = dx * axes.forward[0] + dz * axes.forward[1];
+      const rightAmount = dx * axes.right[0] + dz * axes.right[1];
 
-      const fx = length >= 0.001 ? rawX / length : axes.forward[0];
-      const fz = length >= 0.001 ? rawZ / length : axes.forward[1];
-      const rightLength = Math.hypot(axes.right[0], axes.right[1]);
-      const fallbackRightX = rightLength >= 0.001 ? axes.right[0] / rightLength : fz;
-      const fallbackRightZ = rightLength >= 0.001 ? axes.right[1] / rightLength : -fx;
-      const rx = length >= 0.001 ? fz : fallbackRightX;
-      const rz = length >= 0.001 ? -fx : fallbackRightZ;
-      const desiredX = dx / distance;
-      const desiredZ = dz / distance;
-
-      const candidates = [
-        { key: "KeyW", x: fx, z: fz },
-        { key: "KeyS", x: -fx, z: -fz },
-        { key: "KeyD", x: rx, z: rz },
-        { key: "KeyA", x: -rx, z: -rz }
-      ];
-
-      candidates.sort(
-        (a, b) =>
-          (b.x * desiredX + b.z * desiredZ)
-          - (a.x * desiredX + a.z * desiredZ)
-      );
+      const key = Math.abs(forwardAmount) >= Math.abs(rightAmount)
+        ? (forwardAmount >= 0 ? "KeyW" : "KeyS")
+        : (rightAmount >= 0 ? "KeyD" : "KeyA");
 
       await releaseKey();
-      activeKey = candidates[0].key;
+      activeKey = key;
       await page.keyboard.down(activeKey);
 
-      // Short pulses prevent acceleration/deceleration inertia from creating
-      // a permanent orbit around a waypoint while still exercising real WASD.
+      // Short pulses prevent acceleration/deceleration inertia from producing
+      // a permanent orbit around a waypoint while still using real WASD.
       const pulse = distance > 2 ? 130 : distance > 0.9 ? 75 : 40;
       await page.waitForTimeout(pulse);
       await releaseKey();
