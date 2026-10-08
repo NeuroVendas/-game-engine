@@ -61,6 +61,7 @@ export class EditorApp {
   private readonly inspectorEmpty = must<HTMLDivElement>("inspector-empty");
   private readonly inspectorFields = must<HTMLDivElement>("inspector-fields");
   private readonly componentList = must<HTMLDivElement>("component-list");
+  private readonly projectPrefabList = must<HTMLDivElement>("project-prefab-list");
   private readonly scriptDialog = must<HTMLDialogElement>("script-editor-dialog");
   private readonly scriptTarget = must<HTMLSpanElement>("script-editor-target");
   private readonly scriptKind = must<HTMLSelectElement>("script-kind");
@@ -116,6 +117,7 @@ export class EditorApp {
     this.history.clear();
     this.renderTree();
     this.renderInspector();
+    this.renderProjectPrefabs();
     this.syncEnvironmentInputs();
     this.forge.mountUI(this.uiRoot, false);
     this.updateHistoryUI();
@@ -130,6 +132,7 @@ export class EditorApp {
     this.history.clear();
     this.renderTree();
     this.renderInspector();
+    this.renderProjectPrefabs();
     this.syncEnvironmentInputs();
     this.forge.mountUI(this.uiRoot, false);
     this.updateHistoryUI();
@@ -299,6 +302,10 @@ export class EditorApp {
         if (!prefab) return;
         this.createPrefab(prefab);
       });
+    });
+
+    must<HTMLButtonElement>("save-project-prefab").addEventListener("click", () => {
+      this.saveSelectionToProjectPrefabs();
     });
 
     must<HTMLButtonElement>("duplicate-selected").addEventListener("click", () => this.duplicateSelected());
@@ -1035,6 +1042,127 @@ export class EditorApp {
     this.renderTree();
     this.selectEntity(entity.id);
     this.log(`Created prefab: ${entity.name}`);
+  }
+
+  private createProjectPrefabDocument(rootId: string, name: string): ForgePrefabDocument | null {
+    const subtree = this.collectEntitySubtree(rootId);
+    if (subtree.length === 0) return null;
+
+    for (const entity of subtree) this.forge.syncEntityFromMesh(entity.id);
+
+    const entities = structuredClone(subtree);
+    const root = entities[0];
+    root.parentId = undefined;
+    root.position = [0, 0, 0];
+
+    return {
+      format: "forge.prefab",
+      version: 1,
+      name,
+      entities
+    };
+  }
+
+  private saveSelectionToProjectPrefabs(): void {
+    if (this.mode !== "editor" || !this.selectedId) {
+      this.log("Select an object or group before saving a project prefab.");
+      return;
+    }
+
+    const selected = this.forge.getEntity(this.selectedId);
+    if (!selected) return;
+
+    const library = this.forge.document.prefabs ?? (this.forge.document.prefabs = []);
+    const baseName = selected.name.trim() || "Prefab";
+    let name = baseName;
+    let index = 2;
+    const existing = new Set(library.map((prefab) => prefab.name.toLowerCase()));
+    while (existing.has(name.toLowerCase())) {
+      name = `${baseName} ${index}`;
+      index += 1;
+    }
+
+    const prefab = this.createProjectPrefabDocument(selected.id, name);
+    if (!prefab) return;
+
+    this.checkpoint();
+    library.push(prefab);
+    this.renderProjectPrefabs();
+    this.log(`Saved project prefab: ${name} • ${prefab.entities.length} object(s).`);
+  }
+
+  private insertProjectPrefab(index: number): void {
+    if (this.mode !== "editor") return;
+    const prefab = this.forge.document.prefabs?.[index];
+    if (!prefab) return;
+
+    this.checkpoint();
+    const root = this.forge.instantiatePrefab(prefab.entities, this.selectedId ?? undefined);
+    if (!root) {
+      this.log(`Could not insert project prefab: ${prefab.name}.`);
+      return;
+    }
+
+    this.renderTree();
+    this.selectEntity(root.id);
+    this.renderProjectPrefabs();
+    this.log(`Inserted project prefab: ${prefab.name}.`);
+  }
+
+  private deleteProjectPrefab(index: number): void {
+    if (this.mode !== "editor") return;
+    const library = this.forge.document.prefabs;
+    const prefab = library?.[index];
+    if (!library || !prefab) return;
+
+    this.checkpoint();
+    library.splice(index, 1);
+    this.renderProjectPrefabs();
+    this.log(`Deleted project prefab: ${prefab.name}.`);
+  }
+
+  private renderProjectPrefabs(): void {
+    this.projectPrefabList.replaceChildren();
+    const library = this.forge.document.prefabs ?? [];
+    const editable = this.mode === "editor";
+    const save = must<HTMLButtonElement>("save-project-prefab");
+    save.disabled = !editable || !this.selectedId;
+
+    this.canvas.dataset.projectPrefabCount = String(library.length);
+
+    if (library.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "component-note";
+      empty.textContent = "No saved prefabs.";
+      this.projectPrefabList.appendChild(empty);
+      return;
+    }
+
+    library.forEach((prefab, index) => {
+      const row = document.createElement("div");
+      row.className = "project-prefab-row";
+      row.dataset.projectPrefabName = prefab.name;
+
+      const insert = document.createElement("button");
+      insert.type = "button";
+      insert.dataset.projectPrefabInsert = prefab.name;
+      insert.textContent = `▧ ${prefab.name}`;
+      insert.title = `Insert ${prefab.name}`;
+      insert.disabled = !editable;
+      insert.addEventListener("click", () => this.insertProjectPrefab(index));
+
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "project-prefab-delete";
+      remove.dataset.projectPrefabDelete = prefab.name;
+      remove.textContent = "×";
+      remove.title = `Delete ${prefab.name}`;
+      remove.disabled = !editable;
+      remove.addEventListener("click", () => this.deleteProjectPrefab(index));
+
+      row.append(insert, remove);
+      this.projectPrefabList.appendChild(row);
+    });
   }
 
   private toggleCollisionDebug(): void {
@@ -2417,6 +2545,7 @@ Forge.onUpdate((dt) => {
 
     this.renderTree();
     this.renderInspector();
+    this.renderProjectPrefabs();
     this.updateHistoryUI();
     this.log(`${action} complete.`);
   }
@@ -2462,6 +2591,7 @@ Forge.onUpdate((dt) => {
     this.modeBadge.classList.add("playing");
     this.renderTree();
     this.renderInspector();
+    this.renderProjectPrefabs();
     this.updateHistoryUI();
   }
 
@@ -2488,6 +2618,7 @@ Forge.onUpdate((dt) => {
     this.setInteractionPrompt(null, false);
     this.renderTree();
     this.renderInspector();
+    this.renderProjectPrefabs();
     this.updateHistoryUI();
     this.log("Returned to editor. Runtime changes reverted.");
   }
@@ -2548,6 +2679,7 @@ Forge.onUpdate((dt) => {
     this.syncEnvironmentInputs();
     this.renderTree();
     this.renderInspector();
+    this.renderProjectPrefabs();
     this.updateHistoryUI();
     this.log(message);
   }
@@ -2558,7 +2690,14 @@ Forge.onUpdate((dt) => {
     return candidate.format === "forge.scene"
       && candidate.version === 1
       && typeof candidate.name === "string"
-      && Array.isArray(candidate.entities);
+      && Array.isArray(candidate.entities)
+      && (
+        candidate.prefabs === undefined
+        || (
+          Array.isArray(candidate.prefabs)
+          && candidate.prefabs.every((prefab) => this.isForgePrefabDocument(prefab))
+        )
+      );
   }
 
   private isForgePrefabDocument(value: unknown): value is ForgePrefabDocument {
