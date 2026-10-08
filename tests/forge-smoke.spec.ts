@@ -555,6 +555,97 @@ Forge.onClick(() => {
 });
 
 
+test("Studio visualizes colliders and round-trips custom prefab hierarchies", async ({ page }) => {
+  await page.goto("/");
+  await page.locator("[data-launch-tab='develop']").click();
+  await page.locator("#new-place").click();
+  await page.locator("#new-place-name").fill("Prefab Physics Place");
+  await page.locator("#confirm-create-place").click();
+
+  const canvas = page.locator("#viewport");
+
+  await page.locator("[data-object='group']").click();
+  await page.locator("#prop-name").fill("Custom Assembly");
+  await page.locator("#prop-name").dispatchEvent("change");
+  await page.locator("#prop-parent").selectOption("");
+  const groupId = await page.locator(".scene-item.selected").getAttribute("data-entity-id");
+  expect(groupId).toBeTruthy();
+
+  await page.locator("[data-primitive='box']").click();
+  await page.locator("#prop-name").fill("Prefab Block");
+  await page.locator("#prop-name").dispatchEvent("change");
+  await page.locator(".scene-item", { hasText: "Prefab Block" }).dragTo(
+    page.locator(".scene-item", { hasText: "Custom Assembly" }).first()
+  );
+
+  await page.locator("[data-primitive='sphere']").click();
+  await page.locator("#prop-name").fill("Prefab Sphere");
+  await page.locator("#prop-name").dispatchEvent("change");
+  await page.locator(".scene-item", { hasText: "Prefab Sphere" }).dragTo(
+    page.locator(".scene-item", { hasText: "Custom Assembly" }).first()
+  );
+
+  await page.locator(".scene-item", { hasText: "Custom Assembly" }).first().click();
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.locator("#export-prefab").click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe("custom-assembly.forge-prefab.json");
+
+  const stream = await download.createReadStream();
+  if (!stream) throw new Error("Prefab download stream unavailable.");
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  const prefabBytes = Buffer.concat(chunks);
+  const exported = JSON.parse(prefabBytes.toString("utf8"));
+
+  expect(exported.format).toBe("forge.prefab");
+  expect(exported.version).toBe(1);
+  expect(exported.name).toBe("Custom Assembly");
+  expect(exported.entities).toHaveLength(3);
+
+  const exportedRoot = exported.entities.find((entity: any) => !entity.parentId);
+  expect(exportedRoot).toBeTruthy();
+  expect(exportedRoot.position).toEqual([0, 0, 0]);
+  expect(
+    exported.entities
+      .filter((entity: any) => entity.id !== exportedRoot.id)
+      .every((entity: any) => entity.parentId === exportedRoot.id)
+  ).toBe(true);
+
+  await page.locator("#prefab-file-input").setInputFiles({
+    name: "custom-assembly.forge-prefab.json",
+    mimeType: "application/json",
+    buffer: prefabBytes
+  });
+
+  await expect(page.locator(".scene-item", { hasText: "Custom Assembly" })).toHaveCount(2);
+  await expect(page.locator(".scene-item", { hasText: "Prefab Block" })).toHaveCount(2);
+  await expect(page.locator(".scene-item", { hasText: "Prefab Sphere" })).toHaveCount(2);
+
+  const importedId = await page.locator(".scene-item.selected").getAttribute("data-entity-id");
+  expect(importedId).toBeTruthy();
+  expect(importedId).not.toBe(groupId);
+  await expect(page.locator("#prop-parent")).toHaveValue(groupId!);
+
+  await page.locator("#collision-debug").click();
+  await expect(canvas).toHaveAttribute("data-collision-debug", "true");
+  await expect.poll(async () => Number(await canvas.getAttribute("data-collision-debug-count")))
+    .toBeGreaterThanOrEqual(5);
+  await expect(page.locator("#collision-debug")).toHaveText("Colliders On");
+
+  await page.locator("#play").click();
+  await expect(page.locator("#mode-badge")).toHaveText("PLAY");
+  await expect(canvas).toHaveAttribute("data-collision-debug", "false");
+
+  await page.locator("#stop").click();
+  await expect(page.locator("#mode-badge")).toHaveText("EDITOR");
+  await expect(canvas).toHaveAttribute("data-collision-debug", "true");
+  await expect(page.locator("#collision-debug")).toHaveText("Colliders On");
+});
+
 test("ModuleScript libraries can be required by gameplay scripts", async ({ page }) => {
   await page.goto("/");
   await page.locator("[data-launch-tab='develop']").click();
