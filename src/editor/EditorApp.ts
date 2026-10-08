@@ -1523,7 +1523,19 @@ export class EditorApp {
             this.log(`Collider auto-fit: ${entity.name}.`);
           });
 
-          actions.appendChild(autoFit);
+          const reset = document.createElement("button");
+          reset.type = "button";
+          reset.dataset.colliderReset = entity.id;
+          reset.textContent = "Reset Proxy";
+          reset.addEventListener("click", () => {
+            this.checkpoint();
+            if (!this.forge.resetBoxCollider(entity.id)) return;
+            this.setSelection(entity.id);
+            this.renderInspector();
+            this.log(`Collider reset: ${entity.name}.`);
+          });
+
+          actions.append(autoFit, reset);
           container.appendChild(actions);
 
           const note = document.createElement("div");
