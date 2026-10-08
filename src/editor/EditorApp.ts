@@ -1549,6 +1549,11 @@ export class EditorApp {
         break;
     }
 
+    if (type === "Trigger") {
+      this.forge.rebuildEntity(entity.id);
+      this.setSelection(entity.id);
+    }
+
     this.renderInspector();
     this.log(`Added ${type} to ${entity.name}.`);
   }
