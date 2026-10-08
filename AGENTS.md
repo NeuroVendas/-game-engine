@@ -24,6 +24,7 @@ Preserve Forge's own identity.
 
 Before major work, read:
 
+- CONTINUE_HERE.md
 - docs/CURRENT_STATE.md
 - docs/PROJECT_HISTORY.md
 - docs/RECOVERY.md
@@ -46,7 +47,7 @@ Prefer scene JSON, semantic IDs, components, scripts, prefabs, stable APIs, and 
 
 ## Current technology
 
-Current package version is 0.5.0 and active Creator Experience development is on forge-v0.5. forge-v0.4 is the historical platform/creator-foundation branch.
+Current package version is 0.5.0. The live continuation branch and stacked PR tip are recorded in `CONTINUE_HERE.md`; read that file instead of assuming `forge-v0.5` is the latest branch. `forge-v0.5` is the historical root of the current v0.5 creator stack, and `forge-v0.4` is the historical platform/creator-foundation branch.
 
 Current stack: TypeScript, Vite, Babylon.js, Supabase, scene JSON, Playwright, and GitHub Actions.
 
@@ -104,3 +105,12 @@ Preserve reversibility.
 Preserve semantic data.
 
 Preserve Forge identity.
+
+
+## Continuation discipline
+
+When continuing an in-progress Forge task, `CONTINUE_HERE.md` is authoritative for the current branch, PR stack, verification state, active regressions and immediate next task.
+
+Do not start a parallel replacement implementation for a system already present in the active stack without first checking the handoff and open PRs.
+
+Before handing the project to another agent, update `CONTINUE_HERE.md` so the repository remains self-describing.
