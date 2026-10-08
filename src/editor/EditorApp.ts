@@ -827,7 +827,9 @@ export class EditorApp {
         type: "point",
         color: "#ffffff",
         intensity: 1.4,
-        range: 24
+        range: 24,
+        castShadows: false,
+        shadowQuality: "medium"
       };
     } else if (objectType === "sound") {
       entity.components.Sound = {
@@ -1824,7 +1826,14 @@ export class EditorApp {
         components.Reactor = { power: 0, temperature: 20 };
         break;
       case "Light":
-        components.Light = { type: "point", color: "#ffffff", intensity: 1.2, range: 20 };
+        components.Light = {
+          type: "point",
+          color: "#ffffff",
+          intensity: 1.2,
+          range: 20,
+          castShadows: false,
+          shadowQuality: "medium"
+        };
         break;
       case "Sound":
         components.Sound = { src: "", volume: 1, loop: false, autoplay: false, spatial: true, maxDistance: 40 };
@@ -2093,6 +2102,18 @@ export class EditorApp {
         this.appendNumberField(container, "Range", component.range ?? 20, 1, (value) => {
           component.range = Math.max(0, value);
         });
+        this.appendCheckboxField(container, "Cast shadows", component.castShadows ?? false, (value) => {
+          component.castShadows = value;
+        });
+        if (component.castShadows) {
+          this.appendSelectField(container, "Shadow quality", component.shadowQuality ?? "medium", [
+            ["low", "Low • 512"],
+            ["medium", "Medium • 1024"],
+            ["high", "High • 2048"]
+          ], (value) => {
+            component.shadowQuality = value as "low" | "medium" | "high";
+          });
+        }
         if (component.type === "spot") {
           this.appendNumberField(container, "Angle °", (component.angle ?? Math.PI / 3) * 180 / Math.PI, 1, (value) => {
             component.angle = Math.max(1, value) * Math.PI / 180;
