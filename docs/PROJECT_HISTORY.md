@@ -781,3 +781,35 @@ Respawn clears horizontal/vertical motion, jump buffer and coyote state before m
 ### Acceptance coverage
 
 Browser Smoke creates a Trigger checkpoint around the blank-scene spawn, saves the checkpoint on ENTER, walks out using real WASD, verifies EXIT, then uses a script key handler to respawn and verifies the player returns to the checkpoint and re-enters the Trigger.
+
+
+## 26. Forge v0.5 — Player health
+
+Forge now includes a reusable runtime health/death loop for the built-in player controller.
+
+### Player service
+
+Creators can configure:
+
+- Max health
+- Auto respawn
+
+These settings serialize with the scene and are applied when Play starts.
+
+### Script API
+
+`Forge.player` now provides:
+
+- `getHealth()`
+- `getMaxHealth()`
+- `isDead()`
+- `damage(amount)`
+- `heal(amount)`
+
+### Death / respawn behavior
+
+Lethal damage clears player motion and enters a dead state. Dead players cannot move. Manual `respawn()` restores full health and returns to the saved checkpoint. When Auto respawn is enabled the same reset occurs automatically after a short delay.
+
+### Acceptance coverage
+
+Browser Smoke configures a 60-health player, applies scripted damage/heal, validates lethal death, performs manual respawn, then enables Auto respawn and validates a second lethal hit returns the player to full health automatically.
