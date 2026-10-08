@@ -626,7 +626,10 @@ export class ForgeEngine {
       skyTextureFileName: environment?.skyTextureFileName,
       ambientColor: environment?.ambientColor ?? "#d9e8f4",
       fogColor: environment?.fogColor ?? "#9fc6df",
-      fogDensity: environment?.fogDensity ?? 0
+      fogDensity: environment?.fogDensity ?? 0,
+      exposure: Math.min(3, Math.max(0.25, environment?.exposure ?? 1)),
+      contrast: Math.min(2, Math.max(0.5, environment?.contrast ?? 1)),
+      toneMapping: environment?.toneMapping === "aces" ? "aces" as const : "standard" as const
     };
 
     if (this.document) this.document.environment = { ...next };
@@ -685,7 +688,16 @@ export class ForgeEngine {
       this.scene.fogMode = Scene.FOGMODE_NONE;
     }
 
+    const image = this.scene.imageProcessingConfiguration;
+    image.exposure = next.exposure;
+    image.contrast = next.contrast;
+    image.toneMappingEnabled = true;
+    image.toneMappingType = next.toneMapping === "aces" ? 1 : 0;
+
     this.canvas.dataset.skybox = next.skyColor;
+    this.canvas.dataset.sceneExposure = next.exposure.toFixed(3);
+    this.canvas.dataset.sceneContrast = next.contrast.toFixed(3);
+    this.canvas.dataset.sceneToneMapping = next.toneMapping;
   }
 
   mountUI(root: HTMLElement, interactive: boolean): void {
