@@ -1505,9 +1505,30 @@ export class EditorApp {
             component.offset = [offset[0], offset[1], value];
           });
 
+          const actions = document.createElement("div");
+          actions.className = "component-actions";
+
+          const autoFit = document.createElement("button");
+          autoFit.type = "button";
+          autoFit.dataset.colliderAutoFit = entity.id;
+          autoFit.textContent = "Auto-fit to Visual";
+          autoFit.addEventListener("click", () => {
+            this.checkpoint();
+            if (!this.forge.fitBoxColliderToVisual(entity.id)) {
+              this.log(`Could not auto-fit collider on ${entity.name}; visual geometry is not ready.`);
+              return;
+            }
+            this.setSelection(entity.id);
+            this.renderInspector();
+            this.log(`Collider auto-fit: ${entity.name}.`);
+          });
+
+          actions.appendChild(autoFit);
+          container.appendChild(actions);
+
           const note = document.createElement("div");
           note.className = "component-note";
-          note.textContent = "Box Proxy uses a separate invisible collision volume. Turn on Colliders to preview it.";
+          note.textContent = "Box Proxy uses a separate invisible collision volume. Auto-fit reads the current visual bounds.";
           container.appendChild(note);
         }
         break;
