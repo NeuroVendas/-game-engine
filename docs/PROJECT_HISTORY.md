@@ -756,3 +756,8 @@ Invalid values are clamped, run speed cannot fall below walk speed and height is
 ### Acceptance coverage
 
 Browser Smoke changes the Player service values, enters Play, verifies the runtime capsule configuration and measures real walking/running velocity through WASD input before returning to Editor.
+
+
+### Proxy reset integration
+
+The complementary **Reset Proxy** action from the parallel physics work was also adopted without replacing Forge's existing proxy implementation. Reset Proxy returns an authored box collider to the entity's canonical size with zero offset, rebuilds the entity safely and preserves imported GLB animation loading across the rebuild.
