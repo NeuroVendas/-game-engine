@@ -146,6 +146,9 @@ export interface ForgeSceneDocument {
     ambientColor?: string;
     fogColor?: string;
     fogDensity?: number;
+    exposure?: number;
+    contrast?: number;
+    toneMapping?: "standard" | "aces";
   };
   entities: ForgeEntity[];
   platform?: {
