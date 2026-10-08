@@ -592,3 +592,42 @@ Forge now has a canonical reusable prefab document:
 - importing while an object is selected parents the prefab root under that object
 
 This is intentionally the first reusable-prefab layer, not yet a full asset-library/package system.
+
+
+## 20. Forge v0.5 — GLB animation clips
+
+Forge's model import path now treats embedded GLB animation clips as a first-class creator/runtime capability instead of ignoring loader AnimationGroups.
+
+### Model authoring
+
+The Model component can configure:
+
+- animation clip
+- autoplay in Play
+- loop
+- playback speed
+
+When an imported model finishes loading, Studio refreshes the selected Model inspector with the discovered clip names. Creators can Preview and Stop the clip directly in Editor mode.
+
+### Runtime ownership
+
+Forge now owns imported AnimationGroups per model entity.
+
+- Babylon's implicit imported-animation playback is stopped after load
+- configured autoplay starts only in Play mode
+- rebuild/delete/document transitions stop and dispose owned groups
+- async model loads dispose their groups if their Forge root disappeared before completion
+- runtime diagnostics expose loaded animation-group counts and clip names
+
+### Script API
+
+Creator scripts can call:
+
+- `Forge.animation.play(idOrName, clipName?)`
+- `Forge.animation.stop(idOrName, clipName?)`
+
+The same Model loop/speed settings are used by runtime playback. Calls made from `onStart` before the async GLB loader has finished are queued per model and replayed as soon as its AnimationGroups become available; `stop` cancels a pending request.
+
+### Acceptance coverage
+
+Browser Smoke generates a real animated GLB fixture with a `Bounce` translation clip and validates clip discovery, Inspector selection, Preview, Stop, autoplay in Play, and clean return to Editor.

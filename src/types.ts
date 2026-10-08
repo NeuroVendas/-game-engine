@@ -77,6 +77,10 @@ export interface ForgeComponents {
   Model?: {
     src: string;
     fileName?: string;
+    animation?: string;
+    animationAutoplay?: boolean;
+    animationLoop?: boolean;
+    animationSpeed?: number;
   };
   Spawn?: {
     enabled: boolean;

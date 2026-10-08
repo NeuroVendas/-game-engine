@@ -65,6 +65,11 @@ interface RuntimeVFXAPI {
   restart(idOrName: string): boolean;
 }
 
+interface RuntimeAnimationAPI {
+  play(idOrName: string, clipName?: string): boolean;
+  stop(idOrName: string, clipName?: string): boolean;
+}
+
 interface ForgeUserAPI {
   readonly self: ForgeNodeAPI;
   readonly parent: ForgeNodeAPI | null;
@@ -95,6 +100,7 @@ interface ForgeUserAPI {
   readonly audio: RuntimeAudioAPI;
   readonly ui: RuntimeUIAPI;
   readonly vfx: RuntimeVFXAPI;
+  readonly animation: RuntimeAnimationAPI;
   readonly time: {
     wait(seconds: number): Promise<void>;
   };
@@ -151,6 +157,10 @@ export class ScriptRuntime {
     stop: () => false,
     restart: () => false
   };
+  private animationApi: RuntimeAnimationAPI = {
+    play: () => false,
+    stop: () => false
+  };
   private worldMutationApi: RuntimeWorldMutationAPI = {
     create: () => null,
     clone: () => null,
@@ -192,6 +202,10 @@ export class ScriptRuntime {
 
   setVFXAPI(api: RuntimeVFXAPI): void {
     this.vfxApi = api;
+  }
+
+  setAnimationAPI(api: RuntimeAnimationAPI): void {
+    this.animationApi = api;
   }
 
   setWorldMutationAPI(api: RuntimeWorldMutationAPI): void {
@@ -383,6 +397,10 @@ export class ScriptRuntime {
         play: (idOrName: string) => this.vfxApi.play(idOrName),
         stop: (idOrName: string) => this.vfxApi.stop(idOrName),
         restart: (idOrName: string) => this.vfxApi.restart(idOrName)
+      },
+      animation: {
+        play: (idOrName: string, clipName?: string) => this.animationApi.play(idOrName, clipName),
+        stop: (idOrName: string, clipName?: string) => this.animationApi.stop(idOrName, clipName)
       },
       time: {
         wait: (seconds: number) => new Promise((resolve) => {
