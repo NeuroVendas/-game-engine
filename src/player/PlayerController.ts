@@ -312,6 +312,10 @@ export class PlayerController {
       this.camera.beta.toFixed(4),
       this.camera.radius.toFixed(3)
     ].join(",");
+    this.forge.canvas.dataset.cameraForward = [
+      forward.x.toFixed(4),
+      forward.z.toFixed(4)
+    ].join(",");
     this.forge.canvas.dataset.cameraRadius = this.camera.radius.toFixed(3);
     this.forge.canvas.dataset.cameraFov = this.camera.fov.toFixed(4);
     this.forge.canvas.dataset.playerMovementState =
@@ -350,6 +354,7 @@ export class PlayerController {
     delete this.forge.canvas.dataset.playerVelocity;
     delete this.forge.canvas.dataset.playerGrounded;
     delete this.forge.canvas.dataset.cameraAngles;
+    delete this.forge.canvas.dataset.cameraForward;
     delete this.forge.canvas.dataset.cameraRadius;
     delete this.forge.canvas.dataset.cameraFov;
     delete this.forge.canvas.dataset.cameraMode;
