@@ -117,6 +117,7 @@ export class EditorApp {
     this.renderTree();
     this.renderInspector();
     this.syncEnvironmentInputs();
+    this.syncPlayerInputs();
     this.forge.mountUI(this.uiRoot, false);
     this.updateHistoryUI();
     this.startLoop();
@@ -131,6 +132,7 @@ export class EditorApp {
     this.renderTree();
     this.renderInspector();
     this.syncEnvironmentInputs();
+    this.syncPlayerInputs();
     this.forge.mountUI(this.uiRoot, false);
     this.updateHistoryUI();
     this.forge.resize();
@@ -286,6 +288,7 @@ export class EditorApp {
       this.forge.document.environment.skyTextureFileName = undefined;
       this.forge.applyEnvironment(this.forge.document.environment);
       this.syncEnvironmentInputs();
+    this.syncPlayerInputs();
       this.log("Sky image cleared. Using color sky.");
     });
     must<HTMLInputElement>("audio-file-input").addEventListener("change", (event) => {
@@ -373,6 +376,10 @@ export class EditorApp {
 
     for (const id of ["env-sky", "env-ambient", "env-fog", "env-fog-density"]) {
       must<HTMLInputElement>(id).addEventListener("change", () => this.applyEnvironmentInputs());
+    }
+
+    for (const id of ["player-collider-height", "player-collider-radius"]) {
+      must<HTMLInputElement>(id).addEventListener("change", () => this.applyPlayerInputs());
     }
 
     document.querySelectorAll<HTMLButtonElement>("[data-environment-preset]").forEach((button) => {
@@ -973,6 +980,7 @@ export class EditorApp {
       environment.skyTextureFileName = file.name;
       this.forge.applyEnvironment(environment);
       this.syncEnvironmentInputs();
+    this.syncPlayerInputs();
       this.log(`Sky image applied: ${file.name}`);
     } catch (error) {
       this.log(`Sky import failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -2322,6 +2330,7 @@ Forge.onUpdate((dt) => {
     };
     this.forge.applyEnvironment(this.forge.document.environment);
     this.syncEnvironmentInputs();
+    this.syncPlayerInputs();
     this.canvas.dataset.environmentPreset = name;
     this.log(`Environment preset: ${name}.`);
   }
@@ -2334,6 +2343,33 @@ Forge.onUpdate((dt) => {
     must<HTMLInputElement>("env-fog-density").value = String(environment.fogDensity ?? 0);
     must<HTMLDivElement>("sky-file-label").textContent =
       environment.skyTextureFileName ? `Sky: ${environment.skyTextureFileName}` : "Color sky";
+  }
+
+  private syncPlayerInputs(): void {
+    const player = this.forge.document.player ?? {};
+    must<HTMLInputElement>("player-collider-height").value = String(player.colliderHeight ?? 3.05);
+    must<HTMLInputElement>("player-collider-radius").value = String(player.colliderRadius ?? 0.45);
+  }
+
+  private applyPlayerInputs(): void {
+    if (this.mode !== "editor") return;
+    this.checkpoint();
+
+    const radiusInput = must<HTMLInputElement>("player-collider-radius");
+    const heightInput = must<HTMLInputElement>("player-collider-height");
+    const radius = Math.min(2, Math.max(0.2, Number(radiusInput.value) || 0.45));
+    const requestedHeight = Math.min(8, Math.max(1, Number(heightInput.value) || 3.05));
+    const height = Math.max(requestedHeight, radius * 2.1);
+
+    this.forge.document.player = {
+      ...(this.forge.document.player ?? {}),
+      colliderHeight: height,
+      colliderRadius: radius
+    };
+    heightInput.value = String(height);
+    radiusInput.value = String(radius);
+    this.canvas.dataset.scenePlayerCollider = `${height.toFixed(3)},${radius.toFixed(3)}`;
+    this.log(`Player collider updated: height ${height.toFixed(2)} • radius ${radius.toFixed(2)}.`);
   }
 
   private applyEnvironmentInputs(): void {
@@ -2417,6 +2453,7 @@ Forge.onUpdate((dt) => {
     this.forge.loadDocument(sceneDocument, false);
     this.forge.mountUI(this.uiRoot, false);
     this.syncEnvironmentInputs();
+    this.syncPlayerInputs();
 
     if (wantedSelection && this.forge.getEntity(wantedSelection)) {
       this.setSelection(wantedSelection);
@@ -2457,7 +2494,11 @@ Forge.onUpdate((dt) => {
       this.forge,
       spawn,
       (message) => this.log(message),
-      (text, locked) => this.setInteractionPrompt(text, locked)
+      (text, locked) => this.setInteractionPrompt(text, locked),
+      {
+        colliderHeight: this.forge.document.player?.colliderHeight,
+        colliderRadius: this.forge.document.player?.colliderRadius
+      }
     );
 
     // Scripts start only after the player and gameplay camera exist.
@@ -2553,6 +2594,7 @@ Forge.onUpdate((dt) => {
     this.forge.loadDocument(sceneDocument, false);
     this.forge.mountUI(this.uiRoot, false);
     this.syncEnvironmentInputs();
+    this.syncPlayerInputs();
     this.renderTree();
     this.renderInspector();
     this.updateHistoryUI();
