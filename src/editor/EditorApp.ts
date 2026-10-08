@@ -2,7 +2,7 @@ import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
 import { GizmoManager } from "@babylonjs/core/Gizmos/gizmoManager";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import type { ForgeComponents, ForgeEntity, ForgePrefabDocument, ForgePrimitive, ForgeSceneDocument, ForgeScriptKind } from "../types";
+import type { ForgeAsset, ForgeAssetKind, ForgeComponents, ForgeEntity, ForgePrefabDocument, ForgePrimitive, ForgeSceneDocument, ForgeScriptKind } from "../types";
 import { ForgeEngine } from "../engine/ForgeEngine";
 import { registerDefaultScripts } from "../engine/defaultScripts";
 import type { ForgePrefabName } from "../engine/prefabs";
@@ -1296,22 +1296,77 @@ export class EditorApp {
     this.renderAssetLibrary();
   }
 
-  private renderAssetLibrary(): void {
-    type AssetKind = "model" | "texture" | "audio";
-    type AssetEntry = { kind: AssetKind; name: string; src: string; fileName?: string };
+  private registerSceneAsset(
+    kind: ForgeAssetKind,
+    name: string,
+    src: string,
+    fileName?: string
+  ): ForgeAsset {
+    const cleanSrc = src.trim();
+    if (!cleanSrc) throw new Error("Asset source is empty.");
 
-    const entries = new Map<string, AssetEntry>();
-    const add = (entry: AssetEntry) => {
-      const src = entry.src.trim();
+    const assets = this.forge.document.assets ?? (this.forge.document.assets = []);
+    const existing = assets.find((asset) => asset.kind === kind && asset.src === cleanSrc);
+    if (existing) {
+      if (fileName && !existing.fileName) existing.fileName = fileName;
+      if (name && !existing.name) existing.name = name;
+      return existing;
+    }
+
+    const base = (fileName ?? name ?? kind)
+      .replace(/\.[^.]+$/, "")
+      .replace(/[^a-zA-Z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .slice(0, 40) || kind;
+    const used = new Set(assets.map((asset) => asset.id));
+    let id = `asset_${kind}_${base}`;
+    let suffix = 2;
+    while (used.has(id)) {
+      id = `asset_${kind}_${base}_${suffix}`;
+      suffix += 1;
+    }
+
+    const asset: ForgeAsset = {
+      id,
+      kind,
+      name: name || fileName || base,
+      src: cleanSrc,
+      fileName
+    };
+    assets.push(asset);
+    return asset;
+  }
+
+  private removeSceneAsset(id: string): void {
+    if (this.mode !== "editor") return;
+    const assets = this.forge.document.assets ?? [];
+    const asset = assets.find((candidate) => candidate.id === id);
+    if (!asset) return;
+
+    this.checkpoint();
+    this.forge.document.assets = assets.filter((candidate) => candidate.id !== id);
+    this.renderAssetLibrary();
+    this.log(`Removed asset from library: ${asset.name}. Existing scene instances were not changed.`);
+  }
+
+  private renderAssetLibrary(): void {
+    const entries = new Map<string, ForgeAsset>();
+    const add = (asset: ForgeAsset) => {
+      const src = asset.src.trim();
       if (!src) return;
-      const key = `${entry.kind}:${src}`;
-      if (!entries.has(key)) entries.set(key, { ...entry, src });
+      const key = `${asset.kind}:${src}`;
+      if (!entries.has(key)) entries.set(key, { ...asset, src });
     };
 
+    for (const asset of this.forge.document.assets ?? []) add(asset);
+
+    // Backward compatibility: legacy scenes created before forge.scene had an
+    // asset registry still expose resources already referenced by entities.
     for (const entity of this.forge.document.entities) {
       const model = entity.components?.Model;
       if (model?.src?.trim()) {
         add({
+          id: "",
           kind: "model",
           name: model.fileName?.replace(/\.glb$/i, "") || entity.name,
           src: model.src,
@@ -1322,6 +1377,7 @@ export class EditorApp {
       const sound = entity.components?.Sound;
       if (sound?.src?.trim()) {
         add({
+          id: "",
           kind: "audio",
           name: sound.fileName?.replace(/\.[^.]+$/, "") || entity.name,
           src: sound.src,
@@ -1331,6 +1387,7 @@ export class EditorApp {
 
       if (entity.texture?.trim()) {
         add({
+          id: "",
           kind: "texture",
           name: entity.textureFileName?.replace(/\.[^.]+$/, "") || `${entity.name} Texture`,
           src: entity.texture,
@@ -1341,6 +1398,7 @@ export class EditorApp {
 
     this.assetLibrary.replaceChildren();
     this.canvas.dataset.assetLibraryCount = String(entries.size);
+    this.canvas.dataset.assetRegistryCount = String(this.forge.document.assets?.length ?? 0);
 
     if (entries.size === 0) {
       const empty = document.createElement("div");
@@ -1354,6 +1412,7 @@ export class EditorApp {
       const row = document.createElement("div");
       row.className = "asset-library-item";
       row.dataset.assetKind = entry.kind;
+      if (entry.id) row.dataset.assetId = entry.id;
 
       const meta = document.createElement("div");
       meta.className = "asset-library-meta";
@@ -1366,20 +1425,32 @@ export class EditorApp {
       type.textContent = entry.kind;
       meta.append(name, type);
 
+      const actions = document.createElement("div");
+      actions.className = "asset-library-actions";
+
       const action = document.createElement("button");
       action.type = "button";
       action.textContent = entry.kind === "texture" ? "Apply" : "Insert";
       action.dataset.assetAction = entry.kind;
       action.addEventListener("click", () => this.reuseSceneAsset(entry));
+      actions.appendChild(action);
 
-      row.append(meta, action);
+      if (entry.id) {
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.textContent = "×";
+        remove.title = "Remove from Asset Library";
+        remove.dataset.assetRemove = entry.id;
+        remove.addEventListener("click", () => this.removeSceneAsset(entry.id));
+        actions.appendChild(remove);
+      }
+
+      row.append(meta, actions);
       this.assetLibrary.appendChild(row);
     }
   }
 
-  private reuseSceneAsset(
-    asset: { kind: "model" | "texture" | "audio"; name: string; src: string; fileName?: string }
-  ): void {
+  private reuseSceneAsset(asset: ForgeAsset): void {
     if (this.mode !== "editor") return;
 
     if (asset.kind === "texture") {
