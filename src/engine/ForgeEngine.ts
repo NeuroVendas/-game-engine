@@ -521,6 +521,24 @@ export class ForgeEngine {
     return true;
   }
 
+  resetBoxCollider(id: string): boolean {
+    const entity = this.getEntity(id);
+    const collider = entity?.components?.Collider;
+    if (!entity || !collider || (collider.mode ?? "mesh") !== "box") return false;
+
+    const fallback = entity.size ?? [1, 1, 1];
+    collider.size = [
+      Math.max(0.05, Math.abs(fallback[0] || 1)),
+      Math.max(0.05, Math.abs(fallback[1] || 1)),
+      Math.max(0.05, Math.abs(fallback[2] || 1))
+    ];
+    collider.offset = [0, 0, 0];
+
+    this.rebuildEntity(id);
+    this.canvas.dataset.lastColliderReset = id;
+    return true;
+  }
+
   syncEntityFromMesh(id: string): void {
     const entity = this.getEntity(id);
     const mesh = this.getMesh(id);
