@@ -670,3 +670,31 @@ Diagnostics expose proxy count/IDs for regression coverage.
 ### Acceptance coverage
 
 Browser Smoke configures a custom Box Proxy, exports it inside a Forge prefab, imports a second copy and verifies that mode, size, offset and distinct proxy instances survive the round-trip. The animated-GLB fixture also enables Box Proxy and validates Auto-fit against the imported triangle's visual bounds before continuing animation playback tests.
+
+
+## 22. Forge v0.5 — Scene player collider authoring
+
+Player collision tuning moved from hard-coded controller constants into canonical scene data.
+
+### Scene settings
+
+`forge.scene.player` can now store:
+
+- `colliderHeight`
+- `colliderRadius`
+
+Studio exposes both values under **Players** in the Explorer-side authoring controls. Defaults preserve the existing collision envelope: height `2.96`, radius `0.52`.
+
+### Runtime behavior
+
+Play mode reads the scene values when creating the Forge Classic player.
+
+- the Babylon movement ellipsoid uses the configured radius and half-height
+- the invisible capsule follows the same authored dimensions
+- safe-ground snapping derives its vertical offset from the collider height
+- the grounded ray origin derives from the same half-height rather than fixed constants
+- runtime diagnostics expose the effective collider height/radius
+
+### Acceptance coverage
+
+Browser Smoke edits both settings in Studio, enters Play and verifies that the PlayerController receives the authored values.
