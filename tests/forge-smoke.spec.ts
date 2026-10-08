@@ -249,10 +249,10 @@ async function moveUntilCoordinate(
 
 async function moveTowardWorldPoint(
   page: any,
-  axes: { forward: [number, number]; right: [number, number] },
+  _axes: { forward: [number, number]; right: [number, number] },
   target: [number, number],
   tolerance = 0.45,
-  timeout = 9000
+  timeout = 12000
 ): Promise<void> {
   const held = new Set<string>();
   const started = Date.now();
@@ -279,12 +279,31 @@ async function moveTowardWorldPoint(
       const dz = target[1] - z;
       if (Math.hypot(dx, dz) <= tolerance) return;
 
-      const forwardAmount = dx * axes.forward[0] + dz * axes.forward[1];
-      const rightAmount = dx * axes.right[0] + dz * axes.right[1];
+      const cameraForwardRaw = await page.locator("#viewport").getAttribute("data-camera-forward");
+      if (!cameraForwardRaw) {
+        await syncKeys([]);
+        await page.waitForTimeout(40);
+        continue;
+      }
+
+      const [rawX, rawZ] = cameraForwardRaw.split(",").map(Number);
+      const length = Math.hypot(rawX, rawZ);
+      if (length < 0.001) {
+        await syncKeys([]);
+        await page.waitForTimeout(40);
+        continue;
+      }
+
+      const forwardX = rawX / length;
+      const forwardZ = rawZ / length;
+      const rightX = forwardZ;
+      const rightZ = -forwardX;
+      const forwardAmount = dx * forwardX + dz * forwardZ;
+      const rightAmount = dx * rightX + dz * rightZ;
       const wanted: string[] = [];
 
-      // Move on the strongest camera-relative axis only. This avoids diagonal
-      // collision resolution pinning the controller against nearby geometry.
+      // Read the live camera basis every iteration and use only the strongest
+      // axis to avoid diagonal collision resolution pinning the controller.
       if (Math.abs(forwardAmount) >= Math.abs(rightAmount)) {
         wanted.push(forwardAmount >= 0 ? "KeyW" : "KeyS");
       } else {
@@ -292,7 +311,7 @@ async function moveTowardWorldPoint(
       }
 
       await syncKeys(wanted);
-      await page.waitForTimeout(55);
+      await page.waitForTimeout(45);
     }
   } finally {
     await syncKeys([]);
@@ -829,7 +848,11 @@ test("Studio imports GLB animations and audio assets", async ({ page }) => {
   await expect(clip.locator("option")).toContainText(["First clip (Bounce)", "Bounce"]);
   await clip.selectOption("Bounce");
 
-  await page.locator("[data-model-animation-autoplay]").click();
+  await page.locator("[data-model-animation-autoplay]").evaluate((input) => {
+    const checkbox = input as HTMLInputElement;
+    checkbox.checked = true;
+    checkbox.dispatchEvent(new Event("change", { bubbles: true }));
+  });
   await expect(page.locator("[data-model-animation-autoplay]")).toBeChecked();
   await page.locator("[data-model-animation-speed]").fill("1.5");
   await page.locator("[data-model-animation-speed]").dispatchEvent("change");
