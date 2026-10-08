@@ -1493,28 +1493,34 @@ export class EditorApp {
           component.offset = offset;
 
           this.appendNumberField(container, "Size X", size[0], 0.1, (value) => {
-            component.size = [Math.max(0.05, Math.abs(value)), size[1], size[2]];
+            const current = component.size ?? size;
+            component.size = [Math.max(0.05, Math.abs(value)), current[1], current[2]];
             this.forge.refreshEntityCollider(entity.id);
           }, false);
           this.appendNumberField(container, "Size Y", size[1], 0.1, (value) => {
-            component.size = [size[0], Math.max(0.05, Math.abs(value)), size[2]];
+            const current = component.size ?? size;
+            component.size = [current[0], Math.max(0.05, Math.abs(value)), current[2]];
             this.forge.refreshEntityCollider(entity.id);
           }, false);
           this.appendNumberField(container, "Size Z", size[2], 0.1, (value) => {
-            component.size = [size[0], size[1], Math.max(0.05, Math.abs(value))];
+            const current = component.size ?? size;
+            component.size = [current[0], current[1], Math.max(0.05, Math.abs(value))];
             this.forge.refreshEntityCollider(entity.id);
           }, false);
 
           this.appendNumberField(container, "Offset X", offset[0], 0.1, (value) => {
-            component.offset = [value, offset[1], offset[2]];
+            const current = component.offset ?? offset;
+            component.offset = [value, current[1], current[2]];
             this.forge.refreshEntityCollider(entity.id);
           }, false);
           this.appendNumberField(container, "Offset Y", offset[1], 0.1, (value) => {
-            component.offset = [offset[0], value, offset[2]];
+            const current = component.offset ?? offset;
+            component.offset = [current[0], value, current[2]];
             this.forge.refreshEntityCollider(entity.id);
           }, false);
           this.appendNumberField(container, "Offset Z", offset[2], 0.1, (value) => {
-            component.offset = [offset[0], offset[1], value];
+            const current = component.offset ?? offset;
+            component.offset = [current[0], current[1], value];
             this.forge.refreshEntityCollider(entity.id);
           }, false);
 
