@@ -230,6 +230,34 @@ button { cursor: pointer; }
 .create-palette button { min-height:30px; text-align:left; border:1px solid #9ca8b1; background:linear-gradient(#fff,#dfe5e9); color:#27343d; font-size:11px; }
 .create-palette button:hover { background:#d7e6f0; }
 .palette-label { grid-column:1/-1; padding-top:5px; color:#687984; font-size:9px; text-transform:uppercase; letter-spacing:.08em; }
+#save-project-prefab { grid-column:1/-1; }
+.project-prefab-list {
+  grid-column:1/-1;
+  display:grid;
+  gap:4px;
+  min-width:0;
+}
+.project-prefab-list .component-note {
+  background:#eef2f4;
+  color:#6c7a84;
+  border-color:#b3bdc4;
+}
+.project-prefab-row {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 30px;
+  gap:4px;
+}
+.project-prefab-row button {
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.project-prefab-row .project-prefab-delete {
+  padding:0;
+  text-align:center;
+  color:#8b3131;
+}
 .service-tree { padding:6px; font-size:12px; }
 .service { padding:5px; color:#32424d; }
 .service.muted { color:#7a8790; }
