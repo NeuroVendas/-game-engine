@@ -378,7 +378,13 @@ export class EditorApp {
       must<HTMLInputElement>(id).addEventListener("change", () => this.applyEnvironmentInputs());
     }
 
-    for (const id of ["player-collider-height", "player-collider-radius"]) {
+    for (const id of [
+      "player-collider-height",
+      "player-collider-radius",
+      "player-walk-speed",
+      "player-run-speed",
+      "player-jump-power"
+    ]) {
       must<HTMLInputElement>(id).addEventListener("change", () => this.applyPlayerInputs());
     }
 
@@ -2349,6 +2355,9 @@ Forge.onUpdate((dt) => {
     const player = this.forge.document.player ?? {};
     must<HTMLInputElement>("player-collider-height").value = String(player.colliderHeight ?? 3.05);
     must<HTMLInputElement>("player-collider-radius").value = String(player.colliderRadius ?? 0.45);
+    must<HTMLInputElement>("player-walk-speed").value = String(player.walkSpeed ?? 5.05);
+    must<HTMLInputElement>("player-run-speed").value = String(player.runSpeed ?? 8);
+    must<HTMLInputElement>("player-jump-power").value = String(player.jumpPower ?? 7.9);
   }
 
   private applyPlayerInputs(): void {
@@ -2357,19 +2366,36 @@ Forge.onUpdate((dt) => {
 
     const radiusInput = must<HTMLInputElement>("player-collider-radius");
     const heightInput = must<HTMLInputElement>("player-collider-height");
+    const walkInput = must<HTMLInputElement>("player-walk-speed");
+    const runInput = must<HTMLInputElement>("player-run-speed");
+    const jumpInput = must<HTMLInputElement>("player-jump-power");
+
     const radius = Math.min(2, Math.max(0.2, Number(radiusInput.value) || 0.45));
     const requestedHeight = Math.min(8, Math.max(1, Number(heightInput.value) || 3.05));
     const height = Math.max(requestedHeight, radius * 2.1);
+    const walkSpeed = Math.min(20, Math.max(1, Number(walkInput.value) || 5.05));
+    const runSpeed = Math.min(30, Math.max(walkSpeed, Number(runInput.value) || 8));
+    const jumpPower = Math.min(20, Math.max(1, Number(jumpInput.value) || 7.9));
 
     this.forge.document.player = {
       ...(this.forge.document.player ?? {}),
       colliderHeight: height,
-      colliderRadius: radius
+      colliderRadius: radius,
+      walkSpeed,
+      runSpeed,
+      jumpPower
     };
     heightInput.value = String(height);
     radiusInput.value = String(radius);
+    walkInput.value = String(walkSpeed);
+    runInput.value = String(runSpeed);
+    jumpInput.value = String(jumpPower);
     this.canvas.dataset.scenePlayerCollider = `${height.toFixed(3)},${radius.toFixed(3)}`;
-    this.log(`Player collider updated: height ${height.toFixed(2)} • radius ${radius.toFixed(2)}.`);
+    this.canvas.dataset.scenePlayerMovement = `${walkSpeed.toFixed(3)},${runSpeed.toFixed(3)},${jumpPower.toFixed(3)}`;
+    this.log(
+      `Player settings updated: collider ${height.toFixed(2)} × ${radius.toFixed(2)} • `
+      + `walk ${walkSpeed.toFixed(2)} • run ${runSpeed.toFixed(2)} • jump ${jumpPower.toFixed(2)}.`
+    );
   }
 
   private applyEnvironmentInputs(): void {
@@ -2497,7 +2523,10 @@ Forge.onUpdate((dt) => {
       (text, locked) => this.setInteractionPrompt(text, locked),
       {
         colliderHeight: this.forge.document.player?.colliderHeight,
-        colliderRadius: this.forge.document.player?.colliderRadius
+        colliderRadius: this.forge.document.player?.colliderRadius,
+        walkSpeed: this.forge.document.player?.walkSpeed,
+        runSpeed: this.forge.document.player?.runSpeed,
+        jumpPower: this.forge.document.player?.jumpPower
       }
     );
 
