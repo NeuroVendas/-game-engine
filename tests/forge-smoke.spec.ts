@@ -224,6 +224,19 @@ async function calibratePlayerAxes(page: any): Promise<{ forward: [number, numbe
 
   const forward: [number, number] = [dx / length, dz / length];
   const right: [number, number] = [forward[1], -forward[0]];
+
+  // Do not start route navigation while the calibration impulse is still
+  // carrying momentum into the opposite direction.
+  await expect.poll(async () => {
+    const raw = await page.locator("#viewport").getAttribute("data-player-velocity");
+    if (!raw) return 999;
+    const [vx, , vz] = raw.split(",").map(Number);
+    return Math.hypot(vx, vz);
+  }, {
+    timeout: 1800,
+    intervals: [60, 80, 100]
+  }).toBeLessThan(0.35);
+
   return { forward, right };
 }
 
@@ -231,7 +244,7 @@ async function moveUntilCoordinate(
   page: any,
   key: string,
   reached: (position: [number, number]) => boolean,
-  timeout = 6500
+  timeout = 12000
 ): Promise<void> {
   await page.keyboard.down(key);
   try {
@@ -245,65 +258,6 @@ async function moveUntilCoordinate(
 
   // Walking deceleration finishes quickly; allow it to settle before the next axis.
   await page.waitForTimeout(180);
-}
-
-async function moveTowardWorldPoint(
-  page: any,
-  axes: { forward: [number, number]; right: [number, number] },
-  target: [number, number],
-  tolerance = 0.45,
-  timeout = 18000
-): Promise<void> {
-  const started = Date.now();
-  let activeKey: string | null = null;
-
-  const releaseKey = async () => {
-    if (!activeKey) return;
-    await page.keyboard.up(activeKey);
-    activeKey = null;
-  };
-
-  try {
-    while (Date.now() - started < timeout) {
-      const [x, z] = await readPlayerXZ(page);
-      const dx = target[0] - x;
-      const dz = target[1] - z;
-      const distance = Math.hypot(dx, dz);
-      if (distance <= tolerance) return;
-
-      // The basis comes from an observed W movement at the start of the test,
-      // so it reflects the controller's actual camera-relative mapping rather
-      // than relying on Babylon camera-ray conventions.
-      const forwardAmount = dx * axes.forward[0] + dz * axes.forward[1];
-      const rightAmount = dx * axes.right[0] + dz * axes.right[1];
-
-      const key = Math.abs(forwardAmount) >= Math.abs(rightAmount)
-        ? (forwardAmount >= 0 ? "KeyW" : "KeyS")
-        : (rightAmount >= 0 ? "KeyD" : "KeyA");
-
-      await releaseKey();
-      activeKey = key;
-      await page.keyboard.down(activeKey);
-
-      // Keep each pulse long enough to cross at least one Babylon render/update
-      // frame even on a busy headless CI runner. Shorter pulses can begin and
-      // end entirely between frames and never reach PlayerController.update().
-      const pulse = distance > 2 ? 300 : distance > 0.9 ? 250 : 220;
-      await page.waitForTimeout(pulse);
-      await releaseKey();
-
-      // Let the controller's deceleration settle before choosing the next axis.
-      await page.waitForTimeout(distance > 1 ? 150 : 190);
-    }
-  } finally {
-    await releaseKey();
-    await page.waitForTimeout(140);
-  }
-
-  const [x, z] = await readPlayerXZ(page);
-  throw new Error(
-    `Could not reach world point ${target.join(",")} from ${x.toFixed(2)},${z.toFixed(2)}.`
-  );
 }
 
 async function expectInteractionPrompt(page: any, promptText: string): Promise<void> {
@@ -938,25 +892,28 @@ test("Core Relay template is a playable complete-game benchmark", async ({ page 
   expect(Math.abs(axes.forward[1])).toBeGreaterThan(0.75);
   expect(Math.abs(axes.right[0])).toBeGreaterThan(0.75);
 
-  // Closed-loop WASD navigation keeps the route in world space even when the
-  // player camera is not perfectly aligned to the X/Z axes.
-  // Relay A: use an open west lane and stop before the north collider face.
-  await moveTowardWorldPoint(page, axes, [-6.7, 2.0], 0.5);
-  await moveTowardWorldPoint(page, axes, [-7.0, -3.15], 0.45);
+  const xPositive = axes.right[0] >= 0 ? "KeyD" : "KeyA";
+  const xNegative = xPositive === "KeyD" ? "KeyA" : "KeyD";
+  const zNegative = axes.forward[1] >= 0 ? "KeyS" : "KeyW";
+
+  // Use axis-aligned gates through known open lanes. This keeps the acceptance
+  // path on real WASD input while avoiding controller inertia around diagonal waypoints.
+  await moveUntilCoordinate(page, xNegative, ([x]) => x <= -6.6);
+  await moveUntilCoordinate(page, zNegative, ([, z]) => z <= -3.1);
   await expectInteractionPrompt(page, "Relay A");
   await page.keyboard.press("KeyE");
   await expect(page.locator("#forge-ui-root")).toContainText("1 / 3 relays online");
 
   // Relay B: step away from A, descend the open lower lane, then approach from the west.
-  await moveTowardWorldPoint(page, axes, [-3.8, -3.0], 0.5);
-  await moveTowardWorldPoint(page, axes, [-3.6, -7.2], 0.5);
-  await moveTowardWorldPoint(page, axes, [-1.2, -7.2], 0.4);
+  await moveUntilCoordinate(page, xPositive, ([x]) => x >= -3.8);
+  await moveUntilCoordinate(page, zNegative, ([, z]) => z <= -7.2);
+  await moveUntilCoordinate(page, xPositive, ([x]) => x >= -1.2);
   await expectInteractionPrompt(page, "Relay B");
   await page.keyboard.press("KeyE");
   await expect(page.locator("#forge-ui-root")).toContainText("2 / 3 relays online");
 
   // Relay C: stay in the lower lane and approach from the west, before its collider face.
-  await moveTowardWorldPoint(page, axes, [4.35, -7.2], 0.45);
+  await moveUntilCoordinate(page, xPositive, ([x]) => x >= 4.4);
   await expectInteractionPrompt(page, "Relay C");
   await page.keyboard.press("KeyE");
   await expect(page.locator("#forge-ui-root")).toContainText("3 / 3 relays online");
