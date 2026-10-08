@@ -1220,14 +1220,16 @@ input, textarea { cursor: text; }
 
 
 /* ===== Forge Studio v0.5 creator tools ===== */
-.lighting-editor {
+.lighting-editor,
+.player-editor {
   display: grid;
   gap: 5px;
   padding: 7px 8px 9px 18px;
   border-bottom: 1px solid #46535d;
   background: #202a31;
 }
-.lighting-editor label {
+.lighting-editor label,
+.player-editor label {
   display: grid;
   grid-template-columns: 1fr 76px;
   align-items: center;
@@ -1243,7 +1245,8 @@ input, textarea { cursor: text; }
   border: 1px solid #65727b;
   background: #11171c;
 }
-.lighting-editor input[type="number"] {
+.lighting-editor input[type="number"],
+.player-editor input[type="number"] {
   width: 76px;
   padding: 4px;
   border: 1px solid #65727b;
