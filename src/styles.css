@@ -270,6 +270,19 @@ legend { color:#61717b; font-size:10px; }
 .component-actions button {
   min-height: 26px;
 }
+.component-checkbox-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 6px;
+}
+.component-checkbox-row label {
+  margin: 0;
+}
+.component-checkbox-row input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+}
 .component-add { display:grid; grid-template-columns:1fr auto; gap:5px; margin-top:7px; padding-top:7px; border-top:1px solid #aab5bd; }
 
 .interaction-prompt {
