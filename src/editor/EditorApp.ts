@@ -2354,11 +2354,48 @@ Forge.onUpdate((dt) => {
   private isForgePrefabDocument(value: unknown): value is ForgePrefabDocument {
     if (!value || typeof value !== "object") return false;
     const candidate = value as Partial<ForgePrefabDocument>;
-    return candidate.format === "forge.prefab"
-      && candidate.version === 1
-      && typeof candidate.name === "string"
-      && Array.isArray(candidate.entities)
-      && candidate.entities.length > 0;
+    if (
+      candidate.format !== "forge.prefab"
+      || candidate.version !== 1
+      || typeof candidate.name !== "string"
+      || !Array.isArray(candidate.entities)
+      || candidate.entities.length === 0
+    ) return false;
+
+    const validKinds = new Set<ForgePrimitive>([
+      "box", "wedge", "sphere", "capsule", "cylinder", "ground", "empty", "model"
+    ]);
+    const ids = new Set<string>();
+
+    for (const entity of candidate.entities) {
+      if (
+        !entity
+        || typeof entity !== "object"
+        || typeof entity.id !== "string"
+        || !entity.id
+        || ids.has(entity.id)
+        || typeof entity.name !== "string"
+        || !validKinds.has(entity.kind)
+        || !Array.isArray(entity.position)
+        || entity.position.length !== 3
+        || entity.position.some((coordinate) => !Number.isFinite(coordinate))
+      ) return false;
+      ids.add(entity.id);
+    }
+
+    for (const entity of candidate.entities) {
+      if (entity.parentId && !ids.has(entity.parentId)) return false;
+
+      const seen = new Set<string>([entity.id]);
+      let parentId = entity.parentId;
+      while (parentId) {
+        if (seen.has(parentId)) return false;
+        seen.add(parentId);
+        parentId = candidate.entities.find((item) => item.id === parentId)?.parentId;
+      }
+    }
+
+    return true;
   }
 
   private exportScene(): void {
