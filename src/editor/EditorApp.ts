@@ -117,6 +117,7 @@ export class EditorApp {
     this.renderTree();
     this.renderInspector();
     this.syncEnvironmentInputs();
+    this.syncPlayerInputs();
     this.forge.mountUI(this.uiRoot, false);
     this.updateHistoryUI();
     this.startLoop();
@@ -131,6 +132,7 @@ export class EditorApp {
     this.renderTree();
     this.renderInspector();
     this.syncEnvironmentInputs();
+    this.syncPlayerInputs();
     this.forge.mountUI(this.uiRoot, false);
     this.updateHistoryUI();
     this.forge.resize();
@@ -373,6 +375,10 @@ export class EditorApp {
 
     for (const id of ["env-sky", "env-ambient", "env-fog", "env-fog-density"]) {
       must<HTMLInputElement>(id).addEventListener("change", () => this.applyEnvironmentInputs());
+    }
+
+    for (const id of ["player-collider-height", "player-collider-radius"]) {
+      must<HTMLInputElement>(id).addEventListener("change", () => this.applyPlayerInputs());
     }
 
     document.querySelectorAll<HTMLButtonElement>("[data-environment-preset]").forEach((button) => {
@@ -2336,6 +2342,32 @@ Forge.onUpdate((dt) => {
       environment.skyTextureFileName ? `Sky: ${environment.skyTextureFileName}` : "Color sky";
   }
 
+  private syncPlayerInputs(): void {
+    const player = this.forge.document.player ?? {};
+    must<HTMLInputElement>("player-collider-height").value = String(player.colliderHeight ?? 2.96);
+    must<HTMLInputElement>("player-collider-radius").value = String(player.colliderRadius ?? 0.52);
+  }
+
+  private applyPlayerInputs(): void {
+    if (this.mode !== "editor") return;
+
+    const heightInput = must<HTMLInputElement>("player-collider-height");
+    const radiusInput = must<HTMLInputElement>("player-collider-radius");
+    const colliderHeight = Math.min(6, Math.max(1.2, Number(heightInput.value) || 2.96));
+    const colliderRadius = Math.min(1.5, Math.max(0.2, Number(radiusInput.value) || 0.52));
+
+    this.checkpoint();
+    this.forge.document.player = {
+      ...(this.forge.document.player ?? {}),
+      colliderHeight,
+      colliderRadius
+    };
+
+    heightInput.value = String(colliderHeight);
+    radiusInput.value = String(colliderRadius);
+    this.log(`Player collider updated • height ${colliderHeight.toFixed(2)} • radius ${colliderRadius.toFixed(2)}.`);
+  }
+
   private applyEnvironmentInputs(): void {
     if (this.mode !== "editor") return;
     this.checkpoint();
@@ -2417,6 +2449,7 @@ Forge.onUpdate((dt) => {
     this.forge.loadDocument(sceneDocument, false);
     this.forge.mountUI(this.uiRoot, false);
     this.syncEnvironmentInputs();
+    this.syncPlayerInputs();
 
     if (wantedSelection && this.forge.getEntity(wantedSelection)) {
       this.setSelection(wantedSelection);
@@ -2553,6 +2586,7 @@ Forge.onUpdate((dt) => {
     this.forge.loadDocument(sceneDocument, false);
     this.forge.mountUI(this.uiRoot, false);
     this.syncEnvironmentInputs();
+    this.syncPlayerInputs();
     this.renderTree();
     this.renderInspector();
     this.updateHistoryUI();
