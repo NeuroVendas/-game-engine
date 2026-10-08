@@ -124,7 +124,10 @@ export class PlayerController {
     this.maxHealth = Math.min(100000, Math.max(1, Number(config.maxHealth) || 100));
     this.health = this.maxHealth;
     this.autoRespawn = config.autoRespawn ?? true;
-    this.killY = Math.min(100000, Math.max(-100000, Number(config.killY) || -100));
+    const requestedKillY = Number(config.killY);
+    this.killY = Number.isFinite(requestedKillY)
+      ? Math.min(100000, Math.max(-100000, requestedKillY))
+      : -100;
 
     this.body = MeshBuilder.CreateCapsule("__player-collider", {
       height: this.colliderHeight,
