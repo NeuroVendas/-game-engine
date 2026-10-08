@@ -894,7 +894,9 @@ export class EditorApp {
       });
 
       this.checkpoint();
-      const entity = this.forge.createPrimitive("model", file.name.replace(/\.glb$/i, "") || "Model");
+      const modelName = file.name.replace(/\.glb$/i, "") || "Model";
+      this.registerSceneAsset("model", modelName, dataUrl, file.name);
+      const entity = this.forge.createPrimitive("model", modelName);
       entity.parentId = this.selectedId ?? undefined;
       entity.components = {
         Model: {
@@ -929,16 +931,8 @@ export class EditorApp {
     if (!file) return;
 
     try {
-      if (!this.selectedId) {
-        throw new Error("Select a visible object before importing a texture.");
-      }
       if (file.size > 4 * 1024 * 1024) {
         throw new Error("Texture is larger than 4 MB. Use a hosted texture URL for larger images.");
-      }
-
-      const entity = this.forge.getEntity(this.selectedId);
-      if (!entity || entity.kind === "empty" || entity.kind === "model") {
-        throw new Error("Textures can be applied to Forge primitive objects.");
       }
 
       const dataUrl = await new Promise<string>((resolve, reject) => {
@@ -949,13 +943,22 @@ export class EditorApp {
       });
 
       this.checkpoint();
-      entity.texture = dataUrl;
-      entity.textureFileName = file.name;
-      this.forge.rebuildEntity(entity.id);
-      this.setSelection(entity.id);
-      this.renderInspector();
-      this.renderAssetLibrary();
-      this.log(`Applied texture ${file.name} to ${entity.name}.`);
+      const textureName = file.name.replace(/\.[^.]+$/, "") || "Texture";
+      this.registerSceneAsset("texture", textureName, dataUrl, file.name);
+
+      const entity = this.selectedId ? this.forge.getEntity(this.selectedId) : undefined;
+      if (entity && entity.kind !== "empty" && entity.kind !== "model") {
+        entity.texture = dataUrl;
+        entity.textureFileName = file.name;
+        this.forge.rebuildEntity(entity.id);
+        this.setSelection(entity.id);
+        this.renderInspector();
+        this.renderAssetLibrary();
+        this.log(`Imported texture ${file.name} and applied it to ${entity.name}.`);
+      } else {
+        this.renderAssetLibrary();
+        this.log(`Imported texture asset ${file.name}. Select a primitive and use Apply from Assets.`);
+      }
     } catch (error) {
       this.log(`Texture import failed: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
@@ -1017,7 +1020,9 @@ export class EditorApp {
       });
 
       this.checkpoint();
-      const entity = this.forge.createPrimitive("empty", file.name.replace(/\.[^.]+$/, "") || "Sound");
+      const audioName = file.name.replace(/\.[^.]+$/, "") || "Sound";
+      this.registerSceneAsset("audio", audioName, dataUrl, file.name);
+      const entity = this.forge.createPrimitive("empty", audioName);
       entity.parentId = this.selectedId ?? undefined;
       entity.components = {
         Sound: {
