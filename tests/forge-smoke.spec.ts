@@ -825,6 +825,19 @@ test("Studio imports GLB animations and audio assets", async ({ page }) => {
   await expect(page.getByLabel("Collider size Z")).toHaveValue("0.05");
   await expect(page.getByLabel("Collider offset X")).toHaveValue("0.5");
   await expect(page.getByLabel("Collider offset Y")).toHaveValue("0.5");
+
+  await page.locator("[data-collider-reset]").click();
+  await expect(canvas).toHaveAttribute("data-last-collider-reset", /animated-triangle/);
+  await expect(page.getByLabel("Collider size X")).toHaveValue("1");
+  await expect(page.getByLabel("Collider size Y")).toHaveValue("1");
+  await expect(page.getByLabel("Collider size Z")).toHaveValue("1");
+  await expect(page.getByLabel("Collider offset X")).toHaveValue("0");
+  await expect(page.getByLabel("Collider offset Y")).toHaveValue("0");
+
+  await page.locator("[data-collider-auto-fit]").click();
+  await expect(page.getByLabel("Collider size Z")).toHaveValue("0.05");
+  await expect(page.getByLabel("Collider offset X")).toHaveValue("0.5");
+  await expect(page.getByLabel("Collider offset Y")).toHaveValue("0.5");
   await expect(page.locator("#component-list")).toContainText("Clips: Bounce");
 
   const clip = page.locator("[data-model-animation-clip]");
