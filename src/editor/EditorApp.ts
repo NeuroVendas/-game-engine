@@ -49,6 +49,12 @@ export class EditorApp {
   private moveSnap = 1;
   private rotationSnap = 15;
   private scaleSnap = 0.1;
+  private editorClipboard: {
+    entities: ForgeEntity[];
+    sourceParentId?: string;
+    sourceName: string;
+    pasteCount: number;
+  } | null = null;
 
   private readonly tree = must<HTMLDivElement>("scene-tree");
   private readonly status = must<HTMLSpanElement>("status");
@@ -506,6 +512,16 @@ export class EditorApp {
         if (control && event.code === "KeyD") {
           event.preventDefault();
           this.duplicateSelected();
+          return;
+        }
+        if (control && event.code === "KeyC") {
+          event.preventDefault();
+          this.copySelected();
+          return;
+        }
+        if (control && event.code === "KeyV") {
+          event.preventDefault();
+          this.pasteClipboard();
           return;
         }
 
@@ -1272,18 +1288,104 @@ export class EditorApp {
     }
   }
 
+  private captureSelectionHierarchy(rootId: string): {
+    entities: ForgeEntity[];
+    sourceParentId?: string;
+    sourceName: string;
+  } | null {
+    const subtree = this.collectEntitySubtree(rootId);
+    if (subtree.length === 0) return null;
+
+    for (const entity of subtree) this.forge.syncEntityFromMesh(entity.id);
+
+    const entities = structuredClone(subtree);
+    const root = entities[0];
+    return {
+      entities,
+      sourceParentId: root.parentId,
+      sourceName: root.name
+    };
+  }
+
+  private instantiateClipboardHierarchy(
+    source: { entities: ForgeEntity[]; sourceParentId?: string; sourceName: string },
+    copyIndex: number,
+    renameRoot: boolean
+  ): ForgeEntity | null {
+    const templates = structuredClone(source.entities);
+    const root = templates[0];
+
+    if (renameRoot) {
+      root.name = copyIndex <= 1
+        ? `${source.sourceName} Copy`
+        : `${source.sourceName} Copy ${copyIndex}`;
+    }
+
+    const step = Math.max(1, copyIndex);
+    root.position = [
+      root.position[0] + 2 * step,
+      root.position[1],
+      root.position[2] + 2 * step
+    ];
+
+    const parentId = source.sourceParentId && this.forge.getEntity(source.sourceParentId)
+      ? source.sourceParentId
+      : undefined;
+
+    return this.forge.instantiatePrefab(templates, parentId);
+  }
+
+  private copySelected(): void {
+    if (this.mode !== "editor" || !this.selectedId) return;
+
+    const captured = this.captureSelectionHierarchy(this.selectedId);
+    if (!captured) return;
+
+    this.editorClipboard = {
+      ...captured,
+      pasteCount: 0
+    };
+    this.canvas.dataset.editorClipboardCount = String(captured.entities.length);
+    this.canvas.dataset.editorClipboardRoot = captured.sourceName;
+    this.log(`Copied ${captured.sourceName} • ${captured.entities.length} object(s).`);
+  }
+
+  private pasteClipboard(): void {
+    if (this.mode !== "editor" || !this.editorClipboard) {
+      if (this.mode === "editor") this.log("Clipboard is empty.");
+      return;
+    }
+
+    this.checkpoint();
+    this.editorClipboard.pasteCount += 1;
+    const root = this.instantiateClipboardHierarchy(
+      this.editorClipboard,
+      this.editorClipboard.pasteCount,
+      true
+    );
+    if (!root) return;
+
+    this.renderTree();
+    this.selectEntity(root.id);
+    this.log(
+      `Pasted ${this.editorClipboard.sourceName} • `
+      + `${this.editorClipboard.entities.length} object(s).`
+    );
+  }
+
   private duplicateSelected(): void {
     if (this.mode !== "editor" || !this.selectedId) return;
 
-    this.forge.syncEntityFromMesh(this.selectedId);
-    this.checkpoint();
+    const captured = this.captureSelectionHierarchy(this.selectedId);
+    if (!captured) return;
 
-    const copy = this.forge.duplicateEntity(this.selectedId);
+    this.checkpoint();
+    const copy = this.instantiateClipboardHierarchy(captured, 1, true);
     if (!copy) return;
 
     this.renderTree();
     this.selectEntity(copy.id);
-    this.log(`Duplicated ${copy.name}`);
+    this.log(`Duplicated ${captured.sourceName} • ${captured.entities.length} object(s).`);
   }
 
   private deleteSelected(): void {

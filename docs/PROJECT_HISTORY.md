@@ -860,3 +860,22 @@ Because it uses the shared death system:
 ### Acceptance coverage
 
 Browser Smoke sets Kill Y to 0, uses a gameplay script to move the player below the world, confirms `fall-death`, then validates automatic checkpoint respawn and full health restoration.
+
+
+## 29. Forge v0.5 — Hierarchy clipboard
+
+Studio duplication and clipboard operations now treat a selected group/object as a reusable hierarchy rather than copying only the root entity.
+
+### Editor shortcuts
+
+- `Ctrl+D` duplicates the selected root and all descendants.
+- `Ctrl+C` captures the selected hierarchy in the in-memory editor clipboard.
+- `Ctrl+V` instantiates a fresh copy with remapped entity IDs.
+
+Internal parenting is preserved, custom script IDs continue through the existing prefab-remapping path and the copied root keeps the original external parent when that parent still exists.
+
+Each paste offsets the root in local X/Z so new copies are visible instead of stacking exactly on top of the source.
+
+### Acceptance coverage
+
+Browser Smoke builds a Group + child Block, verifies hierarchy-aware Ctrl+D, performs repeated Ctrl+C/Ctrl+V, exports the scene and validates fresh IDs, preserved parent-child relationships and distinct copy positions.
