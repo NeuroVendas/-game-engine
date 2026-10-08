@@ -221,6 +221,7 @@ export class ForgeEngine {
     for (const id of [...this.entityParticles.keys()]) this.disposeEntityParticle(id);
     for (const id of [...this.entityAnimations.keys()]) this.disposeEntityAnimations(id);
     this.entityColliderProxies.clear();
+    this.refreshColliderProxyDiagnostics();
 
     // Detach Forge entity roots first so disposing one parent cannot accidentally
     // dispose another tracked Forge entity before its own cleanup pass.
@@ -1191,6 +1192,25 @@ export class ForgeEngine {
     if (!proxy) return;
     this.entityColliderProxies.delete(id);
     if (!proxy.isDisposed()) proxy.dispose(false, true);
+    this.refreshColliderProxyDiagnostics();
+  }
+
+  private refreshColliderProxyDiagnostics(): void {
+    this.canvas.dataset.colliderProxyCount = String(this.entityColliderProxies.size);
+    this.canvas.dataset.colliderProxies = [...this.entityColliderProxies.entries()]
+      .map(([id, proxy]) => {
+        const size = proxy.getBoundingInfo().boundingBox.extendSize.scale(2);
+        return [
+          id,
+          size.x.toFixed(2),
+          size.y.toFixed(2),
+          size.z.toFixed(2),
+          proxy.position.x.toFixed(2),
+          proxy.position.y.toFixed(2),
+          proxy.position.z.toFixed(2)
+        ].join(":");
+      })
+      .join(",");
   }
 
   private configureCollider(entity: ForgeEntity, root: Mesh): void {
@@ -1232,6 +1252,7 @@ export class ForgeEngine {
     proxy.material = material;
 
     this.entityColliderProxies.set(entity.id, proxy);
+    this.refreshColliderProxyDiagnostics();
   }
 
   private applyColliderDebug(entity: ForgeEntity, root: Mesh): boolean {
