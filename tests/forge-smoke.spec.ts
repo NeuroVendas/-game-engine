@@ -1364,6 +1364,71 @@ test("Studio quick actions expose toolbar clipboard and F2 rename", async ({ pag
   expect(await canvas.getAttribute("data-runtime-error")).toBeNull();
 });
 
+test("Drop to Ground places selected hierarchies on the surface below", async ({ page }) => {
+  await page.goto("/");
+  await page.locator("[data-launch-tab='develop']").click();
+  await page.locator("#new-place").click();
+  await page.locator("#new-place-name").fill("Drop To Ground Place");
+  await page.locator("#confirm-create-place").click();
+
+  const canvas = page.locator("#viewport");
+
+  await page.locator("[data-object='group']").click();
+  await page.locator("#prop-name").fill("Drop Group");
+  await page.locator("#prop-name").dispatchEvent("change");
+  const groupId = await page.locator(".scene-item.selected").getAttribute("data-entity-id");
+  expect(groupId).toBeTruthy();
+
+  await page.locator("[data-primitive='box']").click();
+  await page.locator("#prop-name").fill("Drop Child");
+  await page.locator("#prop-name").dispatchEvent("change");
+  await page.locator("#pos-x").fill("0");
+  await page.locator("#pos-x").dispatchEvent("change");
+  await page.locator("#pos-y").fill("1");
+  await page.locator("#pos-y").dispatchEvent("change");
+  await page.locator("#pos-z").fill("0");
+  await page.locator("#pos-z").dispatchEvent("change");
+
+  await page.locator(".scene-item", { hasText: "Drop Child" }).dragTo(
+    page.locator(".scene-item", { hasText: "Drop Group" }).first()
+  );
+
+  await page.locator(".scene-item", { hasText: "Drop Group" }).first().click();
+  await page.locator("#pos-y").fill("8");
+  await page.locator("#pos-y").dispatchEvent("change");
+  const before = Number(await page.locator("#pos-y").inputValue());
+  expect(before).toBeGreaterThan(7);
+
+  await page.keyboard.press("End");
+  await expect(canvas).toHaveAttribute("data-last-drop-to-ground", new RegExp(`^${groupId}:`));
+  const after = Number(await page.locator("#pos-y").inputValue());
+  expect(after).toBeLessThan(before - 5);
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.locator("#export-scene").click();
+  const download = await downloadPromise;
+  const stream = await download.createReadStream();
+  if (!stream) throw new Error("Scene download stream unavailable.");
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  const scene = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  const group = scene.entities.find((entity: any) => entity.id === groupId);
+  const child = scene.entities.find((entity: any) => entity.name === "Drop Child");
+
+  expect(group).toBeTruthy();
+  expect(child?.parentId).toBe(groupId);
+  expect(group.position[1]).toBeLessThan(before - 5);
+
+  await page.locator("#drop-selected").click();
+  await expect(page.locator("#output-log")).toContainText("Dropped Drop Group to ground");
+  const afterAgain = Number(await page.locator("#pos-y").inputValue());
+  expect(Math.abs(afterAgain - after)).toBeLessThan(0.2);
+
+  expect(await canvas.getAttribute("data-runtime-error")).toBeNull();
+});
+
 test("ModuleScript libraries can be required by gameplay scripts", async ({ page }) => {
   await page.goto("/");
   await page.locator("[data-launch-tab='develop']").click();
