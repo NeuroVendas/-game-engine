@@ -1232,6 +1232,89 @@ Forge.onKeyDown((code) => {
   expect(await canvas.getAttribute("data-runtime-error")).toBeNull();
 });
 
+test("Studio clipboard duplicates and pastes full hierarchies with fresh IDs", async ({ page }) => {
+  await page.goto("/");
+  await page.locator("[data-launch-tab='develop']").click();
+  await page.locator("#new-place").click();
+  await page.locator("#new-place-name").fill("Clipboard Hierarchy Place");
+  await page.locator("#confirm-create-place").click();
+
+  const canvas = page.locator("#viewport");
+
+  await page.locator("[data-object='group']").click();
+  await page.locator("#prop-name").fill("Clipboard Assembly");
+  await page.locator("#prop-name").dispatchEvent("change");
+  const originalRootId = await page.locator(".scene-item.selected").getAttribute("data-entity-id");
+  expect(originalRootId).toBeTruthy();
+
+  await page.locator("[data-primitive='box']").click();
+  await page.locator("#prop-name").fill("Clipboard Block");
+  await page.locator("#prop-name").dispatchEvent("change");
+  const originalBlockId = await page.locator(".scene-item.selected").getAttribute("data-entity-id");
+  expect(originalBlockId).toBeTruthy();
+
+  await page.locator(".scene-item", { hasText: "Clipboard Block" }).dragTo(
+    page.locator(".scene-item", { hasText: "Clipboard Assembly" }).first()
+  );
+
+  await page.locator(".scene-item", { hasText: "Clipboard Assembly" }).first().click();
+  await page.keyboard.press("Control+KeyD");
+
+  await expect(page.locator(".scene-item", { hasText: "Clipboard Assembly" })).toHaveCount(2);
+  await expect(page.locator(".scene-item", { hasText: "Clipboard Block" })).toHaveCount(2);
+  const duplicateRootId = await page.locator(".scene-item.selected").getAttribute("data-entity-id");
+  expect(duplicateRootId).toBeTruthy();
+  expect(duplicateRootId).not.toBe(originalRootId);
+
+  await page.locator(".scene-item", { hasText: "Clipboard Assembly" }).first().click();
+  await page.keyboard.press("Control+KeyC");
+  await expect(canvas).toHaveAttribute("data-editor-clipboard-count", "2");
+  await expect(canvas).toHaveAttribute("data-editor-clipboard-root", "Clipboard Assembly");
+
+  await page.keyboard.press("Control+KeyV");
+  await expect(page.locator(".scene-item", { hasText: "Clipboard Assembly" })).toHaveCount(3);
+  await expect(page.locator(".scene-item", { hasText: "Clipboard Block" })).toHaveCount(3);
+
+  const firstPasteId = await page.locator(".scene-item.selected").getAttribute("data-entity-id");
+  expect(firstPasteId).toBeTruthy();
+  expect(firstPasteId).not.toBe(originalRootId);
+  expect(firstPasteId).not.toBe(duplicateRootId);
+
+  await page.keyboard.press("Control+KeyV");
+  await expect(page.locator(".scene-item", { hasText: "Clipboard Assembly" })).toHaveCount(4);
+  await expect(page.locator(".scene-item", { hasText: "Clipboard Block" })).toHaveCount(4);
+
+  const secondPasteId = await page.locator(".scene-item.selected").getAttribute("data-entity-id");
+  expect(secondPasteId).toBeTruthy();
+  expect(secondPasteId).not.toBe(firstPasteId);
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.locator("#export-scene").click();
+  const download = await downloadPromise;
+  const stream = await download.createReadStream();
+  if (!stream) throw new Error("Scene download stream unavailable.");
+
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  const scene = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  const roots = scene.entities.filter((entity: any) =>
+    entity.name === "Clipboard Assembly"
+    || entity.name.startsWith("Clipboard Assembly Copy")
+  );
+  const blocks = scene.entities.filter((entity: any) => entity.name === "Clipboard Block");
+
+  expect(roots).toHaveLength(4);
+  expect(blocks).toHaveLength(4);
+  expect(new Set(roots.map((entity: any) => entity.id)).size).toBe(4);
+  expect(new Set(blocks.map((entity: any) => entity.id)).size).toBe(4);
+  expect(blocks.every((entity: any) => roots.some((root: any) => root.id === entity.parentId))).toBe(true);
+
+  const positions = roots.map((entity: any) => entity.position.join(","));
+  expect(new Set(positions).size).toBeGreaterThanOrEqual(3);
+});
+
 test("ModuleScript libraries can be required by gameplay scripts", async ({ page }) => {
   await page.goto("/");
   await page.locator("[data-launch-tab='develop']").click();
