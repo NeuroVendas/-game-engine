@@ -649,6 +649,19 @@ test("Studio visualizes colliders and round-trips custom prefab hierarchies", as
     page.locator(".scene-item", { hasText: "Custom Assembly" }).first()
   );
 
+  await page.locator(".scene-item", { hasText: "Prefab Block" }).first().click();
+  await page.getByLabel("Collision mode").selectOption("box");
+  await page.getByLabel("Collider size X").fill("3.5");
+  await page.getByLabel("Collider size X").dispatchEvent("change");
+  await page.getByLabel("Collider size Y").fill("2.5");
+  await page.getByLabel("Collider size Y").dispatchEvent("change");
+  await page.getByLabel("Collider size Z").fill("1.25");
+  await page.getByLabel("Collider size Z").dispatchEvent("change");
+  await page.getByLabel("Collider offset X").fill("0.4");
+  await page.getByLabel("Collider offset X").dispatchEvent("change");
+
+  await expect(canvas).toHaveAttribute("data-collider-proxy-count", "1");
+
   await page.locator("[data-primitive='sphere']").click();
   await page.locator("#prop-name").fill("Prefab Sphere");
   await page.locator("#prop-name").dispatchEvent("change");
@@ -677,6 +690,14 @@ test("Studio visualizes colliders and round-trips custom prefab hierarchies", as
   expect(exported.name).toBe("Custom Assembly");
   expect(exported.entities).toHaveLength(3);
 
+  const exportedBlock = exported.entities.find((entity: any) => entity.name === "Prefab Block");
+  expect(exportedBlock?.components?.Collider).toMatchObject({
+    enabled: true,
+    mode: "box",
+    size: [3.5, 2.5, 1.25],
+    offset: [0.4, 0, 0]
+  });
+
   const exportedRoot = exported.entities.find((entity: any) => !entity.parentId);
   expect(exportedRoot).toBeTruthy();
   expect(exportedRoot.position).toEqual([0, 0, 0]);
@@ -695,6 +716,7 @@ test("Studio visualizes colliders and round-trips custom prefab hierarchies", as
   await expect(page.locator(".scene-item", { hasText: "Custom Assembly" })).toHaveCount(2);
   await expect(page.locator(".scene-item", { hasText: "Prefab Block" })).toHaveCount(2);
   await expect(page.locator(".scene-item", { hasText: "Prefab Sphere" })).toHaveCount(2);
+  await expect(canvas).toHaveAttribute("data-collider-proxy-count", "2");
 
   const importedId = await page.locator(".scene-item.selected").getAttribute("data-entity-id");
   expect(importedId).toBeTruthy();
