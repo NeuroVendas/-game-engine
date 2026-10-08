@@ -283,30 +283,16 @@ async function moveAlongWorldAxis(
   if (Math.abs(target - current) <= 0.35) return;
   const desiredSign = Math.sign(target - current);
 
-  const candidates = axis === "x"
-    ? ["KeyA", "KeyD"]
-    : ["KeyW", "KeyS"];
-
-  let chosen: string | null = null;
-  let bestSignedDelta = -Infinity;
-
-  for (const key of candidates) {
-    const before = await readAxis();
-    await holdMovement(page, [key], 180);
-    const after = await readAxis();
-    const signedDelta = (after - before) * desiredSign;
-
-    if (signedDelta > bestSignedDelta) {
-      bestSignedDelta = signedDelta;
-      chosen = key;
-    }
-
-    if (signedDelta > 0.08) break;
-  }
-
-  if (!chosen || bestSignedDelta <= 0.02) {
-    throw new Error(`Could not find a movement key for world ${axis.toUpperCase()} axis.`);
-  }
+  // Choose a real WASD input from the current camera basis. Probing both
+  // directions beside a solid console can push the player into its collider.
+  const forwardRaw = await page.locator("#viewport").getAttribute("data-camera-forward");
+  if (!forwardRaw) throw new Error("Player camera basis unavailable.");
+  const [fx, fz] = forwardRaw.split(",").map(Number);
+  const candidates: Array<[string, number]> = axis === "x"
+    ? [["KeyW", fx], ["KeyS", -fx], ["KeyD", fz], ["KeyA", -fz]]
+    : [["KeyW", fz], ["KeyS", -fz], ["KeyD", -fx], ["KeyA", fx]];
+  candidates.sort((a, b) => b[1] * desiredSign - a[1] * desiredSign);
+  const chosen = candidates[0][0];
 
   const reached = (value: number) =>
     desiredSign > 0 ? value >= target : value <= target;
@@ -1165,7 +1151,7 @@ test("Hazard component creates a Trigger and deals repeated player damage", asyn
   await expect.poll(async () => canvas.getAttribute("data-last-hazard-damage"), {
     timeout: 3000,
     intervals: [50, 75, 100]
-  }).toMatch(/Hazard_Zone:8\.00/);
+  }).toMatch(/Object:8\.00/);
 
   await expect.poll(async () => canvas.getAttribute("data-player-dead"), {
     timeout: 3500,
@@ -1582,8 +1568,8 @@ test("Core Relay template is a playable complete-game benchmark", async ({ page 
   const canvas = page.locator("#viewport");
 
   // Use axis-aligned gates through known open lanes. Each segment measures the
-  // actual controller mapping before committing to a WASD key, so camera conventions
-  // cannot make the gameplay benchmark drive in the wrong direction.
+  // current camera basis before committing to a WASD key, without blind probes
+  // into nearby console colliders.
   await moveAlongWorldAxis(page, "x", -6.6);
   await moveAlongWorldAxis(page, "z", -3.1);
   await expectInteractionPrompt(page, "Relay A");

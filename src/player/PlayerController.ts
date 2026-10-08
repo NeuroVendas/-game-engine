@@ -77,6 +77,7 @@ export class PlayerController {
 
       this.avatarRoot.setEnabled(!this.firstPerson);
       this.forge.canvas.dataset.cameraMode = this.firstPerson ? "first-person" : "third-person";
+      this.forge.canvas.dataset.cameraRadius = this.camera.radius.toFixed(3);
       this.log(this.firstPerson ? "First-person camera." : "Third-person camera.");
     }
 

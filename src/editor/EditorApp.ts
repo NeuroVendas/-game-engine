@@ -1798,10 +1798,11 @@ export class EditorApp {
       case "Collider": {
         const component = components.Collider;
         if (!component) return;
+        const refresh = () => this.forge.refreshCollider(entity.id);
 
         this.appendCheckboxField(container, "Enabled", component.enabled, (value) => {
           component.enabled = value;
-        });
+        }, refresh);
 
         this.appendSelectField(container, "Mode", component.mode ?? "mesh", [
           ["mesh", "Mesh"],
@@ -1812,7 +1813,7 @@ export class EditorApp {
             component.size ??= entity.size ? [...entity.size] : [2, 2, 2];
             component.offset ??= [0, 0, 0];
           }
-        });
+        }, refresh);
 
         if ((component.mode ?? "mesh") === "box") {
           const size = component.size ?? (entity.size ? [...entity.size] : [2, 2, 2]);
@@ -1822,23 +1823,23 @@ export class EditorApp {
 
           this.appendNumberField(container, "Size X", size[0], 0.1, (value) => {
             component.size = [Math.max(0.05, Math.abs(value)), size[1], size[2]];
-          });
+          }, refresh);
           this.appendNumberField(container, "Size Y", size[1], 0.1, (value) => {
             component.size = [size[0], Math.max(0.05, Math.abs(value)), size[2]];
-          });
+          }, refresh);
           this.appendNumberField(container, "Size Z", size[2], 0.1, (value) => {
             component.size = [size[0], size[1], Math.max(0.05, Math.abs(value))];
-          });
+          }, refresh);
 
           this.appendNumberField(container, "Offset X", offset[0], 0.1, (value) => {
             component.offset = [value, offset[1], offset[2]];
-          });
+          }, refresh);
           this.appendNumberField(container, "Offset Y", offset[1], 0.1, (value) => {
             component.offset = [offset[0], value, offset[2]];
-          });
+          }, refresh);
           this.appendNumberField(container, "Offset Z", offset[2], 0.1, (value) => {
             component.offset = [offset[0], offset[1], value];
-          });
+          }, refresh);
 
           const actions = document.createElement("div");
           actions.className = "component-actions";
@@ -2459,7 +2460,8 @@ Forge.onUpdate((dt) => {
     labelText: string,
     value: number,
     step: number,
-    apply: (value: number) => void
+    apply: (value: number) => void,
+    refresh?: () => void
   ): void {
     const label = document.createElement("label");
     label.textContent = labelText;
@@ -2479,7 +2481,8 @@ Forge.onUpdate((dt) => {
       apply(next);
       if (this.selectedId) {
         const selectedId = this.selectedId;
-        this.forge.rebuildEntity(selectedId);
+        if (refresh) refresh();
+        else this.forge.rebuildEntity(selectedId);
         this.setSelection(selectedId);
       }
       this.renderInspector();
@@ -2494,7 +2497,8 @@ Forge.onUpdate((dt) => {
     container: HTMLDivElement,
     labelText: string,
     value: boolean,
-    apply: (value: boolean) => void
+    apply: (value: boolean) => void,
+    refresh?: () => void
   ): void {
     const label = document.createElement("label");
     label.textContent = labelText;
@@ -2507,7 +2511,8 @@ Forge.onUpdate((dt) => {
       apply(input.checked);
       if (this.selectedId) {
         const selectedId = this.selectedId;
-        this.forge.rebuildEntity(selectedId);
+        if (refresh) refresh();
+        else this.forge.rebuildEntity(selectedId);
         this.setSelection(selectedId);
       }
       this.renderInspector();
@@ -2523,7 +2528,8 @@ Forge.onUpdate((dt) => {
     labelText: string,
     value: string,
     options: Array<[string, string]>,
-    apply: (value: string) => void
+    apply: (value: string) => void,
+    refresh?: () => void
   ): void {
     const label = document.createElement("label");
     label.textContent = labelText;
@@ -2542,7 +2548,8 @@ Forge.onUpdate((dt) => {
       apply(select.value);
       if (this.selectedId) {
         const selectedId = this.selectedId;
-        this.forge.rebuildEntity(selectedId);
+        if (refresh) refresh();
+        else this.forge.rebuildEntity(selectedId);
         this.setSelection(selectedId);
       }
       this.renderInspector();
