@@ -559,6 +559,7 @@
             <div class="component-add">
               <select id="component-type">
                 <option value="Collider">Collider</option>
+                <option value="Trigger">Trigger Volume</option>
                 <option value="Interactable">Interactable</option>
                 <option value="Door">Door</option>
                 <option value="Clearance">Clearance</option>
@@ -616,6 +617,8 @@
           <code>Forge.world.create("box", "Crate")</code>
           <code>Forge.world.clone("Crate")</code>
           <code>Forge.world.destroy("Crate")</code>
+          <code>Forge.onTriggerEnter((actor) =&gt; {})</code>
+          <code>Forge.onTriggerExit((actor) =&gt; {})</code>
           <code>Forge.onStart(fn)</code>
           <code>Forge.onUpdate(fn)</code>
           <code>Forge.onInteract(fn)</code>
