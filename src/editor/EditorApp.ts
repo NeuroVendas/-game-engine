@@ -1510,6 +1510,26 @@ export class EditorApp {
             component.offset = [offset[0], offset[1], value];
           });
 
+          const actions = document.createElement("div");
+          actions.className = "component-actions";
+
+          const fit = document.createElement("button");
+          fit.type = "button";
+          fit.dataset.colliderFit = entity.id;
+          fit.textContent = "Fit Proxy To Visual";
+          fit.addEventListener("click", () => {
+            this.checkpoint();
+            if (!this.forge.fitBoxColliderToVisual(entity.id)) {
+              this.log(`Could not fit collider: visual geometry for ${entity.name} is not loaded yet.`);
+              return;
+            }
+            this.setSelection(entity.id);
+            this.renderInspector();
+            this.log(`Collider fitted to visual bounds: ${entity.name}.`);
+          });
+          actions.appendChild(fit);
+          container.appendChild(actions);
+
           const note = document.createElement("div");
           note.className = "component-note";
           note.textContent = "Box Proxy uses this local volume for collisions instead of the visible mesh.";
