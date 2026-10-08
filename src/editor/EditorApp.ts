@@ -1471,7 +1471,8 @@ export class EditorApp {
 
         this.appendCheckboxField(container, "Enabled", component.enabled, (value) => {
           component.enabled = value;
-        });
+          this.forge.refreshEntityCollider(entity.id);
+        }, false);
 
         this.appendSelectField(container, "Mode", component.mode ?? "mesh", [
           ["mesh", "Mesh"],
@@ -1482,7 +1483,8 @@ export class EditorApp {
             component.size ??= entity.size ? [...entity.size] : [2, 2, 2];
             component.offset ??= [0, 0, 0];
           }
-        });
+          this.forge.refreshEntityCollider(entity.id);
+        }, false);
 
         if ((component.mode ?? "mesh") === "box") {
           const size = component.size ?? (entity.size ? [...entity.size] : [2, 2, 2]);
@@ -1492,23 +1494,29 @@ export class EditorApp {
 
           this.appendNumberField(container, "Size X", size[0], 0.1, (value) => {
             component.size = [Math.max(0.05, Math.abs(value)), size[1], size[2]];
-          });
+            this.forge.refreshEntityCollider(entity.id);
+          }, false);
           this.appendNumberField(container, "Size Y", size[1], 0.1, (value) => {
             component.size = [size[0], Math.max(0.05, Math.abs(value)), size[2]];
-          });
+            this.forge.refreshEntityCollider(entity.id);
+          }, false);
           this.appendNumberField(container, "Size Z", size[2], 0.1, (value) => {
             component.size = [size[0], size[1], Math.max(0.05, Math.abs(value))];
-          });
+            this.forge.refreshEntityCollider(entity.id);
+          }, false);
 
           this.appendNumberField(container, "Offset X", offset[0], 0.1, (value) => {
             component.offset = [value, offset[1], offset[2]];
-          });
+            this.forge.refreshEntityCollider(entity.id);
+          }, false);
           this.appendNumberField(container, "Offset Y", offset[1], 0.1, (value) => {
             component.offset = [offset[0], value, offset[2]];
-          });
+            this.forge.refreshEntityCollider(entity.id);
+          }, false);
           this.appendNumberField(container, "Offset Z", offset[2], 0.1, (value) => {
             component.offset = [offset[0], offset[1], value];
-          });
+            this.forge.refreshEntityCollider(entity.id);
+          }, false);
 
           const actions = document.createElement("div");
           actions.className = "component-actions";
@@ -2055,7 +2063,8 @@ Forge.onUpdate((dt) => {
     labelText: string,
     value: number,
     step: number,
-    apply: (value: number) => void
+    apply: (value: number) => void,
+    rebuildEntity = true
   ): void {
     const label = document.createElement("label");
     label.textContent = labelText;
@@ -2072,7 +2081,7 @@ Forge.onUpdate((dt) => {
       }
       this.checkpoint();
       apply(next);
-      if (this.selectedId) {
+      if (rebuildEntity && this.selectedId) {
         const selectedId = this.selectedId;
         this.forge.rebuildEntity(selectedId);
         this.setSelection(selectedId);
@@ -2089,7 +2098,8 @@ Forge.onUpdate((dt) => {
     container: HTMLDivElement,
     labelText: string,
     value: boolean,
-    apply: (value: boolean) => void
+    apply: (value: boolean) => void,
+    rebuildEntity = true
   ): void {
     const label = document.createElement("label");
     label.textContent = labelText;
@@ -2100,7 +2110,7 @@ Forge.onUpdate((dt) => {
     input.addEventListener("change", () => {
       this.checkpoint();
       apply(input.checked);
-      if (this.selectedId) {
+      if (rebuildEntity && this.selectedId) {
         const selectedId = this.selectedId;
         this.forge.rebuildEntity(selectedId);
         this.setSelection(selectedId);
@@ -2118,7 +2128,8 @@ Forge.onUpdate((dt) => {
     labelText: string,
     value: string,
     options: Array<[string, string]>,
-    apply: (value: string) => void
+    apply: (value: string) => void,
+    rebuildEntity = true
   ): void {
     const label = document.createElement("label");
     label.textContent = labelText;
@@ -2135,7 +2146,7 @@ Forge.onUpdate((dt) => {
     select.addEventListener("change", () => {
       this.checkpoint();
       apply(select.value);
-      if (this.selectedId) {
+      if (rebuildEntity && this.selectedId) {
         const selectedId = this.selectedId;
         this.forge.rebuildEntity(selectedId);
         this.setSelection(selectedId);
