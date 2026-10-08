@@ -97,6 +97,7 @@ Implemented:
 - collider mode selection: visible Mesh collision or editable Box Proxy collision
 - Box Proxy local size and offset authoring, including prefab persistence
 - automatic Box Proxy fitting to the current visible geometry, including imported GLB bounds
+- Reset Proxy action to restore entity-default size and zero local offset
 - custom prefab export/import for selected hierarchies (`.forge-prefab.json`)
 - project-scoped Prefab Library stored inside the Forge scene document
 - one-click Save Selection / Insert / Delete for reusable project prefabs
