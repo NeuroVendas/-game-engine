@@ -116,6 +116,7 @@ export interface ForgeAsset {
   name: string;
   src: string;
   fileName?: string;
+  folder?: string;
 }
 
 export interface ForgePrefabDocument {
