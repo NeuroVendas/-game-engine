@@ -123,6 +123,7 @@ export class EditorApp {
     this.renderInspector();
     this.syncEnvironmentInputs();
     this.syncPlayerInputs();
+    this.syncRenderingInputs();
     this.forge.mountUI(this.uiRoot, false);
     this.updateHistoryUI();
     this.startLoop();
@@ -138,6 +139,7 @@ export class EditorApp {
     this.renderInspector();
     this.syncEnvironmentInputs();
     this.syncPlayerInputs();
+    this.syncRenderingInputs();
     this.forge.mountUI(this.uiRoot, false);
     this.updateHistoryUI();
     this.forge.resize();
@@ -405,6 +407,8 @@ export class EditorApp {
     ]) {
       must<HTMLInputElement>(id).addEventListener("change", () => this.applyPlayerInputs());
     }
+    must<HTMLSelectElement>("render-quality")
+      .addEventListener("change", () => this.applyRenderingInputs());
 
     document.querySelectorAll<HTMLButtonElement>("[data-environment-preset]").forEach((button) => {
       button.addEventListener("click", () => {
@@ -2951,6 +2955,22 @@ Forge.onUpdate((dt) => {
       environment.skyTextureFileName ? `Sky: ${environment.skyTextureFileName}` : "Color sky";
   }
 
+  private syncRenderingInputs(): void {
+    must<HTMLSelectElement>("render-quality").value =
+      this.forge.document.rendering?.quality ?? "medium";
+  }
+
+  private applyRenderingInputs(): void {
+    if (this.mode !== "editor") return;
+    this.checkpoint();
+
+    const value = must<HTMLSelectElement>("render-quality").value;
+    const quality = value === "low" || value === "high" ? value : "medium";
+    this.forge.document.rendering = { quality };
+    this.forge.applyRenderingSettings(this.forge.document.rendering);
+    this.log(`Rendering quality: ${quality}.`);
+  }
+
   private syncPlayerInputs(): void {
     const player = this.forge.document.player ?? {};
     must<HTMLInputElement>("player-collider-height").value = String(player.colliderHeight ?? 3.05);
@@ -3097,6 +3117,7 @@ Forge.onUpdate((dt) => {
     this.forge.mountUI(this.uiRoot, false);
     this.syncEnvironmentInputs();
     this.syncPlayerInputs();
+    this.syncRenderingInputs();
 
     if (wantedSelection && this.forge.getEntity(wantedSelection)) {
       this.setSelection(wantedSelection);
@@ -3241,6 +3262,7 @@ Forge.onUpdate((dt) => {
     this.forge.mountUI(this.uiRoot, false);
     this.syncEnvironmentInputs();
     this.syncPlayerInputs();
+    this.syncRenderingInputs();
     this.renderTree();
     this.renderInspector();
     this.updateHistoryUI();
