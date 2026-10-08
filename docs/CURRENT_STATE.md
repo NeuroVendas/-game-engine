@@ -443,8 +443,12 @@ Creator workflow:
 - Model: Insert a new model instance without uploading again.
 - Audio: Insert another Sound object from the same source.
 - Texture: Apply the stored texture to the selected Forge primitive.
-- Search by asset/file name.
-- Filter by Models / Textures / Audio.
+- Rename assets without renaming existing scene instances.
+- Organize assets into lightweight folders.
+- Search by asset/file/folder name.
+- Filter by Models / Textures / Audio and folder.
+- Drag Model/Audio assets into Workspace or onto a parent object.
+- Drag Texture assets directly onto a Forge primitive.
 - Remove from the Asset Library without modifying existing scene instances.
 
 Texture imports no longer require a selected object. With a compatible primitive selected, Forge imports and applies it; otherwise it is stored for later use.
