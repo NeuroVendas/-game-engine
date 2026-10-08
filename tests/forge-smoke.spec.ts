@@ -572,6 +572,26 @@ test("studio v0.5 supports resize, sky, UI, typed scripts, sound and lights", as
   await expect(page.locator("#prop-parent")).toHaveValue("");
   await page.locator("#prop-material").selectOption("metal");
   await expect(page.locator("#prop-material")).toHaveValue("metal");
+  await expect(page.locator("#prop-roughness")).toHaveValue("0.22");
+  await expect(page.locator("#prop-metallic")).toHaveValue("0.88");
+  await expect(canvas).toHaveAttribute("data-last-surface", /:0\.220:0\.880:1\.000:1\.000$/);
+
+  await page.locator("#prop-roughness").fill("0.35");
+  await page.locator("#prop-roughness").dispatchEvent("change");
+  await page.locator("#prop-metallic").fill("0.65");
+  await page.locator("#prop-metallic").dispatchEvent("change");
+  await page.locator("#prop-texture-u").fill("2");
+  await page.locator("#prop-texture-u").dispatchEvent("change");
+  await page.locator("#prop-texture-v").fill("3");
+  await page.locator("#prop-texture-v").dispatchEvent("change");
+  await expect(canvas).toHaveAttribute("data-last-surface", /:0\.350:0\.650:2\.000:3\.000$/);
+
+  await page.locator("#reset-surface").click();
+  await expect(page.locator("#prop-roughness")).toHaveValue("0.22");
+  await expect(page.locator("#prop-metallic")).toHaveValue("0.88");
+  await expect(page.locator("#prop-texture-u")).toHaveValue("1");
+  await expect(page.locator("#prop-texture-v")).toHaveValue("1");
+  await expect(canvas).toHaveAttribute("data-last-surface", /:0\.220:0\.880:1\.000:1\.000$/);
 
   await page.locator("[data-object='empty']").click();
   await expect(page.locator("#scene-tree")).toContainText("Object");
