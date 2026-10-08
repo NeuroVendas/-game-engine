@@ -411,3 +411,13 @@ The Collider component supports two modes:
 - **Box Proxy** — Forge creates a separate invisible box collider parented to the entity root.
 
 Box Proxy exposes local size and offset controls in the Inspector plus **Auto-fit to Visual**, which computes a local bounding box from the entity's rendered primitive/GLB geometry, and **Reset Proxy**, which returns to the entity default size with zero local offset. The proxy stays invisible in Play mode and is rendered only by the Studio **Colliders On** visualization. Proxy settings serialize with the scene/prefab and are recreated across reload, rebuild, Play/Stop and prefab import.
+
+
+## Player collider settings
+
+Scene documents can optionally configure the runtime player capsule:
+
+- `player.colliderHeight`
+- `player.colliderRadius`
+
+Studio exposes both under the Player service. Existing scenes remain compatible and default to height `3.05` / radius `0.45`. Runtime clamps invalid values and keeps height large enough for the chosen radius. Ground snapping and grounded probes use the configured capsule dimensions.
