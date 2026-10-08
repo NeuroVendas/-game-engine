@@ -1679,7 +1679,20 @@ export class EditorApp {
             this.renderInspector();
             this.log(`Collider fitted to visual bounds: ${entity.name}.`);
           });
-          actions.appendChild(fit);
+
+          const reset = document.createElement("button");
+          reset.type = "button";
+          reset.dataset.colliderReset = entity.id;
+          reset.textContent = "Reset Proxy";
+          reset.addEventListener("click", () => {
+            this.checkpoint();
+            if (!this.forge.resetBoxCollider(entity.id)) return;
+            this.setSelection(entity.id);
+            this.renderInspector();
+            this.log(`Collider reset: ${entity.name}.`);
+          });
+
+          actions.append(fit, reset);
           container.appendChild(actions);
 
           const note = document.createElement("div");
