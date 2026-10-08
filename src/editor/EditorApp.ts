@@ -1295,6 +1295,7 @@ export class EditorApp {
     }
 
     this.selectedId = id;
+    this.renderProjectPrefabs();
 
     if (!id) {
       this.gizmos.attachToMesh(null);
@@ -1304,6 +1305,7 @@ export class EditorApp {
     const mesh = this.forge.getMesh(id);
     if (!mesh) {
       this.selectedId = null;
+      this.renderProjectPrefabs();
       this.gizmos.attachToMesh(null);
       return;
     }
