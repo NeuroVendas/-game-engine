@@ -326,6 +326,7 @@ export class EditorApp {
     must<HTMLButtonElement>("paste-selected").addEventListener("click", () => this.pasteClipboard());
     must<HTMLButtonElement>("duplicate-selected").addEventListener("click", () => this.duplicateSelected());
     must<HTMLButtonElement>("rename-selected").addEventListener("click", () => this.beginRenameSelected());
+    must<HTMLButtonElement>("drop-selected").addEventListener("click", () => this.dropSelectedToGround());
     must<HTMLButtonElement>("delete-selected").addEventListener("click", () => this.deleteSelected());
     must<HTMLButtonElement>("code-selected").addEventListener("click", () => this.openScriptEditor());
     must<HTMLButtonElement>("collision-debug").addEventListener("click", () => this.toggleCollisionDebug());
@@ -570,6 +571,12 @@ export class EditorApp {
 
         if (event.code === "Delete") {
           this.deleteSelected();
+          return;
+        }
+
+        if (event.code === "End" && this.selectedId) {
+          event.preventDefault();
+          this.dropSelectedToGround();
           return;
         }
 
@@ -1426,6 +1433,23 @@ export class EditorApp {
     this.log(`Deleted ${entity.name}`);
   }
 
+  private dropSelectedToGround(): void {
+    if (this.mode !== "editor" || !this.selectedId) return;
+
+    const entity = this.forge.getEntity(this.selectedId);
+    if (!entity) return;
+
+    this.checkpoint();
+    if (!this.forge.dropEntityToGround(entity.id)) {
+      this.log(`No surface found below ${entity.name}.`);
+      return;
+    }
+
+    this.renderTree();
+    this.renderInspector();
+    this.log(`Dropped ${entity.name} to ground.`);
+  }
+
   private beginRenameSelected(): void {
     if (this.mode !== "editor" || !this.selectedId) return;
     const input = must<HTMLInputElement>("prop-name");
@@ -1440,6 +1464,7 @@ export class EditorApp {
     must<HTMLButtonElement>("copy-selected").disabled = !hasSelection;
     must<HTMLButtonElement>("duplicate-selected").disabled = !hasSelection;
     must<HTMLButtonElement>("rename-selected").disabled = !hasSelection;
+    must<HTMLButtonElement>("drop-selected").disabled = !hasSelection;
     must<HTMLButtonElement>("delete-selected").disabled = !hasSelection;
     must<HTMLButtonElement>("paste-selected").disabled = !editable || !this.editorClipboard;
   }
