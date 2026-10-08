@@ -249,7 +249,7 @@ async function moveUntilCoordinate(
 
 async function moveTowardWorldPoint(
   page: any,
-  _axes: { forward: [number, number]; right: [number, number] },
+  axes: { forward: [number, number]; right: [number, number] },
   target: [number, number],
   tolerance = 0.45,
   timeout = 15000
@@ -272,24 +272,20 @@ async function moveTowardWorldPoint(
       if (distance <= tolerance) return;
 
       const cameraForwardRaw = await page.locator("#viewport").getAttribute("data-camera-forward");
-      if (!cameraForwardRaw) {
-        await releaseKey();
-        await page.waitForTimeout(50);
-        continue;
-      }
-
-      const [rawX, rawZ] = cameraForwardRaw.split(",").map(Number);
+      const parsedForward = cameraForwardRaw
+        ? cameraForwardRaw.split(",").map(Number)
+        : [axes.forward[0], axes.forward[1]];
+      const rawX = Number.isFinite(parsedForward[0]) ? parsedForward[0] : axes.forward[0];
+      const rawZ = Number.isFinite(parsedForward[1]) ? parsedForward[1] : axes.forward[1];
       const length = Math.hypot(rawX, rawZ);
-      if (length < 0.001) {
-        await releaseKey();
-        await page.waitForTimeout(50);
-        continue;
-      }
 
-      const fx = rawX / length;
-      const fz = rawZ / length;
-      const rx = fz;
-      const rz = -fx;
+      const fx = length >= 0.001 ? rawX / length : axes.forward[0];
+      const fz = length >= 0.001 ? rawZ / length : axes.forward[1];
+      const rightLength = Math.hypot(axes.right[0], axes.right[1]);
+      const fallbackRightX = rightLength >= 0.001 ? axes.right[0] / rightLength : fz;
+      const fallbackRightZ = rightLength >= 0.001 ? axes.right[1] / rightLength : -fx;
+      const rx = length >= 0.001 ? fz : fallbackRightX;
+      const rz = length >= 0.001 ? -fx : fallbackRightZ;
       const desiredX = dx / distance;
       const desiredZ = dz / distance;
 
