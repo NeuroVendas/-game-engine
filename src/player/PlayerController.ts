@@ -36,6 +36,9 @@ export class PlayerController {
   private readonly thirdPersonMaxRadius = 11.5;
   private colliderHeight = 3.05;
   private colliderRadius = 0.45;
+  private walkSpeed = 5.05;
+  private runSpeed = 8.0;
+  private jumpPower = 7.9;
 
   private readonly onKeyDown = (event: KeyboardEvent) => {
     if (["KeyW", "KeyA", "KeyS", "KeyD", "Space", "ShiftLeft", "ShiftRight"].includes(event.code)) {
@@ -92,13 +95,22 @@ export class PlayerController {
     spawn: [number, number, number],
     private readonly log: (message: string) => void,
     private readonly setPrompt: (text: string | null, locked: boolean) => void = () => {},
-    config: { colliderHeight?: number; colliderRadius?: number } = {}
+    config: {
+      colliderHeight?: number;
+      colliderRadius?: number;
+      walkSpeed?: number;
+      runSpeed?: number;
+      jumpPower?: number;
+    } = {}
   ) {
     const scene = forge.scene;
 
     this.colliderRadius = Math.min(2, Math.max(0.2, Number(config.colliderRadius) || 0.45));
     const requestedHeight = Math.min(8, Math.max(1, Number(config.colliderHeight) || 3.05));
     this.colliderHeight = Math.max(requestedHeight, this.colliderRadius * 2.1);
+    this.walkSpeed = Math.min(20, Math.max(1, Number(config.walkSpeed) || 5.05));
+    this.runSpeed = Math.min(30, Math.max(this.walkSpeed, Number(config.runSpeed) || 8.0));
+    this.jumpPower = Math.min(20, Math.max(1, Number(config.jumpPower) || 7.9));
 
     this.body = MeshBuilder.CreateCapsule("__player-collider", {
       height: this.colliderHeight,
@@ -194,6 +206,9 @@ export class PlayerController {
     forge.canvas.dataset.cameraMode = "third-person";
     forge.canvas.dataset.playerColliderHeight = this.colliderHeight.toFixed(3);
     forge.canvas.dataset.playerColliderRadius = this.colliderRadius.toFixed(3);
+    forge.canvas.dataset.playerWalkSpeed = this.walkSpeed.toFixed(3);
+    forge.canvas.dataset.playerRunSpeed = this.runSpeed.toFixed(3);
+    forge.canvas.dataset.playerJumpPower = this.jumpPower.toFixed(3);
 
     window.addEventListener("keydown", this.onKeyDown, { passive: false });
     window.addEventListener("keyup", this.onKeyUp);
@@ -237,7 +252,7 @@ export class PlayerController {
     }
 
     if (this.jumpBuffer > 0 && this.coyoteTime > 0) {
-      this.verticalVelocity = 7.9;
+      this.verticalVelocity = this.jumpPower;
       this.jumpBuffer = 0;
       this.coyoteTime = 0;
       this.grounded = false;
@@ -245,7 +260,7 @@ export class PlayerController {
 
     this.sprintBlend += ((running ? 1 : 0) - this.sprintBlend) * Math.min(1, dt * 7.5);
 
-    const targetSpeed = running ? 8.0 : 5.05;
+    const targetSpeed = running ? this.runSpeed : this.walkSpeed;
     const targetVelocity = moving
       ? desiredDirection.scale(targetSpeed)
       : Vector3.Zero();
@@ -373,6 +388,9 @@ export class PlayerController {
     delete this.forge.canvas.dataset.cameraMode;
     delete this.forge.canvas.dataset.playerColliderHeight;
     delete this.forge.canvas.dataset.playerColliderRadius;
+    delete this.forge.canvas.dataset.playerWalkSpeed;
+    delete this.forge.canvas.dataset.playerRunSpeed;
+    delete this.forge.canvas.dataset.playerJumpPower;
     delete this.forge.canvas.dataset.playerMovementState;
     delete this.forge.canvas.dataset.avatarRig;
     delete this.forge.canvas.dataset.avatarShape;
