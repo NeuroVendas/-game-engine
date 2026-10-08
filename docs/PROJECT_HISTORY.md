@@ -646,6 +646,7 @@ Box Proxy supports:
 
 - local Size X / Y / Z
 - local Offset X / Y / Z
+- Auto-fit to current visual bounds, including imported GLB geometry
 - parent transform inheritance
 - Editor collider visualization
 - Play-mode invisibility
@@ -667,4 +668,4 @@ Diagnostics expose proxy count/IDs for regression coverage.
 
 ### Acceptance coverage
 
-Browser Smoke configures a custom Box Proxy, exports it inside a Forge prefab, imports a second copy and verifies that mode, size, offset and distinct proxy instances survive the round-trip.
+Browser Smoke configures a custom Box Proxy, exports it inside a Forge prefab, imports a second copy and verifies that mode, size, offset and distinct proxy instances survive the round-trip. The animated-GLB fixture also enables Box Proxy and validates Auto-fit against the imported triangle's visual bounds before continuing animation playback tests.
