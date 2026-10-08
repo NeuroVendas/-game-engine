@@ -157,6 +157,7 @@ Forge Classic currently has:
 - sprint
 - jump
 - E interaction
+- scene-level authorable collision height/radius
 
 Movement now includes:
 
@@ -173,6 +174,8 @@ Movement now includes:
 - distinct rise/fall animation states
 - first/third-person zoom preservation
 - protected third-person camera distance and vertical orbit limits
+- grounding probes derived from the configured player collider height
+- Play-mode collider diagnostics for regression coverage
 
 Further feel tuning and a stronger animation controller are still expected.
 
