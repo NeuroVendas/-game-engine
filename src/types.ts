@@ -101,6 +101,13 @@ export interface ForgeEntity {
   parentId?: string;
 }
 
+export interface ForgePrefabDocument {
+  format: "forge.prefab";
+  version: 1;
+  name: string;
+  entities: ForgeEntity[];
+}
+
 export interface ForgeSceneDocument {
   format: "forge.scene";
   version: 1;
