@@ -446,6 +446,71 @@ export class ForgeEngine {
     return this.entityMeshes.get(id);
   }
 
+  fitBoxColliderToVisual(id: string): boolean {
+    const entity = this.getEntity(id);
+    const root = this.getMesh(id);
+    const collider = entity?.components?.Collider;
+    if (!entity || !root || !collider) return false;
+
+    const proxy = this.entityColliderProxies.get(id);
+    const visualMeshes: AbstractMesh[] = entity.kind === "model"
+      ? root.getChildMeshes(false).filter(
+          (mesh) =>
+            mesh !== proxy
+            && mesh.metadata?.forgeEntityId === id
+            && mesh.metadata?.forgeColliderProxy !== true
+            && mesh.getTotalVertices() > 0
+        )
+      : [root];
+
+    if (visualMeshes.length === 0) return false;
+
+    root.computeWorldMatrix(true);
+    const inverseRootWorld = root.getWorldMatrix().clone();
+    inverseRootWorld.invert();
+
+    const minimum = new Vector3(
+      Number.POSITIVE_INFINITY,
+      Number.POSITIVE_INFINITY,
+      Number.POSITIVE_INFINITY
+    );
+    const maximum = new Vector3(
+      Number.NEGATIVE_INFINITY,
+      Number.NEGATIVE_INFINITY,
+      Number.NEGATIVE_INFINITY
+    );
+
+    let pointCount = 0;
+    for (const mesh of visualMeshes) {
+      mesh.computeWorldMatrix(true);
+      const vectors = mesh.getBoundingInfo().boundingBox.vectorsWorld;
+      for (const worldPoint of vectors) {
+        const localPoint = Vector3.TransformCoordinates(worldPoint, inverseRootWorld);
+        minimum.minimizeInPlace(localPoint);
+        maximum.maximizeInPlace(localPoint);
+        pointCount += 1;
+      }
+    }
+
+    if (pointCount === 0 || !Number.isFinite(minimum.x) || !Number.isFinite(maximum.x)) {
+      return false;
+    }
+
+    const size = maximum.subtract(minimum);
+    const center = minimum.add(maximum).scale(0.5);
+
+    collider.mode = "box";
+    collider.size = [
+      Math.max(0.05, Math.abs(size.x)),
+      Math.max(0.05, Math.abs(size.y)),
+      Math.max(0.05, Math.abs(size.z))
+    ];
+    collider.offset = [center.x, center.y, center.z];
+
+    this.rebuildEntity(id);
+    return true;
+  }
+
   syncEntityFromMesh(id: string): void {
     const entity = this.getEntity(id);
     const mesh = this.getMesh(id);
