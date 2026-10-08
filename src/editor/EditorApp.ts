@@ -51,6 +51,7 @@ export class EditorApp {
   private scaleSnap = 0.1;
 
   private readonly tree = must<HTMLDivElement>("scene-tree");
+  private readonly assetLibrary = must<HTMLDivElement>("asset-library");
   private readonly status = must<HTMLSpanElement>("status");
   private readonly outputLog = must<HTMLDivElement>("output-log");
   private readonly fps = must<HTMLDivElement>("fps");
@@ -953,6 +954,7 @@ export class EditorApp {
       this.forge.rebuildEntity(entity.id);
       this.setSelection(entity.id);
       this.renderInspector();
+      this.renderAssetLibrary();
       this.log(`Applied texture ${file.name} to ${entity.name}.`);
     } catch (error) {
       this.log(`Texture import failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -1290,6 +1292,158 @@ export class EditorApp {
     for (const entity of entities) {
       if (!visited.has(entity.id)) appendEntity(entity, 0);
     }
+
+    this.renderAssetLibrary();
+  }
+
+  private renderAssetLibrary(): void {
+    type AssetKind = "model" | "texture" | "audio";
+    type AssetEntry = { kind: AssetKind; name: string; src: string; fileName?: string };
+
+    const entries = new Map<string, AssetEntry>();
+    const add = (entry: AssetEntry) => {
+      const src = entry.src.trim();
+      if (!src) return;
+      const key = `${entry.kind}:${src}`;
+      if (!entries.has(key)) entries.set(key, { ...entry, src });
+    };
+
+    for (const entity of this.forge.document.entities) {
+      const model = entity.components?.Model;
+      if (model?.src?.trim()) {
+        add({
+          kind: "model",
+          name: model.fileName?.replace(/\.glb$/i, "") || entity.name,
+          src: model.src,
+          fileName: model.fileName
+        });
+      }
+
+      const sound = entity.components?.Sound;
+      if (sound?.src?.trim()) {
+        add({
+          kind: "audio",
+          name: sound.fileName?.replace(/\.[^.]+$/, "") || entity.name,
+          src: sound.src,
+          fileName: sound.fileName
+        });
+      }
+
+      if (entity.texture?.trim()) {
+        add({
+          kind: "texture",
+          name: entity.textureFileName?.replace(/\.[^.]+$/, "") || `${entity.name} Texture`,
+          src: entity.texture,
+          fileName: entity.textureFileName
+        });
+      }
+    }
+
+    this.assetLibrary.replaceChildren();
+    this.canvas.dataset.assetLibraryCount = String(entries.size);
+
+    if (entries.size === 0) {
+      const empty = document.createElement("div");
+      empty.className = "asset-library-empty";
+      empty.textContent = "Import a model, texture or audio file to reuse it here.";
+      this.assetLibrary.appendChild(empty);
+      return;
+    }
+
+    for (const entry of entries.values()) {
+      const row = document.createElement("div");
+      row.className = "asset-library-item";
+      row.dataset.assetKind = entry.kind;
+
+      const meta = document.createElement("div");
+      meta.className = "asset-library-meta";
+      const name = document.createElement("div");
+      name.className = "asset-library-name";
+      name.textContent = entry.name;
+      name.title = entry.fileName ?? entry.name;
+      const type = document.createElement("div");
+      type.className = "asset-library-type";
+      type.textContent = entry.kind;
+      meta.append(name, type);
+
+      const action = document.createElement("button");
+      action.type = "button";
+      action.textContent = entry.kind === "texture" ? "Apply" : "Insert";
+      action.dataset.assetAction = entry.kind;
+      action.addEventListener("click", () => this.reuseSceneAsset(entry));
+
+      row.append(meta, action);
+      this.assetLibrary.appendChild(row);
+    }
+  }
+
+  private reuseSceneAsset(
+    asset: { kind: "model" | "texture" | "audio"; name: string; src: string; fileName?: string }
+  ): void {
+    if (this.mode !== "editor") return;
+
+    if (asset.kind === "texture") {
+      if (!this.selectedId) {
+        this.log("Select a Forge primitive before applying a texture asset.");
+        return;
+      }
+
+      const selected = this.forge.getEntity(this.selectedId);
+      if (!selected || selected.kind === "empty" || selected.kind === "model") {
+        this.log("Texture assets can be applied to Forge primitive objects.");
+        return;
+      }
+
+      this.checkpoint();
+      selected.texture = asset.src;
+      selected.textureFileName = asset.fileName;
+      this.forge.rebuildEntity(selected.id);
+      this.setSelection(selected.id);
+      this.renderInspector();
+      this.renderAssetLibrary();
+      this.log(`Applied asset ${asset.name} to ${selected.name}.`);
+      return;
+    }
+
+    this.checkpoint();
+
+    if (asset.kind === "model") {
+      const entity = this.forge.createPrimitive("model", asset.name || "Model");
+      entity.parentId = this.selectedId ?? undefined;
+      entity.components = {
+        Model: {
+          src: asset.src,
+          fileName: asset.fileName,
+          animationAutoplay: false,
+          animationLoop: true,
+          animationSpeed: 1
+        },
+        Collider: { enabled: false }
+      };
+      this.forge.rebuildEntity(entity.id);
+      this.renderTree();
+      this.selectEntity(entity.id);
+      this.log(`Inserted model asset: ${asset.name}.`);
+      return;
+    }
+
+    const entity = this.forge.createPrimitive("empty", asset.name || "Sound");
+    entity.parentId = this.selectedId ?? undefined;
+    entity.components = {
+      Sound: {
+        src: asset.src,
+        fileName: asset.fileName,
+        volume: 1,
+        loop: false,
+        autoplay: false,
+        spatial: true,
+        maxDistance: 40
+      }
+    };
+    this.forge.rebuildEntity(entity.id);
+    this.renderTree();
+    this.selectEntity(entity.id);
+    this.log(`Inserted audio asset: ${asset.name}.`);
   }
 
   private renderInspector(): void {
