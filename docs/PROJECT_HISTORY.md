@@ -648,6 +648,7 @@ Box Proxy exposes:
 
 - Size X / Y / Z
 - Offset X / Y / Z
+- **Fit Proxy To Visual**, which computes the local bounds of the current visible primitive or imported GLB geometry
 
 The proxy inherits the Forge entity transform, remains non-pickable, and becomes the collision source while visible model meshes stop colliding.
 
