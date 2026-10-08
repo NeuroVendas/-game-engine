@@ -1244,10 +1244,13 @@ input, textarea { cursor: text; }
 }
 .asset-library-tools {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 82px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 4px;
   padding: 6px 8px 0 18px;
   background: #1b242b;
+}
+.asset-library-tools #asset-search {
+  grid-column: 1 / -1;
 }
 .asset-library-tools input,
 .asset-library-tools select {
@@ -1306,6 +1309,21 @@ input, textarea { cursor: text; }
   color: #84939d;
   font-size: 8px;
   text-transform: uppercase;
+}
+.asset-library-folder {
+  width: 100%;
+  min-width: 0;
+  margin-top: 2px;
+  padding: 1px 2px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #91a0aa;
+  font-size: 8px;
+}
+.asset-library-folder:not([readonly]):focus {
+  border-color: #667782;
+  background: #141c22;
+  outline: none;
 }
 .asset-library-actions {
   display: flex;
