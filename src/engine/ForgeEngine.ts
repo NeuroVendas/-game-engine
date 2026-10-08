@@ -50,6 +50,7 @@ export class ForgeEngine {
   private readonly entitySounds = new Map<string, Sound>();
   private readonly entityParticles = new Map<string, ParticleSystem>();
   private readonly entityAnimations = new Map<string, AnimationGroup[]>();
+  private readonly pendingAnimationPlays = new Map<string, string | undefined>();
   private readonly hemi: HemisphericLight;
   private readonly key: DirectionalLight;
   private readonly shadowGenerator: ShadowGenerator | null;
@@ -210,6 +211,7 @@ export class ForgeEngine {
   loadDocument(document: ForgeSceneDocument, runtimeMode = false, startScripts = true): void {
     this.scripts.stopAll();
     this.runtimeMode = runtimeMode;
+    this.pendingAnimationPlays.clear();
 
     for (const light of this.entityLights.values()) light.dispose();
     this.entityLights.clear();
@@ -422,6 +424,7 @@ export class ForgeEngine {
     this.disposeEntitySound(id);
     this.disposeEntityParticle(id);
     this.disposeEntityAnimations(id);
+    this.pendingAnimationPlays.delete(id);
 
     const oldMesh = this.entityMeshes.get(id);
     if (oldMesh) this.unregisterShadowCaster(oldMesh, true);
@@ -514,6 +517,7 @@ export class ForgeEngine {
     this.disposeEntitySound(id);
     this.disposeEntityParticle(id);
     this.disposeEntityAnimations(id);
+    this.pendingAnimationPlays.delete(id);
 
     const forgeChildren = this.document.entities
       .filter((candidate) => candidate.parentId === id)
@@ -1067,7 +1071,13 @@ export class ForgeEngine {
       this.refreshAnimationDiagnostics();
       this.applyColliderDebug(entity, root);
 
-      if (this.runtimeMode && component.animationAutoplay === true) {
+      const hasPendingPlay = this.pendingAnimationPlays.has(entity.id);
+      const pendingClip = this.pendingAnimationPlays.get(entity.id);
+      this.pendingAnimationPlays.delete(entity.id);
+
+      if (this.runtimeMode && hasPendingPlay) {
+        this.playModelAnimation(entity.id, pendingClip);
+      } else if (this.runtimeMode && component.animationAutoplay === true) {
         this.playModelAnimation(entity.id, component.animation);
       }
 
@@ -1082,6 +1092,7 @@ export class ForgeEngine {
         `Loaded model ${entity.name} • ${result.meshes.length} meshes • ${animationClips.length} animation clip(s)`
       );
     } catch (error) {
+      this.pendingAnimationPlays.delete(entity.id);
       root.metadata = {
         ...(root.metadata ?? {}),
         modelError: error instanceof Error ? error.message : String(error)
@@ -1095,9 +1106,16 @@ export class ForgeEngine {
     const entity = this.getEntity(id);
     const groups = this.entityAnimations.get(id);
     const component = entity?.components?.Model;
-    if (!entity || !component || !groups?.length) return false;
+    if (!entity || !component) return false;
 
     const requested = clipName?.trim() || component.animation?.trim();
+    if (!groups?.length) {
+      if (!component.src?.trim()) return false;
+      this.pendingAnimationPlays.set(id, requested);
+      this.canvas.dataset.lastAnimationAction = `queue:${id}:${requested || "*"}`;
+      return true;
+    }
+
     const group = (requested ? groups.find((candidate) => candidate.name === requested) : undefined)
       ?? groups[0];
     if (!group) return false;
@@ -1116,10 +1134,17 @@ export class ForgeEngine {
 
   stopModelAnimation(idOrName: string, clipName?: string): boolean {
     const id = this.resolveEntityId(idOrName);
+    const entity = this.getEntity(id);
     const groups = this.entityAnimations.get(id);
-    if (!groups?.length) return false;
-
     const requested = clipName?.trim();
+
+    if (!groups?.length) {
+      if (!entity?.components?.Model) return false;
+      this.pendingAnimationPlays.delete(id);
+      this.canvas.dataset.lastAnimationAction = `stop:${id}:${requested || "*"}`;
+      return true;
+    }
+
     const targets = requested
       ? groups.filter((group) => group.name === requested)
       : groups;
