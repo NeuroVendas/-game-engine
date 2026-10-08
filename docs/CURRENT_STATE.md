@@ -96,6 +96,7 @@ Implemented:
 - collider visualization toggle in the Studio viewport
 - collider mode selection: visible Mesh collision or editable Box Proxy collision
 - Box Proxy local size and offset authoring, including prefab persistence
+- automatic Box Proxy fitting to the current visible geometry, including imported GLB bounds
 - custom prefab export/import for selected hierarchies (`.forge-prefab.json`)
 - Explorer drag/drop reparenting
 - cycle prevention
