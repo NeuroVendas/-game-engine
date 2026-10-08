@@ -159,6 +159,8 @@ Forge Classic currently has:
 - sprint
 - jump
 - E interaction
+- scene-configurable capsule height/radius
+- scene-configurable walk/run/jump values
 
 Movement now includes:
 
@@ -404,3 +406,18 @@ Do not describe these as finished:
 The goal is no longer "add buttons."
 
 A creator should be able to make a game that looks intentional, feels natural, uses assets/scripts/audio/UI, playtests instantly, saves/publishes and can be played by someone else.
+
+
+## Player scene settings
+
+Forge scenes can author runtime player physics directly from the Player service in Studio.
+
+Current scene-level settings:
+
+- `player.colliderHeight`
+- `player.colliderRadius`
+- `player.walkSpeed`
+- `player.runSpeed`
+- `player.jumpPower`
+
+Defaults remain compatible with existing scenes: height 3.05, radius 0.45, walk 5.05, run 8 and jump 7.9. Values are clamped at authoring/runtime boundaries, capsule height cannot collapse below its radius, and grounded/safe-ground probes use the configured capsule dimensions.
