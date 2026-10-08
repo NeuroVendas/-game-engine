@@ -106,7 +106,7 @@ Implemented:
 - Particle VFX
 - UI
 - Script/LocalScript/ModuleScript
-- GLB import
+- GLB import with embedded animation clip discovery/playback
 - texture import
 - audio import
 - custom sky image import
@@ -195,6 +195,7 @@ Major current creator/runtime capabilities:
 - audio control
 - UI control
 - VFX play/stop/restart control
+- model animation play/stop control
 - player API
 - camera API
 - logging/output
@@ -212,6 +213,22 @@ UI types:
 UI supports position, size, font size, colors/background, visibility and anchors.
 
 UI click routing into child scripts is regression-tested to fire once.
+
+## Model animation
+
+Imported GLB models can expose embedded animation clips through the Model component.
+
+Current authoring supports:
+
+- clip selection
+- autoplay in Play mode
+- loop on/off
+- playback speed
+- editor Preview / Stop
+- script control through `Forge.animation.play/stop`
+- animation-group lifecycle cleanup across rebuild/delete/Play transitions
+
+This is clip playback, not yet the planned full animation controller/state machine.
 
 ## Audio
 
@@ -245,7 +262,7 @@ This is the first authorable VFX layer, not a final node/graph-based effects sys
 
 Current browser import path:
 
-- GLB
+- GLB, including embedded AnimationGroups
 - image texture
 - audio/WAV
 - sky image
