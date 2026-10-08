@@ -1710,7 +1710,7 @@ export class EditorApp {
 
     if (asset.kind === "model") {
       const entity = this.forge.createPrimitive("model", asset.name || "Model");
-      entity.parentId = this.selectedId ?? undefined;
+      entity.parentId = resolvedTargetId ?? undefined;
       entity.components = {
         Model: {
           src: asset.src,
@@ -1729,7 +1729,7 @@ export class EditorApp {
     }
 
     const entity = this.forge.createPrimitive("empty", asset.name || "Sound");
-    entity.parentId = this.selectedId ?? undefined;
+    entity.parentId = resolvedTargetId ?? undefined;
     entity.components = {
       Sound: {
         src: asset.src,
