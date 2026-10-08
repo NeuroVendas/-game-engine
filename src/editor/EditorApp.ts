@@ -54,6 +54,7 @@ export class EditorApp {
   private readonly assetLibrary = must<HTMLDivElement>("asset-library");
   private readonly assetSearch = must<HTMLInputElement>("asset-search");
   private readonly assetKindFilter = must<HTMLSelectElement>("asset-kind-filter");
+  private readonly assetFolderFilter = must<HTMLSelectElement>("asset-folder-filter");
   private readonly status = must<HTMLSpanElement>("status");
   private readonly outputLog = must<HTMLDivElement>("output-log");
   private readonly fps = must<HTMLDivElement>("fps");
@@ -204,6 +205,7 @@ export class EditorApp {
   private bindUI(): void {
     this.assetSearch.addEventListener("input", () => this.renderAssetLibrary());
     this.assetKindFilter.addEventListener("change", () => this.renderAssetLibrary());
+    this.assetFolderFilter.addEventListener("change", () => this.renderAssetLibrary());
 
     must<HTMLButtonElement>("tool-select").addEventListener("click", () => this.setTool("select"));
     must<HTMLButtonElement>("tool-move").addEventListener("click", () => this.setTool("move"));
@@ -1434,6 +1436,20 @@ export class EditorApp {
     this.log(`Renamed asset ${previous} → ${clean}.`);
   }
 
+  private setSceneAssetFolder(id: string, nextFolder: string): void {
+    if (this.mode !== "editor") return;
+    const asset = this.forge.document.assets?.find((candidate) => candidate.id === id);
+    if (!asset) return;
+
+    const clean = nextFolder.trim().replace(/\s+/g, " ").slice(0, 48);
+    if ((asset.folder ?? "") === clean) return;
+
+    this.checkpoint();
+    asset.folder = clean || undefined;
+    this.renderAssetLibrary();
+    this.log(`Asset folder updated: ${asset.name} → ${clean || "Unsorted"}.`);
+  }
+
   private removeSceneAsset(id: string): void {
     if (this.mode !== "editor") return;
     const assets = this.forge.document.assets ?? [];
@@ -1497,14 +1513,38 @@ export class EditorApp {
     this.canvas.dataset.assetLibraryCount = String(entries.size);
     this.canvas.dataset.assetRegistryCount = String(this.forge.document.assets?.length ?? 0);
 
+    const wantedFolder = this.assetFolderFilter.value || "all";
+    const folders = [...new Set(
+      [...entries.values()]
+        .map((entry) => entry.folder?.trim())
+        .filter((folder): folder is string => Boolean(folder))
+    )].sort((a, b) => a.localeCompare(b));
+
+    const previousFolder = folders.includes(wantedFolder) ? wantedFolder : "all";
+    this.assetFolderFilter.replaceChildren();
+    const allFolders = document.createElement("option");
+    allFolders.value = "all";
+    allFolders.textContent = "All folders";
+    this.assetFolderFilter.appendChild(allFolders);
+    for (const folder of folders) {
+      const option = document.createElement("option");
+      option.value = folder;
+      option.textContent = folder;
+      this.assetFolderFilter.appendChild(option);
+    }
+    this.assetFolderFilter.value = previousFolder;
+
     const query = this.assetSearch.value.trim().toLowerCase();
     const kindFilter = this.assetKindFilter.value as ForgeAssetKind | "all";
+    const folderFilter = this.assetFolderFilter.value;
     const visibleEntries = [...entries.values()].filter((entry) => {
       const kindMatches = kindFilter === "all" || entry.kind === kindFilter;
+      const folderMatches = folderFilter === "all" || (entry.folder ?? "") === folderFilter;
       const textMatches = !query
         || entry.name.toLowerCase().includes(query)
-        || (entry.fileName ?? "").toLowerCase().includes(query);
-      return kindMatches && textMatches;
+        || (entry.fileName ?? "").toLowerCase().includes(query)
+        || (entry.folder ?? "").toLowerCase().includes(query);
+      return kindMatches && folderMatches && textMatches;
     });
     this.canvas.dataset.assetLibraryVisibleCount = String(visibleEntries.length);
 
@@ -1551,7 +1591,25 @@ export class EditorApp {
       const type = document.createElement("div");
       type.className = "asset-library-type";
       type.textContent = entry.kind;
-      meta.append(name, type);
+
+      const folder = document.createElement("input");
+      folder.className = "asset-library-folder";
+      folder.type = "text";
+      folder.placeholder = "Unsorted";
+      folder.value = entry.folder ?? "";
+      folder.readOnly = !entry.id;
+      if (entry.id) {
+        folder.dataset.assetFolder = entry.id;
+        folder.addEventListener("change", () => this.setSceneAssetFolder(entry.id, folder.value));
+        folder.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            folder.blur();
+          }
+        });
+      }
+
+      meta.append(name, type, folder);
 
       const actions = document.createElement("div");
       actions.className = "asset-library-actions";
