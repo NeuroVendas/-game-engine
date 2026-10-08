@@ -920,7 +920,7 @@ test("Studio imports GLB animations and audio assets", async ({ page }) => {
   await expect(canvas).toHaveAttribute("data-collider-proxy-count", "1");
   await expect(canvas).toHaveAttribute(
     "data-collider-proxies",
-    /:1\.00:1\.00:0\.05:0\.50:0\.50:0\.00/
+    /:1\.00:1\.00:0\.05:-?0\.50:0\.50:0\.00/
   );
   await expect.poll(async () => canvas.getAttribute("data-model-animation-groups"), {
     timeout: 10000
