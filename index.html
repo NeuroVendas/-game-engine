@@ -455,7 +455,12 @@
           <div class="service-tree">
             <div id="workspace-root" class="service workspace-root">▾ Workspace</div>
             <div id="scene-tree" class="scene-tree"></div>
-            <div class="service muted">Players</div>
+            <div class="service">▾ Players</div>
+            <div class="lighting-editor player-editor">
+              <label>Collider height <input id="player-collider-height" type="number" min="1.2" max="6" step="0.05" value="2.96" /></label>
+              <label>Collider radius <input id="player-collider-radius" type="number" min="0.2" max="1.5" step="0.01" value="0.52" /></label>
+              <div class="component-note">Scene-level player collision volume used in Play mode.</div>
+            </div>
             <div class="service">▾ Lighting</div>
             <div class="lighting-editor">
               <div class="lighting-presets" aria-label="Environment presets">
