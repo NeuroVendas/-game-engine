@@ -845,6 +845,12 @@ test("Studio imports GLB animations and audio assets", async ({ page }) => {
   await expect(modelLibraryRow.locator("[data-asset-name]")).toHaveValue("Animated Asset");
   await expect(page.locator(".scene-item", { hasText: "animated-triangle" })).toHaveCount(1);
 
+  await modelLibraryRow.locator("[data-asset-folder]").fill("Characters");
+  await modelLibraryRow.locator("[data-asset-folder]").dispatchEvent("change");
+  await expect(page.locator("#asset-library [data-asset-kind='model'] [data-asset-folder]"))
+    .toHaveValue("Characters");
+  await expect(page.locator("#asset-folder-filter option")).toContainText(["All folders", "Characters"]);
+
   await page.locator("#component-type").selectOption("Collider");
   await page.locator("#add-component").click();
   await page.getByLabel("Collision mode").selectOption("box");
@@ -993,6 +999,13 @@ Forge.onStart(() => {
   await expect(canvas).toHaveAttribute("data-asset-library-visible-count", "1");
   await expect(page.locator("#asset-library [data-asset-kind='texture'] [data-asset-name]")).toHaveValue("pixel");
   await page.locator("#asset-kind-filter").selectOption("all");
+  await expect(canvas).toHaveAttribute("data-asset-library-visible-count", "3");
+
+  await page.locator("#asset-folder-filter").selectOption("Characters");
+  await expect(canvas).toHaveAttribute("data-asset-library-visible-count", "1");
+  await expect(page.locator("#asset-library [data-asset-kind='model'] [data-asset-name]"))
+    .toHaveValue("Animated Asset");
+  await page.locator("#asset-folder-filter").selectOption("all");
   await expect(canvas).toHaveAttribute("data-asset-library-visible-count", "3");
 
   await page.locator("[data-primitive='box']").click();
