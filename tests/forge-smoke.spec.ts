@@ -947,6 +947,68 @@ Forge.onTriggerExit(() => {
   expect(await canvas.getAttribute("data-runtime-error")).toBeNull();
 });
 
+test("Studio Player settings configure the runtime capsule and movement", async ({ page }) => {
+  await page.goto("/");
+  await page.locator("[data-launch-tab='develop']").click();
+  await page.locator("#new-place").click();
+  await page.locator("#new-place-name").fill("Player Physics Place");
+  await page.locator("#confirm-create-place").click();
+
+  const canvas = page.locator("#viewport");
+  await expect(canvas).toHaveAttribute("data-scene-player-collider", "3.050,0.450");
+  await expect(canvas).toHaveAttribute("data-scene-player-movement", "5.050,8.000,7.900");
+
+  await page.locator("#player-collider-height").fill("2.4");
+  await page.locator("#player-collider-height").dispatchEvent("change");
+  await page.locator("#player-collider-radius").fill("0.35");
+  await page.locator("#player-collider-radius").dispatchEvent("change");
+  await page.locator("#player-walk-speed").fill("4.2");
+  await page.locator("#player-walk-speed").dispatchEvent("change");
+  await page.locator("#player-run-speed").fill("6.8");
+  await page.locator("#player-run-speed").dispatchEvent("change");
+  await page.locator("#player-jump-power").fill("6.5");
+  await page.locator("#player-jump-power").dispatchEvent("change");
+
+  await expect(canvas).toHaveAttribute("data-scene-player-collider", "2.400,0.350");
+  await expect(canvas).toHaveAttribute("data-scene-player-movement", "4.200,6.800,6.500");
+
+  await page.locator("#play").click();
+  await expect(page.locator("#mode-badge")).toHaveText("PLAY");
+  await expect(canvas).toHaveAttribute("data-player-collider-height", "2.400");
+  await expect(canvas).toHaveAttribute("data-player-collider-radius", "0.350");
+  await expect(canvas).toHaveAttribute("data-player-walk-speed", "4.200");
+  await expect(canvas).toHaveAttribute("data-player-run-speed", "6.800");
+  await expect(canvas).toHaveAttribute("data-player-jump-power", "6.500");
+
+  await page.keyboard.down("KeyW");
+  await page.waitForTimeout(700);
+  const walkVelocityRaw = (await canvas.getAttribute("data-player-velocity"))!;
+  const walkVelocity = Math.hypot(
+    Number(walkVelocityRaw.split(",")[0]),
+    Number(walkVelocityRaw.split(",")[2])
+  );
+  expect(walkVelocity).toBeGreaterThan(3.5);
+  expect(walkVelocity).toBeLessThanOrEqual(4.3);
+
+  await page.keyboard.down("ShiftLeft");
+  await page.waitForTimeout(450);
+  const runVelocityRaw = (await canvas.getAttribute("data-player-velocity"))!;
+  const runVelocity = Math.hypot(
+    Number(runVelocityRaw.split(",")[0]),
+    Number(runVelocityRaw.split(",")[2])
+  );
+  expect(runVelocity).toBeGreaterThan(walkVelocity + 1.5);
+  expect(runVelocity).toBeLessThanOrEqual(6.9);
+  await page.keyboard.up("ShiftLeft");
+  await page.keyboard.up("KeyW");
+
+  await page.locator("#stop").click();
+  await expect(page.locator("#mode-badge")).toHaveText("EDITOR");
+  await expect(page.locator("#player-collider-height")).toHaveValue("2.4");
+  await expect(page.locator("#player-run-speed")).toHaveValue("6.8");
+  expect(await canvas.getAttribute("data-runtime-error")).toBeNull();
+});
+
 test("ModuleScript libraries can be required by gameplay scripts", async ({ page }) => {
   await page.goto("/");
   await page.locator("[data-launch-tab='develop']").click();
