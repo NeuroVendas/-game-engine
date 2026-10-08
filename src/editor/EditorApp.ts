@@ -2918,6 +2918,7 @@ Forge.onUpdate((dt) => {
     this.forge.loadDocument(this.playSnapshot, true, false);
     this.forge.mountUI(this.uiRoot, true);
     this.mode = "play";
+    this.updateQuickActionUI();
     this.gizmos.positionGizmoEnabled = false;
     this.gizmos.rotationGizmoEnabled = false;
     this.gizmos.scaleGizmoEnabled = false;
@@ -2972,6 +2973,7 @@ Forge.onUpdate((dt) => {
     this.player?.dispose();
     this.player = null;
     this.mode = "editor";
+    this.updateQuickActionUI();
 
     if (this.playSnapshot) {
       this.forge.loadDocument(this.playSnapshot, false);
