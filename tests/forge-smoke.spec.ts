@@ -881,6 +881,72 @@ test("Project prefab library persists and inserts reusable hierarchies", async (
   expect(blocks.every((entity: any) => groups.some((group: any) => group.id === entity.parentId))).toBe(true);
 });
 
+test("Trigger volumes fire enter and exit hooks without blocking the player", async ({ page }) => {
+  await page.goto("/");
+  await page.locator("[data-launch-tab='develop']").click();
+  await page.locator("#new-place").click();
+  await page.locator("#new-place-name").fill("Trigger Volume Place");
+  await page.locator("#confirm-create-place").click();
+
+  const canvas = page.locator("#viewport");
+
+  await page.locator("[data-object='empty']").click();
+  await page.locator("#prop-name").fill("Checkpoint Zone");
+  await page.locator("#prop-name").dispatchEvent("change");
+  const zoneId = await page.locator(".scene-item.selected").getAttribute("data-entity-id");
+  expect(zoneId).toBeTruthy();
+
+  await page.locator("#pos-x").fill("0");
+  await page.locator("#pos-x").dispatchEvent("change");
+  await page.locator("#pos-y").fill("2");
+  await page.locator("#pos-y").dispatchEvent("change");
+  await page.locator("#pos-z").fill("10");
+  await page.locator("#pos-z").dispatchEvent("change");
+
+  await page.locator("#component-type").selectOption("Trigger");
+  await page.locator("#add-component").click();
+  const triggerCard = page.locator(".component").filter({ hasText: "Trigger" }).first();
+  await expect(triggerCard).toContainText("Trigger Volume does not block movement");
+  await expect(canvas).toHaveAttribute("data-trigger-volume-count", "1");
+
+  await page.locator("#collision-debug").click();
+  await expect(canvas).toHaveAttribute("data-trigger-debug-count", "1");
+  await page.locator("#collision-debug").click();
+
+  await page.locator(".scene-item", { hasText: "Checkpoint Zone" }).click();
+  await page.locator("[data-object='script']").click();
+  await page.locator("#code-selected").click();
+  await page.locator("#script-source").fill(`
+Forge.onTriggerEnter(() => {
+  Forge.log("TRIGGER_ENTER");
+});
+
+Forge.onTriggerExit(() => {
+  Forge.log("TRIGGER_EXIT");
+});
+`);
+  await page.locator("#script-check").click();
+  await expect(page.locator("#status")).toContainText("syntax OK");
+  await page.locator("#script-save").click();
+  await page.locator("#script-close").click();
+
+  await page.locator("#play").click();
+  await expect(page.locator("#mode-badge")).toHaveText("PLAY");
+  await expect(page.locator("#output-log")).toContainText("TRIGGER_ENTER");
+  await expect(canvas).toHaveAttribute("data-last-trigger-action", `enter:${zoneId}`);
+  await expect(canvas).toHaveAttribute("data-active-trigger-count", "1");
+
+  await page.keyboard.down("KeyW");
+  await page.waitForTimeout(1700);
+  await page.keyboard.up("KeyW");
+
+  await expect(page.locator("#output-log")).toContainText("TRIGGER_EXIT");
+  await expect(canvas).toHaveAttribute("data-last-trigger-action", `exit:${zoneId}`);
+  await expect(canvas).toHaveAttribute("data-active-trigger-count", "0");
+
+  expect(await canvas.getAttribute("data-runtime-error")).toBeNull();
+});
+
 test("ModuleScript libraries can be required by gameplay scripts", async ({ page }) => {
   await page.goto("/");
   await page.locator("[data-launch-tab='develop']").click();
