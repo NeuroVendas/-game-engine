@@ -16,6 +16,11 @@ export interface ForgeComponents {
     size?: [number, number, number];
     offset?: [number, number, number];
   };
+  Hazard?: {
+    enabled: boolean;
+    damage?: number;
+    interval?: number;
+  };
   Interactable?: {
     enabled: boolean;
     prompt?: string;
