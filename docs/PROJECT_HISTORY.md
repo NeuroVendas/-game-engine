@@ -731,6 +731,8 @@ Environment data now persists:
 - contrast
 - Standard / ACES tone mapping
 
+Scene rendering also persists a Low / Medium / High quality tier that changes Babylon's internal hardware scaling level for performance or supersampling without changing gameplay/camera logic.
+
 Lighting presets were expanded with Studio and Cinematic looks, and every preset now includes its intended post-processing values.
 
 ### PBR primitive surfaces
