@@ -676,8 +676,8 @@ Browser Smoke configures a custom Box Proxy, exports it inside a Forge prefab, i
 
 Player collision is no longer hard-coded to one capsule size.
 
-Creators can edit scene-level collider height/radius under the Player service. Play mode forwards those values into the PlayerController, which rebuilds its invisible capsule, Babylon ellipsoid, safe-ground snap and grounded probe from the configured dimensions.
+Creators can edit scene-level collider height/radius plus walk speed, run speed and jump power under the Player service. Play mode forwards those values into the PlayerController, which rebuilds its invisible capsule, Babylon ellipsoid, safe-ground snap and grounded probe from the configured dimensions while using the scene movement values for walk/run/jump targets.
 
-Legacy scenes retain the original 3.05 / 0.45 defaults.
+Legacy scenes retain the original 3.05 / 0.45 collider and 5.05 / 8 / 7.9 movement defaults.
 
-Browser acceptance coverage changes the scene collider dimensions, enters Play and verifies the runtime controller reports the configured height/radius.
+Browser acceptance coverage changes collider and movement values, enters Play and verifies the runtime controller reports the configured settings.
