@@ -974,6 +974,18 @@ Forge.onStart(() => {
   await expect(canvas).toHaveAttribute("data-asset-library-count", "3");
   await expect(canvas).toHaveAttribute("data-asset-registry-count", "3");
 
+  await page.locator("#asset-search").fill("silence");
+  await expect(canvas).toHaveAttribute("data-asset-library-visible-count", "1");
+  await expect(page.locator("#asset-library .asset-library-item")).toHaveCount(1);
+  await expect(page.locator("#asset-library")).toContainText("silence");
+
+  await page.locator("#asset-search").fill("");
+  await page.locator("#asset-kind-filter").selectOption("texture");
+  await expect(canvas).toHaveAttribute("data-asset-library-visible-count", "1");
+  await expect(page.locator("#asset-library")).toContainText("pixel");
+  await page.locator("#asset-kind-filter").selectOption("all");
+  await expect(canvas).toHaveAttribute("data-asset-library-visible-count", "3");
+
   await page.locator("[data-primitive='box']").click();
   await page.locator("#prop-name").fill("Texture Target");
   await page.locator("#prop-name").dispatchEvent("change");
