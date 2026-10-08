@@ -1097,6 +1097,26 @@ test("Studio imports GLB animations and audio assets", async ({ page }) => {
     timeout: 10000
   }).toBe("1");
 
+  await modelCollider.locator("[data-collider-reset]").click();
+  await expect(canvas).toHaveAttribute("data-last-collider-reset", /animated-triangle/);
+  await expect(canvas).toHaveAttribute(
+    "data-collider-proxies",
+    /:1\.00:1\.00:1\.00:0\.00:0\.00:0\.00/
+  );
+  await expect.poll(async () => canvas.getAttribute("data-model-animation-groups"), {
+    timeout: 10000
+  }).toBe("1");
+
+  const refreshedCollider = page.locator(".component").filter({ hasText: "Collider" }).first();
+  await refreshedCollider.locator("[data-collider-fit]").click();
+  await expect(canvas).toHaveAttribute(
+    "data-collider-proxies",
+    /:1\.00:1\.00:0\.05:0\.50:0\.50:0\.00/
+  );
+  await expect.poll(async () => canvas.getAttribute("data-model-animation-groups"), {
+    timeout: 10000
+  }).toBe("1");
+
   const clip = page.locator("[data-model-animation-clip]");
   await expect(clip.locator("option")).toContainText(["First clip (Bounce)", "Bounce"]);
   await clip.selectOption("Bounce");
