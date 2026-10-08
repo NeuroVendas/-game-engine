@@ -1041,6 +1041,88 @@ test("Studio Player settings configure the runtime capsule and movement", async 
   expect(await canvas.getAttribute("data-runtime-error")).toBeNull();
 });
 
+test("Player health supports damage heal death and respawn", async ({ page }) => {
+  await page.goto("/");
+  await page.locator("[data-launch-tab='develop']").click();
+  await page.locator("#new-place").click();
+  await page.locator("#new-place-name").fill("Player Health Place");
+  await page.locator("#confirm-create-place").click();
+
+  const canvas = page.locator("#viewport");
+
+  await page.locator("#player-max-health").fill("60");
+  await page.locator("#player-max-health").dispatchEvent("change");
+  await page.locator("#player-auto-respawn").uncheck();
+  await expect(canvas).toHaveAttribute("data-scene-player-health", "60.000,false");
+
+  await page.locator(".scene-item", { hasText: "Baseplate" }).click();
+  await page.locator("[data-object='script']").click();
+  await page.locator("#code-selected").click();
+  await page.locator("#script-source").fill(`
+Forge.onKeyDown((code) => {
+  if (code === "KeyH") {
+    Forge.log("HEALTH_DAMAGE:" + Forge.player.damage(25));
+  }
+  if (code === "KeyJ") {
+    Forge.log("HEALTH_HEAL:" + Forge.player.heal(10));
+  }
+  if (code === "KeyK") {
+    Forge.log("HEALTH_FATAL:" + Forge.player.damage(999));
+  }
+  if (code === "KeyR") {
+    Forge.log("HEALTH_RESPAWN:" + Forge.player.respawn());
+  }
+});
+`);
+  await page.locator("#script-check").click();
+  await expect(page.locator("#status")).toContainText("syntax OK");
+  await page.locator("#script-save").click();
+  await page.locator("#script-close").click();
+
+  await page.locator("#play").click();
+  await expect(page.locator("#mode-badge")).toHaveText("PLAY");
+  await expect(canvas).toHaveAttribute("data-player-health", "60.000,60.000");
+  await expect(canvas).toHaveAttribute("data-player-dead", "false");
+
+  await page.keyboard.press("KeyH");
+  await expect(page.locator("#output-log")).toContainText("HEALTH_DAMAGE:35");
+  await expect(canvas).toHaveAttribute("data-player-health", "35.000,60.000");
+
+  await page.keyboard.press("KeyJ");
+  await expect(page.locator("#output-log")).toContainText("HEALTH_HEAL:45");
+  await expect(canvas).toHaveAttribute("data-player-health", "45.000,60.000");
+
+  await page.keyboard.press("KeyK");
+  await expect(page.locator("#output-log")).toContainText("HEALTH_FATAL:0");
+  await expect(canvas).toHaveAttribute("data-player-health", "0.000,60.000");
+  await expect(canvas).toHaveAttribute("data-player-dead", "true");
+
+  await page.keyboard.press("KeyR");
+  await expect(page.locator("#output-log")).toContainText("HEALTH_RESPAWN:true");
+  await expect(canvas).toHaveAttribute("data-player-health", "60.000,60.000");
+  await expect(canvas).toHaveAttribute("data-player-dead", "false");
+
+  await page.locator("#stop").click();
+  await expect(page.locator("#mode-badge")).toHaveText("EDITOR");
+  await expect(page.locator("#player-auto-respawn")).not.toBeChecked();
+
+  await page.locator("#player-auto-respawn").check();
+  await expect(canvas).toHaveAttribute("data-scene-player-health", "60.000,true");
+
+  await page.locator("#play").click();
+  await expect(page.locator("#mode-badge")).toHaveText("PLAY");
+  await page.keyboard.press("KeyK");
+  await expect(canvas).toHaveAttribute("data-player-dead", "true");
+  await expect.poll(async () => canvas.getAttribute("data-player-dead"), {
+    timeout: 2500,
+    intervals: [100, 150, 200]
+  }).toBe("false");
+  await expect(canvas).toHaveAttribute("data-player-health", "60.000,60.000");
+  await expect(canvas).toHaveAttribute("data-last-player-action", "respawn");
+
+  expect(await canvas.getAttribute("data-runtime-error")).toBeNull();
+});
+
 test("ModuleScript libraries can be required by gameplay scripts", async ({ page }) => {
   await page.goto("/");
   await page.locator("[data-launch-tab='develop']").click();
