@@ -950,9 +950,11 @@ Forge.onStart(() => {
   // Reuse the same imported GLB without uploading it again.
   await page.locator(".scene-item", { hasText: "Baseplate" }).click();
   const modelAsset = page.locator("#asset-library [data-asset-kind='model']");
-  await modelAsset.locator("[data-asset-action='model']").click();
+  await modelAsset.dragTo(page.locator("#workspace-root"));
   await expect(page.locator(".scene-item", { hasText: "animated-triangle" })).toHaveCount(1);
   await expect(page.locator(".scene-item", { hasText: "Animated Asset" })).toHaveCount(1);
+  await page.locator(".scene-item", { hasText: "Animated Asset" }).click();
+  await expect(page.locator("#prop-parent")).toHaveValue("");
   await expect(canvas).toHaveAttribute("data-asset-library-count", "1");
   await expect(canvas).toHaveAttribute("data-asset-registry-count", "1");
 
@@ -1013,7 +1015,8 @@ Forge.onStart(() => {
   await page.locator("#prop-name").dispatchEvent("change");
 
   const textureAsset = page.locator("#asset-library [data-asset-kind='texture']");
-  await textureAsset.locator("[data-asset-action='texture']").click();
+  await textureAsset.dragTo(page.locator(".scene-item", { hasText: "Texture Target" }));
+  await expect(page.locator(".scene-item", { hasText: "Texture Target" })).toHaveClass(/selected/);
   await expect.poll(async () => page.locator("#prop-texture").inputValue())
     .toMatch(/^data:image\/png;base64,/);
 
