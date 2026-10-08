@@ -1328,7 +1328,7 @@ export class EditorApp {
 
     switch (type) {
       case "Collider":
-        components.Collider = { enabled: true };
+        components.Collider = { enabled: true, mode: "mesh" };
         break;
       case "Interactable":
         components.Interactable = { enabled: true, prompt: "E • Interact" };
@@ -1463,9 +1463,53 @@ export class EditorApp {
       case "Collider": {
         const component = components.Collider;
         if (!component) return;
+
         this.appendCheckboxField(container, "Enabled", component.enabled, (value) => {
           component.enabled = value;
         });
+
+        this.appendSelectField(container, "Collision mode", component.mode ?? "mesh", [
+          ["mesh", "Mesh"],
+          ["box", "Box Proxy"]
+        ], (value) => {
+          component.mode = value as "mesh" | "box";
+          if (component.mode === "box" && !component.size) {
+            component.size = [...(entity.size ?? [1, 1, 1])];
+          }
+          if (component.mode === "box" && !component.offset) {
+            component.offset = [0, 0, 0];
+          }
+        });
+
+        if ((component.mode ?? "mesh") === "box") {
+          const size = component.size ?? entity.size ?? [1, 1, 1];
+          const offset = component.offset ?? [0, 0, 0];
+
+          this.appendNumberField(container, "Collider size X", size[0], 0.1, (value) => {
+            component.size = [Math.max(0.05, Math.abs(value)), size[1], size[2]];
+          });
+          this.appendNumberField(container, "Collider size Y", size[1], 0.1, (value) => {
+            component.size = [size[0], Math.max(0.05, Math.abs(value)), size[2]];
+          });
+          this.appendNumberField(container, "Collider size Z", size[2], 0.1, (value) => {
+            component.size = [size[0], size[1], Math.max(0.05, Math.abs(value))];
+          });
+
+          this.appendNumberField(container, "Collider offset X", offset[0], 0.1, (value) => {
+            component.offset = [value, offset[1], offset[2]];
+          });
+          this.appendNumberField(container, "Collider offset Y", offset[1], 0.1, (value) => {
+            component.offset = [offset[0], value, offset[2]];
+          });
+          this.appendNumberField(container, "Collider offset Z", offset[2], 0.1, (value) => {
+            component.offset = [offset[0], offset[1], value];
+          });
+
+          const note = document.createElement("div");
+          note.className = "component-note";
+          note.textContent = "Box Proxy uses a separate invisible collision volume. Turn on Colliders to preview it.";
+          container.appendChild(note);
+        }
         break;
       }
       case "Interactable": {
