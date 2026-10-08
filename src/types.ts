@@ -108,6 +108,16 @@ export interface ForgeEntity {
   parentId?: string;
 }
 
+export type ForgeAssetKind = "model" | "texture" | "audio";
+
+export interface ForgeAsset {
+  id: string;
+  kind: ForgeAssetKind;
+  name: string;
+  src: string;
+  fileName?: string;
+}
+
 export interface ForgePrefabDocument {
   format: "forge.prefab";
   version: 1;
@@ -119,6 +129,7 @@ export interface ForgeSceneDocument {
   format: "forge.scene";
   version: 1;
   name: string;
+  assets?: ForgeAsset[];
   playerSpawn?: Vec3;
   player?: {
     colliderHeight?: number;
