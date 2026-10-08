@@ -1056,7 +1056,10 @@ export class ForgeEngine {
     const enabled = !this.runtimeMode
       && this.collisionDebugEnabled
       && Boolean(entity.components?.Collider?.enabled);
-    const targets: AbstractMesh[] = [root, ...root.getChildMeshes(false)];
+    const modelMeshes = root.getChildMeshes(false).filter(
+      (target) => target.metadata?.forgeEntityId === entity.id
+    );
+    const targets: AbstractMesh[] = [root, ...modelMeshes];
 
     for (const target of targets) {
       if (enabled && target.visibility !== 0) {
