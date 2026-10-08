@@ -120,6 +120,7 @@ export interface ForgeSceneDocument {
   version: 1;
   name: string;
   playerSpawn?: Vec3;
+  prefabs?: ForgePrefabDocument[];
   environment?: {
     skyColor?: string;
     skyTexture?: string;
