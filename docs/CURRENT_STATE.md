@@ -94,6 +94,8 @@ Implemented:
 - hierarchy/parenting
 - Groups
 - collider visualization toggle in the Studio viewport
+- collider mode selection: visible Mesh collision or editable Box Proxy collision
+- Box Proxy local size and offset authoring, including prefab persistence
 - custom prefab export/import for selected hierarchies (`.forge-prefab.json`)
 - Explorer drag/drop reparenting
 - cycle prevention
