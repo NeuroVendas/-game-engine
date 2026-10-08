@@ -12,6 +12,7 @@ export class PlayerController {
   readonly body: Mesh;
   readonly camera: ArcRotateCamera;
 
+  private readonly colliderHalfHeight: number;
   private readonly avatarRoot: TransformNode;
   private readonly avatarParts: Mesh[] = [];
   private readonly avatarNodes: TransformNode[] = [];
@@ -92,18 +93,30 @@ export class PlayerController {
     private readonly setPrompt: (text: string | null, locked: boolean) => void = () => {}
   ) {
     const scene = forge.scene;
+    const colliderHeight = Math.min(
+      6,
+      Math.max(1.2, Number(forge.document.player?.colliderHeight) || 2.96)
+    );
+    const colliderRadius = Math.min(
+      1.5,
+      Math.max(0.2, Number(forge.document.player?.colliderRadius) || 0.52)
+    );
+    this.colliderHalfHeight = colliderHeight * 0.5;
 
     this.body = MeshBuilder.CreateCapsule("__player-collider", {
-      height: 3.05,
-      radius: 0.45,
+      height: Math.max(colliderHeight, colliderRadius * 2),
+      radius: colliderRadius,
       subdivisions: 8
     }, scene);
     this.body.position = new Vector3(spawn[0], spawn[1], spawn[2]);
     this.body.checkCollisions = true;
-    this.body.ellipsoid = new Vector3(0.52, 1.48, 0.52);
+    this.body.ellipsoid = new Vector3(colliderRadius, this.colliderHalfHeight, colliderRadius);
     this.body.ellipsoidOffset = Vector3.Zero();
     this.body.isPickable = false;
     this.body.visibility = 0;
+
+    forge.canvas.dataset.playerColliderHeight = colliderHeight.toFixed(2);
+    forge.canvas.dataset.playerColliderRadius = colliderRadius.toFixed(2);
 
     this.snapToSafeGround();
 
@@ -353,6 +366,8 @@ export class PlayerController {
     delete this.forge.canvas.dataset.playerPosition;
     delete this.forge.canvas.dataset.playerVelocity;
     delete this.forge.canvas.dataset.playerGrounded;
+    delete this.forge.canvas.dataset.playerColliderHeight;
+    delete this.forge.canvas.dataset.playerColliderRadius;
     delete this.forge.canvas.dataset.cameraAngles;
     delete this.forge.canvas.dataset.cameraForward;
     delete this.forge.canvas.dataset.cameraRadius;
@@ -493,12 +508,17 @@ export class PlayerController {
     const hit = this.forge.scene.pickWithRay(ray, (mesh) => mesh !== this.body && mesh.checkCollisions);
 
     if (hit?.hit && hit.pickedPoint) {
-      this.body.position.y = hit.pickedPoint.y + 1.53;
+      this.body.position.y = hit.pickedPoint.y + this.colliderHalfHeight + 0.05;
     }
   }
 
   private isGrounded(): boolean {
-    const ray = new Ray(this.body.position.add(new Vector3(0, -1.34, 0)), Vector3.Down(), 0.42);
+    const groundProbeOffset = Math.max(0.05, this.colliderHalfHeight - 0.14);
+    const ray = new Ray(
+      this.body.position.add(new Vector3(0, -groundProbeOffset, 0)),
+      Vector3.Down(),
+      0.42
+    );
     const hit = this.forge.scene.pickWithRay(ray, (mesh) => mesh !== this.body && mesh.checkCollisions);
     return hit?.hit ?? false;
   }
