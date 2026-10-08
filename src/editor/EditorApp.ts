@@ -72,6 +72,13 @@ export class EditorApp {
     this.forge = new ForgeEngine(canvas, (message) => this.log(message));
     registerDefaultScripts(this.forge.scripts);
 
+    this.canvas.addEventListener("forge:model-loaded", ((event: Event) => {
+      const detail = (event as CustomEvent<{ entityId?: string }>).detail;
+      if (this.mode === "editor" && detail?.entityId === this.selectedId) {
+        this.renderInspector();
+      }
+    }) as EventListener);
+
     this.editorCamera = new ArcRotateCamera(
       "__editor-camera",
       -Math.PI / 2.2,
@@ -878,7 +885,10 @@ export class EditorApp {
       entity.components = {
         Model: {
           src: dataUrl,
-          fileName: file.name
+          fileName: file.name,
+          animationAutoplay: false,
+          animationLoop: true,
+          animationSpeed: 1
         },
         Collider: { enabled: false }
       };
@@ -1362,7 +1372,12 @@ export class EditorApp {
         };
         break;
       case "Model":
-        components.Model = { src: "" };
+        components.Model = {
+          src: "",
+          animationAutoplay: false,
+          animationLoop: true,
+          animationSpeed: 1
+        };
         break;
       case "Spawn":
         components.Spawn = { enabled: true };
@@ -1659,6 +1674,115 @@ export class EditorApp {
         this.appendTextField(container, "GLB / glTF URL", component.src, (value) => {
           component.src = value;
         });
+
+        const modelMesh = this.forge.getMesh(entity.id);
+        const animationClips = (
+          modelMesh?.metadata as { modelAnimationClips?: string[] } | null
+        )?.modelAnimationClips ?? [];
+
+        const clipLabel = document.createElement("label");
+        clipLabel.textContent = "Animation clip";
+        const clipSelect = document.createElement("select");
+
+        const automatic = document.createElement("option");
+        automatic.value = "";
+        automatic.textContent = animationClips.length > 0
+          ? `First clip (${animationClips[0]})`
+          : "First available clip";
+        clipSelect.appendChild(automatic);
+
+        for (const clipName of animationClips) {
+          const option = document.createElement("option");
+          option.value = clipName;
+          option.textContent = clipName;
+          clipSelect.appendChild(option);
+        }
+
+        clipSelect.value = component.animation ?? "";
+        clipSelect.addEventListener("change", () => {
+          this.checkpoint();
+          component.animation = clipSelect.value || undefined;
+          this.log(`Animation clip: ${clipSelect.value || "first available"}.`);
+        });
+        clipLabel.appendChild(clipSelect);
+        container.appendChild(clipLabel);
+
+        const autoplayLabel = document.createElement("label");
+        autoplayLabel.textContent = "Autoplay in Play";
+        const autoplay = document.createElement("input");
+        autoplay.type = "checkbox";
+        autoplay.checked = component.animationAutoplay ?? false;
+        autoplay.addEventListener("change", () => {
+          this.checkpoint();
+          component.animationAutoplay = autoplay.checked;
+        });
+        autoplayLabel.appendChild(autoplay);
+        container.appendChild(autoplayLabel);
+
+        const loopLabel = document.createElement("label");
+        loopLabel.textContent = "Loop";
+        const loop = document.createElement("input");
+        loop.type = "checkbox";
+        loop.checked = component.animationLoop ?? true;
+        loop.addEventListener("change", () => {
+          this.checkpoint();
+          component.animationLoop = loop.checked;
+        });
+        loopLabel.appendChild(loop);
+        container.appendChild(loopLabel);
+
+        const speedLabel = document.createElement("label");
+        speedLabel.textContent = "Animation speed";
+        const speed = document.createElement("input");
+        speed.type = "number";
+        speed.min = "0.05";
+        speed.max = "4";
+        speed.step = "0.05";
+        speed.value = String(component.animationSpeed ?? 1);
+        speed.addEventListener("change", () => {
+          const next = Math.min(4, Math.max(0.05, Number(speed.value) || 1));
+          this.checkpoint();
+          component.animationSpeed = next;
+          speed.value = String(next);
+        });
+        speedLabel.appendChild(speed);
+        container.appendChild(speedLabel);
+
+        const clipNote = document.createElement("div");
+        clipNote.className = "component-note";
+        clipNote.textContent = animationClips.length > 0
+          ? `Clips: ${animationClips.join(", ")}`
+          : component.src
+            ? "Animation clips will appear after the model finishes loading."
+            : "Import an animated GLB to discover clips.";
+        container.appendChild(clipNote);
+
+        const animationActions = document.createElement("div");
+        animationActions.className = "component-actions";
+
+        const preview = document.createElement("button");
+        preview.type = "button";
+        preview.textContent = "Preview Animation";
+        preview.disabled = animationClips.length === 0;
+        preview.addEventListener("click", () => {
+          if (!this.forge.playModelAnimation(entity.id, component.animation)) {
+            this.log(`No animation clip available on ${entity.name}.`);
+            return;
+          }
+          this.log(`Previewing animation on ${entity.name}.`);
+        });
+
+        const stop = document.createElement("button");
+        stop.type = "button";
+        stop.textContent = "Stop";
+        stop.disabled = animationClips.length === 0;
+        stop.addEventListener("click", () => {
+          this.forge.stopModelAnimation(entity.id);
+        });
+
+        animationActions.append(preview, stop);
+        container.appendChild(animationActions);
+
         if (component.fileName) {
           const note = document.createElement("div");
           note.className = "component-note";
