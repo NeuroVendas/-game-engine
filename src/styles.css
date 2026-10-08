@@ -1242,6 +1242,22 @@ input, textarea { cursor: text; }
 .lighting-presets button:hover {
   background: linear-gradient(#3c4b56,#29343c);
 }
+.asset-library-tools {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 82px;
+  gap: 4px;
+  padding: 6px 8px 0 18px;
+  background: #1b242b;
+}
+.asset-library-tools input,
+.asset-library-tools select {
+  min-width: 0;
+  padding: 4px 5px;
+  border: 1px solid #48555f;
+  background: #11181d;
+  color: #d5dde2;
+  font-size: 9px;
+}
 .asset-library {
   display: grid;
   gap: 4px;
