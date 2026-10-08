@@ -29,6 +29,11 @@ export class PlayerController {
   private interactPressed = false;
   private walkTime = 0;
   private clearanceLevel = 1;
+  private landingCompression = 0;
+  private sprintBlend = 0;
+  private thirdPersonRadius = 6;
+  private readonly thirdPersonMinRadius = 2.35;
+  private readonly thirdPersonMaxRadius = 11.5;
 
   private readonly onKeyDown = (event: KeyboardEvent) => {
     if (["KeyW", "KeyA", "KeyS", "KeyD", "Space", "ShiftLeft", "ShiftRight"].includes(event.code)) {
@@ -42,9 +47,24 @@ export class PlayerController {
     }
 
     if (event.code === "KeyC" && !event.repeat) {
-      this.firstPerson = !this.firstPerson;
-      this.camera.radius = this.firstPerson ? 0.45 : 6;
+      if (!this.firstPerson) {
+        this.thirdPersonRadius = Math.min(
+          this.thirdPersonMaxRadius,
+          Math.max(this.thirdPersonMinRadius, this.camera.radius)
+        );
+        this.firstPerson = true;
+        this.camera.lowerRadiusLimit = 0.35;
+        this.camera.upperRadiusLimit = 0.6;
+        this.camera.radius = 0.45;
+      } else {
+        this.firstPerson = false;
+        this.camera.lowerRadiusLimit = this.thirdPersonMinRadius;
+        this.camera.upperRadiusLimit = this.thirdPersonMaxRadius;
+        this.camera.radius = this.thirdPersonRadius;
+      }
+
       this.avatarRoot.setEnabled(!this.firstPerson);
+      this.forge.canvas.dataset.cameraMode = this.firstPerson ? "first-person" : "third-person";
       this.log(this.firstPerson ? "First-person camera." : "Third-person camera.");
     }
 
@@ -142,10 +162,16 @@ export class PlayerController {
       this.body.position.add(new Vector3(0, 0.48, 0)),
       scene
     );
-    this.camera.lowerRadiusLimit = 0.35;
-    this.camera.upperRadiusLimit = 10;
+    this.camera.lowerRadiusLimit = this.thirdPersonMinRadius;
+    this.camera.upperRadiusLimit = this.thirdPersonMaxRadius;
+    this.camera.lowerBetaLimit = 0.34;
+    this.camera.upperBetaLimit = 1.46;
     this.camera.panningSensibility = 0;
-    this.camera.wheelPrecision = 20;
+    this.camera.wheelPrecision = 28;
+    this.camera.inertia = 0.72;
+    this.camera.angularSensibilityX = 2600;
+    this.camera.angularSensibilityY = 2600;
+    this.camera.fov = 0.82;
     this.camera.checkCollisions = true;
     this.camera.collisionRadius = new Vector3(0.25, 0.25, 0.25);
     this.camera.attachControl(forge.canvas, true);
@@ -154,6 +180,7 @@ export class PlayerController {
     forge.canvas.dataset.avatarRig = "ForgeClassic6";
     forge.canvas.dataset.avatarShape = "block-head-equal-limbs";
     forge.canvas.dataset.avatarAnimation = "idle";
+    forge.canvas.dataset.cameraMode = "third-person";
 
     window.addEventListener("keydown", this.onKeyDown, { passive: false });
     window.addEventListener("keyup", this.onKeyUp);
@@ -181,7 +208,14 @@ export class PlayerController {
 
     if (moving) desiredDirection.normalize();
 
+    const wasGrounded = this.grounded;
+    const landingVelocity = this.verticalVelocity;
     this.grounded = this.isGrounded();
+
+    if (this.grounded && !wasGrounded && landingVelocity < -2.8) {
+      this.landingCompression = Math.min(0.12, Math.abs(landingVelocity) * 0.012);
+    }
+
     this.coyoteTime = this.grounded ? 0.12 : Math.max(0, this.coyoteTime - dt);
     this.jumpBuffer = Math.max(0, this.jumpBuffer - dt);
 
@@ -196,14 +230,16 @@ export class PlayerController {
       this.grounded = false;
     }
 
-    const targetSpeed = running ? 7.4 : 4.85;
+    this.sprintBlend += ((running ? 1 : 0) - this.sprintBlend) * Math.min(1, dt * 7.5);
+
+    const targetSpeed = running ? 8.0 : 5.05;
     const targetVelocity = moving
       ? desiredDirection.scale(targetSpeed)
       : Vector3.Zero();
 
     const acceleration = this.grounded
-      ? (moving ? 24 : 36)
-      : (moving ? 8.5 : 10.5);
+      ? (moving ? (running ? 20.5 : 22.5) : 33)
+      : (moving ? 7.4 : 9.2);
 
     this.horizontalVelocity = this.moveTowardVector(
       this.horizontalVelocity,
@@ -238,7 +274,21 @@ export class PlayerController {
       this.animateIdle(dt);
     }
 
-    const desiredCameraTarget = this.body.position.add(new Vector3(0, 0.54, 0));
+    this.landingCompression += (0 - this.landingCompression) * Math.min(1, dt * 12);
+
+    if (!this.firstPerson) {
+      this.thirdPersonRadius = Math.min(
+        this.thirdPersonMaxRadius,
+        Math.max(this.thirdPersonMinRadius, this.camera.radius)
+      );
+    }
+
+    const desiredFov = this.firstPerson ? 0.79 : 0.82 + this.sprintBlend * 0.045;
+    this.camera.fov += (desiredFov - this.camera.fov) * Math.min(1, dt * 5.5);
+
+    const desiredCameraTarget = this.body.position.add(
+      new Vector3(0, 0.54 - this.landingCompression * 0.35, 0)
+    );
     Vector3.LerpToRef(
       this.camera.target,
       desiredCameraTarget,
@@ -262,6 +312,10 @@ export class PlayerController {
       this.camera.beta.toFixed(4),
       this.camera.radius.toFixed(3)
     ].join(",");
+    this.forge.canvas.dataset.cameraRadius = this.camera.radius.toFixed(3);
+    this.forge.canvas.dataset.cameraFov = this.camera.fov.toFixed(4);
+    this.forge.canvas.dataset.playerMovementState =
+      !this.grounded ? "air" : running ? "sprint" : moving ? "walk" : "idle";
 
     this.updateInteractionPrompt();
 
@@ -296,6 +350,10 @@ export class PlayerController {
     delete this.forge.canvas.dataset.playerVelocity;
     delete this.forge.canvas.dataset.playerGrounded;
     delete this.forge.canvas.dataset.cameraAngles;
+    delete this.forge.canvas.dataset.cameraRadius;
+    delete this.forge.canvas.dataset.cameraFov;
+    delete this.forge.canvas.dataset.cameraMode;
+    delete this.forge.canvas.dataset.playerMovementState;
     delete this.forge.canvas.dataset.avatarRig;
     delete this.forge.canvas.dataset.avatarShape;
     delete this.forge.canvas.dataset.avatarAnimation;
@@ -371,41 +429,53 @@ export class PlayerController {
   }
 
   private animateClassicWalk(dt: number, running: boolean): void {
-    const cadence = running ? 10.5 : 7.2;
-    const amplitude = running ? 0.82 : 0.60;
+    const cadence = running ? 9.4 : 6.6;
+    const amplitude = running ? 0.72 : 0.52;
 
     this.walkTime += dt * cadence;
     const swing = Math.sin(this.walkTime) * amplitude;
-    const bob = Math.abs(Math.sin(this.walkTime * 2)) * (running ? 0.055 : 0.035);
+    const bob = Math.abs(Math.sin(this.walkTime * 2)) * (running ? 0.042 : 0.025);
+    const bodyLean = running ? -0.065 : -0.025;
 
-    this.easeRotation(this.armPivots[0], swing, dt, 16);
-    this.easeRotation(this.armPivots[1], -swing, dt, 16);
-    this.easeRotation(this.legPivots[0], -swing * 0.82, dt, 16);
-    this.easeRotation(this.legPivots[1], swing * 0.82, dt, 16);
+    this.easeRotation(this.armPivots[0], swing, dt, 14);
+    this.easeRotation(this.armPivots[1], -swing, dt, 14);
+    this.easeRotation(this.legPivots[0], -swing * 0.9, dt, 15);
+    this.easeRotation(this.legPivots[1], swing * 0.9, dt, 15);
 
-    this.avatarRoot.position.y += (bob - this.avatarRoot.position.y) * Math.min(1, dt * 18);
-    this.headPivot.rotation.z = Math.sin(this.walkTime) * 0.025;
+    const wantedY = bob - this.landingCompression;
+    this.avatarRoot.position.y += (wantedY - this.avatarRoot.position.y) * Math.min(1, dt * 17);
+    this.avatarRoot.rotation.x += (bodyLean - this.avatarRoot.rotation.x) * Math.min(1, dt * 9);
+    this.headPivot.rotation.z += (
+      Math.sin(this.walkTime) * (running ? 0.018 : 0.012) - this.headPivot.rotation.z
+    ) * Math.min(1, dt * 12);
     this.forge.canvas.dataset.avatarAnimation = running ? "run" : "walk";
   }
 
   private animateIdle(dt: number): void {
+    this.walkTime += dt * 0.9;
     this.easeRotation(this.armPivots[0], 0, dt, 10);
     this.easeRotation(this.armPivots[1], 0, dt, 10);
     this.easeRotation(this.legPivots[0], 0, dt, 10);
     this.easeRotation(this.legPivots[1], 0, dt, 10);
 
-    this.avatarRoot.position.y += (0 - this.avatarRoot.position.y) * Math.min(1, dt * 10);
+    const breathe = Math.sin(this.walkTime) * 0.008;
+    const wantedY = breathe - this.landingCompression;
+    this.avatarRoot.position.y += (wantedY - this.avatarRoot.position.y) * Math.min(1, dt * 10);
+    this.avatarRoot.rotation.x += (0 - this.avatarRoot.rotation.x) * Math.min(1, dt * 9);
     this.headPivot.rotation.z += (0 - this.headPivot.rotation.z) * Math.min(1, dt * 8);
     this.forge.canvas.dataset.avatarAnimation = "idle";
   }
 
   private animateJump(dt: number): void {
-    this.easeRotation(this.armPivots[0], -0.35, dt, 12);
-    this.easeRotation(this.armPivots[1], -0.35, dt, 12);
-    this.easeRotation(this.legPivots[0], 0.18, dt, 12);
-    this.easeRotation(this.legPivots[1], -0.18, dt, 12);
-    this.avatarRoot.position.y += (0.025 - this.avatarRoot.position.y) * Math.min(1, dt * 10);
-    this.forge.canvas.dataset.avatarAnimation = "jump";
+    const rising = this.verticalVelocity > 0;
+    this.easeRotation(this.armPivots[0], rising ? -0.22 : -0.08, dt, 11);
+    this.easeRotation(this.armPivots[1], rising ? -0.22 : -0.08, dt, 11);
+    this.easeRotation(this.legPivots[0], rising ? 0.14 : 0.24, dt, 11);
+    this.easeRotation(this.legPivots[1], rising ? -0.14 : -0.24, dt, 11);
+    this.avatarRoot.position.y += (0.02 - this.avatarRoot.position.y) * Math.min(1, dt * 10);
+    this.avatarRoot.rotation.x += ((rising ? -0.04 : 0.035) - this.avatarRoot.rotation.x)
+      * Math.min(1, dt * 8);
+    this.forge.canvas.dataset.avatarAnimation = rising ? "jump-rise" : "jump-fall";
   }
 
   private easeRotation(node: TransformNode, targetX: number, dt: number, speed: number): void {
