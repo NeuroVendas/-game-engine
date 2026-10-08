@@ -1301,6 +1301,75 @@ export class EditorApp {
     this.renderAssetLibrary();
   }
 
+  private ensureSceneAssetRegistry(): ForgeAsset[] {
+    if (this.forge.document.assets) return this.forge.document.assets;
+
+    const assets: ForgeAsset[] = [];
+    const usedIds = new Set<string>();
+    const seen = new Set<string>();
+
+    const addLegacy = (
+      kind: ForgeAssetKind,
+      name: string,
+      src: string,
+      fileName?: string
+    ) => {
+      const cleanSrc = src.trim();
+      if (!cleanSrc) return;
+      const key = `${kind}:${cleanSrc}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+
+      const base = (fileName ?? name ?? kind)
+        .replace(/\.[^.]+$/, "")
+        .replace(/[^a-zA-Z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "")
+        .slice(0, 40) || kind;
+      let id = `asset_${kind}_${base}`;
+      let suffix = 2;
+      while (usedIds.has(id)) {
+        id = `asset_${kind}_${base}_${suffix}`;
+        suffix += 1;
+      }
+      usedIds.add(id);
+      assets.push({ id, kind, name: name || fileName || base, src: cleanSrc, fileName });
+    };
+
+    for (const entity of this.forge.document.entities) {
+      const model = entity.components?.Model;
+      if (model?.src?.trim()) {
+        addLegacy(
+          "model",
+          model.fileName?.replace(/\.glb$/i, "") || entity.name,
+          model.src,
+          model.fileName
+        );
+      }
+
+      const sound = entity.components?.Sound;
+      if (sound?.src?.trim()) {
+        addLegacy(
+          "audio",
+          sound.fileName?.replace(/\.[^.]+$/, "") || entity.name,
+          sound.src,
+          sound.fileName
+        );
+      }
+
+      if (entity.texture?.trim()) {
+        addLegacy(
+          "texture",
+          entity.textureFileName?.replace(/\.[^.]+$/, "") || `${entity.name} Texture`,
+          entity.texture,
+          entity.textureFileName
+        );
+      }
+    }
+
+    this.forge.document.assets = assets;
+    return assets;
+  }
+
   private registerSceneAsset(
     kind: ForgeAssetKind,
     name: string,
@@ -1310,7 +1379,7 @@ export class EditorApp {
     const cleanSrc = src.trim();
     if (!cleanSrc) throw new Error("Asset source is empty.");
 
-    const assets = this.forge.document.assets ?? (this.forge.document.assets = []);
+    const assets = this.ensureSceneAssetRegistry();
     const existing = assets.find((asset) => asset.kind === kind && asset.src === cleanSrc);
     if (existing) {
       if (fileName && !existing.fileName) existing.fileName = fileName;
@@ -1365,9 +1434,9 @@ export class EditorApp {
 
     for (const asset of this.forge.document.assets ?? []) add(asset);
 
-    // Backward compatibility: legacy scenes created before forge.scene had an
-    // asset registry still expose resources already referenced by entities.
-    for (const entity of this.forge.document.entities) {
+    // Backward compatibility: scenes without an asset registry still expose
+    // resources referenced by entities. The first new import migrates them.
+    if (this.forge.document.assets === undefined) for (const entity of this.forge.document.entities) {
       const model = entity.components?.Model;
       if (model?.src?.trim()) {
         add({
