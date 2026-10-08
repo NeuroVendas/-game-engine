@@ -857,10 +857,15 @@ test("Studio imports GLB animations and audio assets", async ({ page }) => {
   await page.locator("[data-model-animation-speed]").fill("1.5");
   await page.locator("[data-model-animation-speed]").dispatchEvent("change");
 
-  await page.locator("[data-model-animation-preview]").click();
+  await page.locator("[data-model-animation-preview]").evaluate((button) => {
+    (button as HTMLButtonElement).click();
+  });
+  await expect(page.locator("#output-log")).toContainText("Previewing animation on animated-triangle");
   await expect(canvas).toHaveAttribute("data-last-animation-action", /play:.*:Bounce/);
 
-  await page.locator("[data-model-animation-stop]").click();
+  await page.locator("[data-model-animation-stop]").evaluate((button) => {
+    (button as HTMLButtonElement).click();
+  });
   await expect(canvas).toHaveAttribute("data-last-animation-action", /stop:.*:\*/);
 
   await page.locator("#play").click();
