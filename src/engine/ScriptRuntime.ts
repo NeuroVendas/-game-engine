@@ -16,6 +16,8 @@ export interface ForgeScript {
   onStart?(): void;
   onUpdate?(dt: number): void;
   onInteract?(actor: AbstractMesh): void;
+  onTriggerEnter?(actor: AbstractMesh): void;
+  onTriggerExit?(actor: AbstractMesh): void;
   onClick?(): void;
   onKeyDown?(code: string): void;
   onKeyUp?(code: string): void;
@@ -114,6 +116,8 @@ interface ForgeUserAPI {
   onStart(callback: () => void): void;
   onUpdate(callback: (dt: number) => void): void;
   onInteract(callback: ScriptCallback): void;
+  onTriggerEnter(callback: ScriptCallback): void;
+  onTriggerExit(callback: ScriptCallback): void;
   onClick(callback: () => void): void;
   onKeyDown(callback: (code: string) => void): void;
   onKeyUp(callback: (code: string) => void): void;
@@ -297,6 +301,22 @@ export class ScriptRuntime {
     }
   }
 
+  triggerEnter(entityId: string, actor: AbstractMesh): void {
+    for (const scriptId of this.eventScriptIds(entityId)) {
+      const script = this.active.get(scriptId);
+      if (!script) continue;
+      this.safeCall(scriptId, "onTriggerEnter", () => script.onTriggerEnter?.(actor));
+    }
+  }
+
+  triggerExit(entityId: string, actor: AbstractMesh): void {
+    for (const scriptId of this.eventScriptIds(entityId)) {
+      const script = this.active.get(scriptId);
+      if (!script) continue;
+      this.safeCall(scriptId, "onTriggerExit", () => script.onTriggerExit?.(actor));
+    }
+  }
+
   uiClick(entityId: string): void {
     for (const scriptId of this.eventScriptIds(entityId)) {
       const script = this.active.get(scriptId);
@@ -422,6 +442,12 @@ export class ScriptRuntime {
       },
       onInteract: (callback: ScriptCallback) => {
         script.onInteract = callback as (actor: AbstractMesh) => void;
+      },
+      onTriggerEnter: (callback: ScriptCallback) => {
+        script.onTriggerEnter = callback as (actor: AbstractMesh) => void;
+      },
+      onTriggerExit: (callback: ScriptCallback) => {
+        script.onTriggerExit = callback as (actor: AbstractMesh) => void;
       },
       onClick: (callback: () => void) => {
         script.onClick = callback;
