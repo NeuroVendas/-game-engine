@@ -195,6 +195,7 @@ Major current creator/runtime capabilities:
 - interaction
 - trigger enter/exit events
 - player checkpoint / respawn control
+- player health, damage/heal, death and optional auto-respawn
 - input/events
 - UI click events
 - object lookup
@@ -421,6 +422,8 @@ Current scene-level settings:
 - `player.walkSpeed`
 - `player.runSpeed`
 - `player.jumpPower`
+- `player.maxHealth`
+- `player.autoRespawn`
 
 Defaults remain compatible with existing scenes: height 3.05, radius 0.45, walk 5.05, run 8 and jump 7.9. Values are clamped at authoring/runtime boundaries, capsule height cannot collapse below its radius, and grounded/safe-ground probes use the configured capsule dimensions.
 
@@ -434,3 +437,23 @@ Runtime scripts can use the Player API to build checkpoint loops without directl
 - `Forge.player.respawn()` clears current motion and returns the runtime player to the saved checkpoint.
 
 The initial checkpoint is the resolved player spawn. This combines naturally with Trigger volumes for checkpoints, platformers, obbies and hazard/respawn gameplay.
+
+
+## Player health
+
+The runtime player has reusable health/death state controlled by the Player service and creator scripts.
+
+Scene settings:
+
+- `player.maxHealth` (default 100)
+- `player.autoRespawn` (default true)
+
+Script API:
+
+- `Forge.player.getHealth()`
+- `Forge.player.getMaxHealth()`
+- `Forge.player.isDead()`
+- `Forge.player.damage(amount)`
+- `Forge.player.heal(amount)`
+
+Lethal damage freezes movement. With auto-respawn enabled the player returns to the current checkpoint after a short delay; with it disabled the player remains dead until `Forge.player.respawn()` is called.
