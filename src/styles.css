@@ -1285,11 +1285,21 @@ input, textarea { cursor: text; }
   min-width: 0;
 }
 .asset-library-name {
+  width: 100%;
+  min-width: 0;
   overflow: hidden;
+  padding: 1px 2px;
+  border: 1px solid transparent;
+  background: transparent;
   color: #d7e0e5;
   font-size: 10px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.asset-library-name:not([readonly]):focus {
+  border-color: #71828e;
+  background: #141c22;
+  outline: none;
 }
 .asset-library-type {
   margin-top: 1px;
