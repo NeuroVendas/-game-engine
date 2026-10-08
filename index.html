@@ -400,6 +400,7 @@
           <button id="duplicate-selected" title="Duplicate (Ctrl+D)">Duplicate</button>
           <button id="delete-selected" title="Delete">Delete</button>
           <button id="code-selected" title="Open script editor for selected object">&lt;/&gt; Code</button>
+          <button id="collision-debug" title="Show collider geometry in the Studio viewport">Colliders Off</button>
           <span class="separator"></span>
           <button id="play" class="play">▶ Play</button>
           <button id="stop" disabled>■ Stop</button>
@@ -408,7 +409,10 @@
           <button id="load-local">Load</button>
           <button id="import-scene">Import</button>
           <button id="export-scene">Export</button>
+          <button id="import-prefab" title="Import a reusable .forge-prefab.json hierarchy">Import Prefab</button>
+          <button id="export-prefab" title="Export the selected object and its children as a reusable prefab">Export Prefab</button>
           <input id="scene-file-input" type="file" accept=".json,.forge.json,application/json" hidden />
+          <input id="prefab-file-input" type="file" accept=".json,.forge-prefab.json,application/json" hidden />
         </div>
       </header>
 
