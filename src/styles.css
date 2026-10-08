@@ -1242,6 +1242,51 @@ input, textarea { cursor: text; }
 .lighting-presets button:hover {
   background: linear-gradient(#3c4b56,#29343c);
 }
+.asset-library {
+  display: grid;
+  gap: 4px;
+  padding: 6px 8px 8px 18px;
+  border-bottom: 1px solid #46535d;
+  background: #1b242b;
+  max-height: 190px;
+  overflow: auto;
+}
+.asset-library-empty {
+  color: #82909a;
+  font-size: 9px;
+  line-height: 1.35;
+}
+.asset-library-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 5px;
+  align-items: center;
+  padding: 5px 6px;
+  border: 1px solid #48555f;
+  background: #222d35;
+}
+.asset-library-meta {
+  min-width: 0;
+}
+.asset-library-name {
+  overflow: hidden;
+  color: #d7e0e5;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.asset-library-type {
+  margin-top: 1px;
+  color: #84939d;
+  font-size: 8px;
+  text-transform: uppercase;
+}
+.asset-library-item button {
+  min-width: 48px;
+  padding: 4px 6px;
+  font-size: 9px;
+}
+
 .component-note {
   padding: 5px 6px;
   border: 1px solid #47545e;
