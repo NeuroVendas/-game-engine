@@ -106,6 +106,11 @@ export interface ForgeEntity {
   transparency?: number;
   texture?: string;
   textureFileName?: string;
+  surface?: {
+    roughness?: number;
+    metallic?: number;
+    textureScale?: [number, number];
+  };
   components?: ForgeComponents;
   parentId?: string;
 }
