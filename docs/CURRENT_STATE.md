@@ -415,9 +415,12 @@ Box Proxy exposes local size and offset controls in the Inspector plus **Auto-fi
 
 ## Player collider settings
 
-Scene documents can optionally configure the runtime player capsule:
+Scene documents can optionally configure the runtime player capsule and movement:
 
 - `player.colliderHeight`
 - `player.colliderRadius`
+- `player.walkSpeed`
+- `player.runSpeed`
+- `player.jumpPower`
 
-Studio exposes both under the Player service. Existing scenes remain compatible and default to height `3.05` / radius `0.45`. Runtime clamps invalid values and keeps height large enough for the chosen radius. Ground snapping and grounded probes use the configured capsule dimensions.
+Studio exposes all five under the Player service. Existing scenes remain compatible and default to height `3.05` / radius `0.45`, walk `5.05`, run `8`, jump `7.9`. Runtime clamps invalid values, keeps height large enough for the chosen radius and prevents run speed from falling below walk speed. Ground snapping and grounded probes use the configured capsule dimensions.
