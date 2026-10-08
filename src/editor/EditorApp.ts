@@ -1683,6 +1683,7 @@ export class EditorApp {
         const clipLabel = document.createElement("label");
         clipLabel.textContent = "Animation clip";
         const clipSelect = document.createElement("select");
+        clipSelect.dataset.modelAnimationClip = entity.id;
 
         const automatic = document.createElement("option");
         automatic.value = "";
@@ -1711,6 +1712,7 @@ export class EditorApp {
         autoplayLabel.textContent = "Autoplay in Play";
         const autoplay = document.createElement("input");
         autoplay.type = "checkbox";
+        autoplay.dataset.modelAnimationAutoplay = entity.id;
         autoplay.checked = component.animationAutoplay ?? false;
         autoplay.addEventListener("change", () => {
           this.checkpoint();
@@ -1723,6 +1725,7 @@ export class EditorApp {
         loopLabel.textContent = "Loop";
         const loop = document.createElement("input");
         loop.type = "checkbox";
+        loop.dataset.modelAnimationLoop = entity.id;
         loop.checked = component.animationLoop ?? true;
         loop.addEventListener("change", () => {
           this.checkpoint();
@@ -1735,6 +1738,7 @@ export class EditorApp {
         speedLabel.textContent = "Animation speed";
         const speed = document.createElement("input");
         speed.type = "number";
+        speed.dataset.modelAnimationSpeed = entity.id;
         speed.min = "0.05";
         speed.max = "4";
         speed.step = "0.05";
@@ -1762,6 +1766,7 @@ export class EditorApp {
 
         const preview = document.createElement("button");
         preview.type = "button";
+        preview.dataset.modelAnimationPreview = entity.id;
         preview.textContent = "Preview Animation";
         preview.disabled = animationClips.length === 0;
         preview.addEventListener("click", () => {
@@ -1774,6 +1779,7 @@ export class EditorApp {
 
         const stop = document.createElement("button");
         stop.type = "button";
+        stop.dataset.modelAnimationStop = entity.id;
         stop.textContent = "Stop";
         stop.disabled = animationClips.length === 0;
         stop.addEventListener("click", () => {
