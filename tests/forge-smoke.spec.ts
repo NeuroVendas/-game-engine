@@ -399,6 +399,17 @@ test("studio v0.5 supports resize, sky, UI, typed scripts, sound and lights", as
   await expect(canvas).toHaveAttribute("data-sky-texture", "sky.png");
   await expect(page.locator("#sky-file-label")).toContainText("sky.png");
 
+  await page.locator("#env-fog-density").fill("0.012");
+  await page.locator("#env-fog-density").dispatchEvent("change");
+  await expect(canvas).toHaveAttribute("data-sky-texture", "sky.png");
+
+  await page.locator("[data-environment-preset='night']").click();
+  await expect(canvas).toHaveAttribute("data-environment-preset", "night");
+  await expect(canvas).toHaveAttribute("data-skybox", "#17263f");
+  await expect(canvas).not.toHaveAttribute("data-sky-texture", /.+/);
+  await expect(page.locator("#env-fog-density")).toHaveValue("0.006");
+  await expect(page.locator("#sky-file-label")).toContainText("Color sky");
+
   await page.locator("[data-primitive='box']").click();
   await expect(page.locator("#prop-parent")).toHaveValue("");
   await page.locator("#prop-material").selectOption("metal");
