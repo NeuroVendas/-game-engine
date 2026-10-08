@@ -236,6 +236,7 @@ export class ForgeEngine {
 
     this.document = structuredClone(document);
     this.applyEnvironment(this.document.environment);
+    this.applyRenderingSettings(this.document.rendering);
 
     for (const entity of this.document.entities) {
       this.createEntityMesh(entity, false);
@@ -622,6 +623,20 @@ export class ForgeEngine {
     }
 
     this.refreshUI();
+  }
+
+  applyRenderingSettings(settings = this.document?.rendering): void {
+    const quality = settings?.quality ?? "medium";
+    const scaling = quality === "low" ? 1.35 : quality === "high" ? 0.8 : 1;
+
+    if (this.document) {
+      this.document.rendering = { quality };
+    }
+
+    this.engine.setHardwareScalingLevel(scaling);
+    this.canvas.dataset.renderQuality = quality;
+    this.canvas.dataset.renderScaling = scaling.toFixed(3);
+    this.resize();
   }
 
   applyEnvironment(environment = this.document?.environment): void {
