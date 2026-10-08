@@ -427,6 +427,10 @@ export class EditorApp {
 
     must<HTMLSelectElement>("prop-parent").addEventListener("change", () => this.applyParentSelection());
     must<HTMLInputElement>("prop-texture").addEventListener("change", () => this.applyAppearance());
+    for (const id of ["prop-roughness", "prop-metallic", "prop-texture-u", "prop-texture-v"]) {
+      must<HTMLInputElement>(id).addEventListener("change", () => this.applyAppearance(true));
+    }
+    must<HTMLButtonElement>("reset-surface").addEventListener("click", () => this.resetSurfaceOverrides());
     must<HTMLButtonElement>("clear-texture").addEventListener("click", () => {
       if (!this.selectedId) return;
       must<HTMLInputElement>("prop-texture").value = "";
@@ -436,7 +440,7 @@ export class EditorApp {
     for (const id of ["prop-color", "prop-emissive", "prop-transparency"]) {
       must<HTMLInputElement>(id).addEventListener("change", () => this.applyAppearance());
     }
-    must<HTMLSelectElement>("prop-material").addEventListener("change", () => this.applyAppearance());
+    must<HTMLSelectElement>("prop-material").addEventListener("change", () => this.applyMaterialPreset());
 
     const workspaceRoot = must<HTMLDivElement>("workspace-root");
     workspaceRoot.addEventListener("dragover", (event) => {
@@ -1773,6 +1777,16 @@ export class EditorApp {
     must<HTMLInputElement>("prop-emissive").value = this.safeHex(entity.emissive, "#000000");
     must<HTMLInputElement>("prop-transparency").value = String(entity.transparency ?? 0);
     must<HTMLInputElement>("prop-texture").value = entity.texture ?? "";
+    const surfaceDefaults = this.materialSurfaceDefaults(entity.material);
+    must<HTMLInputElement>("prop-roughness").value = String(
+      entity.surface?.roughness ?? surfaceDefaults.roughness
+    );
+    must<HTMLInputElement>("prop-metallic").value = String(
+      entity.surface?.metallic ?? surfaceDefaults.metallic
+    );
+    const textureScale = entity.surface?.textureScale ?? [1, 1];
+    must<HTMLInputElement>("prop-texture-u").value = String(textureScale[0]);
+    must<HTMLInputElement>("prop-texture-v").value = String(textureScale[1]);
     must<HTMLInputElement>("pos-x").value = mesh.position.x.toFixed(2);
     must<HTMLInputElement>("pos-y").value = mesh.position.y.toFixed(2);
     must<HTMLInputElement>("pos-z").value = mesh.position.z.toFixed(2);
@@ -2728,7 +2742,49 @@ Forge.onUpdate((dt) => {
     return /^#[0-9a-fA-F]{6}$/.test(value ?? "") ? value! : fallback;
   }
 
-  private applyAppearance(): void {
+  private materialSurfaceDefaults(material: ForgeEntity["material"]): {
+    roughness: number;
+    metallic: number;
+  } {
+    switch (material ?? "plastic") {
+      case "matte": return { roughness: 0.94, metallic: 0 };
+      case "metal": return { roughness: 0.22, metallic: 0.88 };
+      case "glass": return { roughness: 0.08, metallic: 0 };
+      case "neon": return { roughness: 0.42, metallic: 0 };
+      default: return { roughness: 0.48, metallic: 0.02 };
+    }
+  }
+
+  private applyMaterialPreset(): void {
+    if (!this.selectedId) return;
+    const entity = this.forge.getEntity(this.selectedId);
+    if (!entity) return;
+
+    this.checkpoint();
+    entity.material = must<HTMLSelectElement>("prop-material").value as ForgeEntity["material"];
+    const textureScale = entity.surface?.textureScale;
+    entity.surface = textureScale ? { textureScale: [...textureScale] } : undefined;
+
+    this.forge.rebuildEntity(entity.id);
+    this.setSelection(entity.id);
+    this.renderInspector();
+    this.log(`Material preset updated for ${entity.name}.`);
+  }
+
+  private resetSurfaceOverrides(): void {
+    if (!this.selectedId) return;
+    const entity = this.forge.getEntity(this.selectedId);
+    if (!entity) return;
+
+    this.checkpoint();
+    entity.surface = undefined;
+    this.forge.rebuildEntity(entity.id);
+    this.setSelection(entity.id);
+    this.renderInspector();
+    this.log(`Surface overrides reset for ${entity.name}.`);
+  }
+
+  private applyAppearance(updateSurface = false): void {
     if (!this.selectedId) return;
     const entity = this.forge.getEntity(this.selectedId);
     if (!entity) return;
@@ -2744,6 +2800,30 @@ Forge.onUpdate((dt) => {
     );
     entity.texture = must<HTMLInputElement>("prop-texture").value.trim() || undefined;
     if (!entity.texture) entity.textureFileName = undefined;
+
+    if (updateSurface) {
+      const roughness = Math.min(
+        1,
+        Math.max(0, Number(must<HTMLInputElement>("prop-roughness").value) || 0)
+      );
+      const metallic = Math.min(
+        1,
+        Math.max(0, Number(must<HTMLInputElement>("prop-metallic").value) || 0)
+      );
+      const textureU = Math.max(
+        0.01,
+        Math.abs(Number(must<HTMLInputElement>("prop-texture-u").value) || 1)
+      );
+      const textureV = Math.max(
+        0.01,
+        Math.abs(Number(must<HTMLInputElement>("prop-texture-v").value) || 1)
+      );
+      entity.surface = {
+        roughness,
+        metallic,
+        textureScale: [textureU, textureV]
+      };
+    }
 
     this.forge.rebuildEntity(entity.id);
     this.setSelection(entity.id);
