@@ -11,6 +11,11 @@ export interface ForgeComponents {
     size?: [number, number, number];
     offset?: [number, number, number];
   };
+  Trigger?: {
+    enabled: boolean;
+    size?: [number, number, number];
+    offset?: [number, number, number];
+  };
   Interactable?: {
     enabled: boolean;
     prompt?: string;
