@@ -106,6 +106,7 @@ Implemented:
 - material presets
 - transparency/textures/emissive
 - Spawn
+- Trigger Volume with non-blocking player enter/exit events
 - Light
 - Sound
 - Particle VFX
@@ -189,6 +190,7 @@ Major current creator/runtime capabilities:
 
 - lifecycle hooks
 - interaction
+- trigger enter/exit events
 - input/events
 - UI click events
 - object lookup
