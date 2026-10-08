@@ -690,3 +690,33 @@ Project prefabs:
 - can be inserted under the currently selected parent
 
 Browser acceptance coverage validates browser persistence, scene export, hierarchy reuse and fresh entity IDs.
+
+
+## 23. Forge v0.5 — Trigger volumes
+
+Forge now supports non-blocking gameplay volumes for checkpoints, automatic doors, hazard zones, secret areas and similar proximity-driven mechanics.
+
+### Trigger component
+
+Trigger exposes:
+
+- Enabled
+- Size X / Y / Z
+- Offset X / Y / Z
+
+The runtime creates an invisible local box volume that follows its Forge entity but never participates in collision blocking.
+
+The Studio collider-visualization toggle also renders trigger volumes with a distinct magenta overlay so creators can inspect them separately from green physical colliders.
+
+### Script events
+
+Scripts on the Trigger entity or its child Scripts can register:
+
+- `Forge.onTriggerEnter((actor) => {})`
+- `Forge.onTriggerExit((actor) => {})`
+
+Trigger state is evaluated after player movement and before normal script `onUpdate` execution.
+
+### Acceptance coverage
+
+Browser Smoke creates a trigger around the blank-scene player spawn, verifies ENTER on Play, walks out using real WASD and verifies EXIT while confirming the volume never blocks player movement.
