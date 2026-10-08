@@ -927,11 +927,11 @@ export class ForgeEngine {
         material.emissiveIntensity = Math.max(material.emissiveIntensity, 1);
       }
 
+      const textureScale = surface.textureScale ?? [1, 1];
       if (entity.texture?.trim()) {
         try {
           const texture = new Texture(entity.texture, this.scene, false, true);
           texture.hasAlpha = true;
-          const textureScale = surface.textureScale ?? [1, 1];
           texture.uScale = Math.max(0.01, Math.abs(textureScale[0]));
           texture.vScale = Math.max(0.01, Math.abs(textureScale[1]));
           material.albedoTexture = texture;
@@ -940,6 +940,22 @@ export class ForgeEngine {
           this.log(`Texture failed on ${entity.name}: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
+
+      mesh.metadata = {
+        ...(mesh.metadata ?? {}),
+        forgeSurface: {
+          roughness: material.roughness,
+          metallic: material.metallic,
+          textureScale: [textureScale[0], textureScale[1]]
+        }
+      };
+      this.canvas.dataset.lastSurface = [
+        entity.id,
+        material.roughness.toFixed(3),
+        material.metallic.toFixed(3),
+        Number(textureScale[0]).toFixed(3),
+        Number(textureScale[1]).toFixed(3)
+      ].join(":");
 
       mesh.material = material;
     }
