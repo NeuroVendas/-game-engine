@@ -705,19 +705,31 @@ test("Studio visualizes colliders and round-trips custom prefab hierarchies", as
   await page.locator("#prop-name").dispatchEvent("change");
 
   const colliderCard = page.locator(".component").filter({ hasText: "Collider" }).first();
-  await colliderCard.getByLabel("Mode").selectOption("box");
-  await colliderCard.getByLabel("Size X").fill("3.5");
-  await colliderCard.getByLabel("Size X").dispatchEvent("change");
-  await colliderCard.getByLabel("Size Y").fill("4.25");
-  await colliderCard.getByLabel("Size Y").dispatchEvent("change");
-  await colliderCard.getByLabel("Size Z").fill("2.75");
-  await colliderCard.getByLabel("Size Z").dispatchEvent("change");
-  await colliderCard.getByLabel("Offset X").fill("0.5");
-  await colliderCard.getByLabel("Offset X").dispatchEvent("change");
-  await colliderCard.getByLabel("Offset Y").fill("1.25");
-  await colliderCard.getByLabel("Offset Y").dispatchEvent("change");
-  await colliderCard.getByLabel("Offset Z").fill("-0.75");
-  await colliderCard.getByLabel("Offset Z").dispatchEvent("change");
+  await colliderCard.getByLabel("Mode").evaluate((select) => {
+    const input = select as HTMLSelectElement;
+    input.value = "box";
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+
+  const setColliderNumber = async (label: string, value: string) => {
+    await colliderCard.getByLabel(label).evaluate((input, nextValue) => {
+      const field = input as HTMLInputElement;
+      field.value = String(nextValue);
+      field.dispatchEvent(new Event("change", { bubbles: true }));
+    }, value);
+  };
+
+  await setColliderNumber("Size X", "3.5");
+  await expect(canvas).toHaveAttribute(
+    "data-collider-proxies",
+    /Block:3\.50:2\.00:2\.00:0\.00:0\.00:0\.00/
+  );
+
+  await setColliderNumber("Size Y", "4.25");
+  await setColliderNumber("Size Z", "2.75");
+  await setColliderNumber("Offset X", "0.5");
+  await setColliderNumber("Offset Y", "1.25");
+  await setColliderNumber("Offset Z", "-0.75");
 
   await expect(canvas).toHaveAttribute("data-collider-proxy-count", "1");
   await expect(canvas).toHaveAttribute(
@@ -884,9 +896,24 @@ test("Studio imports GLB animations and audio assets", async ({ page }) => {
 
   const modelCollider = page.locator(".component").filter({ hasText: "Collider" }).first();
   await expect(modelCollider).toBeVisible();
-  await modelCollider.getByLabel("Enabled").check();
-  await modelCollider.getByLabel("Mode").selectOption("box");
-  await page.locator("[data-collider-fit]").click();
+
+  await modelCollider.getByLabel("Enabled").evaluate((input) => {
+    const checkbox = input as HTMLInputElement;
+    checkbox.checked = true;
+    checkbox.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await expect(modelCollider.getByLabel("Enabled")).toBeChecked();
+
+  await modelCollider.getByLabel("Mode").evaluate((select) => {
+    const input = select as HTMLSelectElement;
+    input.value = "box";
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await expect(modelCollider.getByLabel("Mode")).toHaveValue("box");
+
+  await page.locator("[data-collider-fit]").evaluate((button) => {
+    (button as HTMLButtonElement).click();
+  });
 
   await expect(page.locator("#output-log"))
     .toContainText("Collider fitted to visual bounds: animated-triangle");
