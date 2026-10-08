@@ -2,7 +2,7 @@ import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
 import { GizmoManager } from "@babylonjs/core/Gizmos/gizmoManager";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import type { ForgeComponents, ForgeEntity, ForgePrimitive, ForgeSceneDocument, ForgeScriptKind } from "../types";
+import type { ForgeComponents, ForgeEntity, ForgePrefabDocument, ForgePrimitive, ForgeSceneDocument, ForgeScriptKind } from "../types";
 import { ForgeEngine } from "../engine/ForgeEngine";
 import { registerDefaultScripts } from "../engine/defaultScripts";
 import type { ForgePrefabName } from "../engine/prefabs";
@@ -45,6 +45,7 @@ export class EditorApp {
   private draggedEntityId: string | null = null;
   private transformSpace: "world" | "local" = "world";
   private snapEnabled = true;
+  private collisionDebug = false;
   private moveSnap = 1;
   private rotationSnap = 15;
   private scaleSnap = 0.1;
@@ -296,6 +297,7 @@ export class EditorApp {
     must<HTMLButtonElement>("duplicate-selected").addEventListener("click", () => this.duplicateSelected());
     must<HTMLButtonElement>("delete-selected").addEventListener("click", () => this.deleteSelected());
     must<HTMLButtonElement>("code-selected").addEventListener("click", () => this.openScriptEditor());
+    must<HTMLButtonElement>("collision-debug").addEventListener("click", () => this.toggleCollisionDebug());
     must<HTMLButtonElement>("add-component").addEventListener("click", () => this.addSelectedComponent());
     must<HTMLButtonElement>("script-close").addEventListener("click", () => this.scriptDialog.close());
     must<HTMLButtonElement>("script-save").addEventListener("click", () => this.saveScriptEditor());
@@ -334,6 +336,13 @@ export class EditorApp {
       void this.importSceneFile(event);
     });
     must<HTMLButtonElement>("export-scene").addEventListener("click", () => this.exportScene());
+    must<HTMLButtonElement>("export-prefab").addEventListener("click", () => this.exportSelectedPrefab());
+    must<HTMLButtonElement>("import-prefab").addEventListener("click", () => {
+      must<HTMLInputElement>("prefab-file-input").click();
+    });
+    must<HTMLInputElement>("prefab-file-input").addEventListener("change", (event) => {
+      void this.importPrefabFile(event);
+    });
 
     const transformInputs = [
       "pos-x", "pos-y", "pos-z",
@@ -1016,6 +1025,93 @@ export class EditorApp {
     this.renderTree();
     this.selectEntity(entity.id);
     this.log(`Created prefab: ${entity.name}`);
+  }
+
+  private toggleCollisionDebug(): void {
+    if (this.mode !== "editor") return;
+    this.collisionDebug = !this.collisionDebug;
+    this.forge.setCollisionDebug(this.collisionDebug);
+
+    const button = must<HTMLButtonElement>("collision-debug");
+    button.classList.toggle("active", this.collisionDebug);
+    button.textContent = this.collisionDebug ? "Colliders On" : "Colliders Off";
+    this.log(this.collisionDebug
+      ? "Collider visualization enabled."
+      : "Collider visualization disabled.");
+  }
+
+  private collectEntitySubtree(rootId: string): ForgeEntity[] {
+    const result: ForgeEntity[] = [];
+    const visit = (id: string) => {
+      const entity = this.forge.getEntity(id);
+      if (!entity) return;
+      result.push(entity);
+      for (const child of this.forge.document.entities.filter((candidate) => candidate.parentId === id)) {
+        visit(child.id);
+      }
+    };
+    visit(rootId);
+    return result;
+  }
+
+  private exportSelectedPrefab(): void {
+    if (this.mode !== "editor" || !this.selectedId) {
+      this.log("Select an object or group before exporting a prefab.");
+      return;
+    }
+
+    const subtree = this.collectEntitySubtree(this.selectedId);
+    if (subtree.length === 0) return;
+
+    for (const entity of subtree) this.forge.syncEntityFromMesh(entity.id);
+
+    const entities = structuredClone(subtree);
+    const root = entities[0];
+    root.parentId = undefined;
+    root.position = [0, 0, 0];
+
+    const prefab: ForgePrefabDocument = {
+      format: "forge.prefab",
+      version: 1,
+      name: root.name,
+      entities
+    };
+
+    const blob = new Blob([JSON.stringify(prefab, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = window.document.createElement("a");
+    anchor.href = url;
+    anchor.download = `${root.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "prefab"}.forge-prefab.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    this.log(`Prefab exported: ${root.name} • ${entities.length} object(s).`);
+  }
+
+  private async importPrefabFile(event: Event): Promise<void> {
+    if (this.mode !== "editor") return;
+
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    try {
+      const parsed: unknown = JSON.parse(await file.text());
+      if (!this.isForgePrefabDocument(parsed)) {
+        throw new Error("File is not a Forge prefab v1.");
+      }
+
+      this.checkpoint();
+      const root = this.forge.instantiatePrefab(parsed.entities, this.selectedId ?? undefined);
+      if (!root) throw new Error("Prefab does not contain any objects.");
+
+      this.renderTree();
+      this.selectEntity(root.id);
+      this.log(`Prefab imported: ${parsed.name} • ${parsed.entities.length} object(s).`);
+    } catch (error) {
+      this.log(`Prefab import failed: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      input.value = "";
+    }
   }
 
   private duplicateSelected(): void {
@@ -2253,6 +2349,16 @@ Forge.onUpdate((dt) => {
       && candidate.version === 1
       && typeof candidate.name === "string"
       && Array.isArray(candidate.entities);
+  }
+
+  private isForgePrefabDocument(value: unknown): value is ForgePrefabDocument {
+    if (!value || typeof value !== "object") return false;
+    const candidate = value as Partial<ForgePrefabDocument>;
+    return candidate.format === "forge.prefab"
+      && candidate.version === 1
+      && typeof candidate.name === "string"
+      && Array.isArray(candidate.entities)
+      && candidate.entities.length > 0;
   }
 
   private exportScene(): void {
