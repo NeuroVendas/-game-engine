@@ -164,6 +164,10 @@ export class ForgeEngine {
         return true;
       }
     });
+    this.scripts.setAnimationAPI({
+      play: (idOrName, clipName) => this.playModelAnimation(idOrName, clipName),
+      stop: (idOrName, clipName) => this.stopModelAnimation(idOrName, clipName)
+    });
     this.scripts.setUIAPI({
       setText: (idOrName, text) => {
         const entity = this.getEntity(this.resolveEntityId(idOrName));
