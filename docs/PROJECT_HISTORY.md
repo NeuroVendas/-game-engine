@@ -631,3 +631,53 @@ The same Model loop/speed settings are used by runtime playback. Calls made from
 ### Acceptance coverage
 
 Browser Smoke generates a real animated GLB fixture with a `Bounce` translation clip and validates clip discovery, Inspector selection, Preview, Stop, autoplay in Play, and clean return to Editor.
+
+
+## 21. Forge v0.5 — Box proxy colliders
+
+Forge's Collider component now separates visual geometry from collision geometry when creators need it.
+
+### Collider modes
+
+- `mesh`: preserves the existing mesh-collision behavior
+- `box`: creates a dedicated invisible box collision proxy
+
+Box Proxy supports:
+
+- local Size X / Y / Z
+- local Offset X / Y / Z
+- Auto-fit to current visual bounds, including imported GLB geometry
+- Reset Proxy back to default entity size / zero offset
+- parent transform inheritance
+- Editor collider visualization
+- Play-mode invisibility
+- scene and custom-prefab serialization
+
+Imported GLB meshes disable per-mesh collisions when Box Proxy is active, preventing complex visual geometry from becoming the collision surface.
+
+### Runtime lifecycle
+
+Forge owns proxy meshes per entity and keeps them coherent across:
+
+- rebuild
+- delete
+- scene reload
+- Editor -> Play -> Editor transitions
+- custom prefab import
+
+Diagnostics expose proxy count/IDs for regression coverage.
+
+### Acceptance coverage
+
+Browser Smoke configures a custom Box Proxy, exports it inside a Forge prefab, imports a second copy and verifies that mode, size, offset and distinct proxy instances survive the round-trip. The animated-GLB fixture also enables Box Proxy and validates Auto-fit against the imported triangle's visual bounds before continuing animation playback tests.
+
+
+## 22. Forge v0.5 — Scene-configurable player collider
+
+Player collision is no longer hard-coded to one capsule size.
+
+Creators can edit scene-level collider height/radius plus walk speed, run speed and jump power under the Player service. Play mode forwards those values into the PlayerController, which rebuilds its invisible capsule, Babylon ellipsoid, safe-ground snap and grounded probe from the configured dimensions while using the scene movement values for walk/run/jump targets.
+
+Legacy scenes retain the original 3.05 / 0.45 collider and 5.05 / 8 / 7.9 movement defaults.
+
+Browser acceptance coverage changes collider and movement values, enters Play and verifies the runtime controller reports the configured settings.

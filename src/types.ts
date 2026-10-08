@@ -7,6 +7,9 @@ export type ForgeScriptKind = "Script" | "LocalScript" | "ModuleScript";
 export interface ForgeComponents {
   Collider?: {
     enabled: boolean;
+    mode?: "mesh" | "box";
+    size?: [number, number, number];
+    offset?: [number, number, number];
   };
   Interactable?: {
     enabled: boolean;
@@ -117,6 +120,13 @@ export interface ForgeSceneDocument {
   version: 1;
   name: string;
   playerSpawn?: Vec3;
+  player?: {
+    colliderHeight?: number;
+    colliderRadius?: number;
+    walkSpeed?: number;
+    runSpeed?: number;
+    jumpPower?: number;
+  };
   environment?: {
     skyColor?: string;
     skyTexture?: string;

@@ -94,6 +94,10 @@ Implemented:
 - hierarchy/parenting
 - Groups
 - collider visualization toggle in the Studio viewport
+- Collider component modes: Mesh or Box Proxy
+- editable Box Proxy size and local offset
+- Auto-fit Box Proxy from current visual/model bounds
+- Reset Proxy back to the entity's default size/zero offset
 - custom prefab export/import for selected hierarchies (`.forge-prefab.json`)
 - Explorer drag/drop reparenting
 - cycle prevention
@@ -397,3 +401,26 @@ Do not describe these as finished:
 The goal is no longer "add buttons."
 
 A creator should be able to make a game that looks intentional, feels natural, uses assets/scripts/audio/UI, playtests instantly, saves/publishes and can be played by someone else.
+
+
+## Collider authoring
+
+The Collider component supports two modes:
+
+- **Mesh** — the visible primitive/model meshes participate directly in Babylon collisions.
+- **Box Proxy** — Forge creates a separate invisible box collider parented to the entity root.
+
+Box Proxy exposes local size and offset controls in the Inspector plus **Auto-fit to Visual**, which computes a local bounding box from the entity's rendered primitive/GLB geometry, and **Reset Proxy**, which returns to the entity default size with zero local offset. The proxy stays invisible in Play mode and is rendered only by the Studio **Colliders On** visualization. Proxy settings serialize with the scene/prefab and are recreated across reload, rebuild, Play/Stop and prefab import.
+
+
+## Player collider settings
+
+Scene documents can optionally configure the runtime player capsule and movement:
+
+- `player.colliderHeight`
+- `player.colliderRadius`
+- `player.walkSpeed`
+- `player.runSpeed`
+- `player.jumpPower`
+
+Studio exposes all five under the Player service. Existing scenes remain compatible and default to height `3.05` / radius `0.45`, walk `5.05`, run `8`, jump `7.9`. Runtime clamps invalid values, keeps height large enough for the chosen radius and prevents run speed from falling below walk speed. Ground snapping and grounded probes use the configured capsule dimensions.

@@ -707,6 +707,19 @@ test("Studio visualizes colliders and round-trips custom prefab hierarchies", as
     page.locator(".scene-item", { hasText: "Custom Assembly" }).first()
   );
 
+  await page.locator(".scene-item", { hasText: "Prefab Block" }).first().click();
+  await page.getByLabel("Collision mode").selectOption("box");
+  await page.getByLabel("Collider size X").fill("3.5");
+  await page.getByLabel("Collider size X").dispatchEvent("change");
+  await page.getByLabel("Collider size Y").fill("2.5");
+  await page.getByLabel("Collider size Y").dispatchEvent("change");
+  await page.getByLabel("Collider size Z").fill("1.25");
+  await page.getByLabel("Collider size Z").dispatchEvent("change");
+  await page.getByLabel("Collider offset X").fill("0.4");
+  await page.getByLabel("Collider offset X").dispatchEvent("change");
+
+  await expect(canvas).toHaveAttribute("data-collider-proxy-count", "1");
+
   await page.locator("[data-primitive='sphere']").click();
   await page.locator("#prop-name").fill("Prefab Sphere");
   await page.locator("#prop-name").dispatchEvent("change");
@@ -735,6 +748,14 @@ test("Studio visualizes colliders and round-trips custom prefab hierarchies", as
   expect(exported.name).toBe("Custom Assembly");
   expect(exported.entities).toHaveLength(3);
 
+  const exportedBlock = exported.entities.find((entity: any) => entity.name === "Prefab Block");
+  expect(exportedBlock?.components?.Collider).toMatchObject({
+    enabled: true,
+    mode: "box",
+    size: [3.5, 2.5, 1.25],
+    offset: [0.4, 0, 0]
+  });
+
   const exportedRoot = exported.entities.find((entity: any) => !entity.parentId);
   expect(exportedRoot).toBeTruthy();
   expect(exportedRoot.position).toEqual([0, 0, 0]);
@@ -753,11 +774,25 @@ test("Studio visualizes colliders and round-trips custom prefab hierarchies", as
   await expect(page.locator(".scene-item", { hasText: "Custom Assembly" })).toHaveCount(2);
   await expect(page.locator(".scene-item", { hasText: "Prefab Block" })).toHaveCount(2);
   await expect(page.locator(".scene-item", { hasText: "Prefab Sphere" })).toHaveCount(2);
+  await expect(canvas).toHaveAttribute("data-collider-proxy-count", "2");
 
   const importedId = await page.locator(".scene-item.selected").getAttribute("data-entity-id");
   expect(importedId).toBeTruthy();
   expect(importedId).not.toBe(groupId);
   await expect(page.locator("#prop-parent")).toHaveValue(groupId!);
+
+  await page.locator("#player-collider-height").fill("2.4");
+  await page.locator("#player-collider-height").dispatchEvent("change");
+  await page.locator("#player-collider-radius").fill("0.35");
+  await page.locator("#player-collider-radius").dispatchEvent("change");
+  await page.locator("#player-walk-speed").fill("4.2");
+  await page.locator("#player-walk-speed").dispatchEvent("change");
+  await page.locator("#player-run-speed").fill("6.8");
+  await page.locator("#player-run-speed").dispatchEvent("change");
+  await page.locator("#player-jump-power").fill("6.5");
+  await page.locator("#player-jump-power").dispatchEvent("change");
+  await expect(canvas).toHaveAttribute("data-scene-player-collider", "2.400,0.350");
+  await expect(canvas).toHaveAttribute("data-scene-player-movement", "4.200,6.800,6.500");
 
   await page.locator("#collision-debug").click();
   await expect(canvas).toHaveAttribute("data-collision-debug", "true");
@@ -768,6 +803,11 @@ test("Studio visualizes colliders and round-trips custom prefab hierarchies", as
   await page.locator("#play").click();
   await expect(page.locator("#mode-badge")).toHaveText("PLAY");
   await expect(canvas).toHaveAttribute("data-collision-debug", "false");
+  await expect(canvas).toHaveAttribute("data-player-collider-height", "2.400");
+  await expect(canvas).toHaveAttribute("data-player-collider-radius", "0.350");
+  await expect(canvas).toHaveAttribute("data-player-walk-speed", "4.200");
+  await expect(canvas).toHaveAttribute("data-player-run-speed", "6.800");
+  await expect(canvas).toHaveAttribute("data-player-jump-power", "6.500");
 
   await page.locator("#stop").click();
   await expect(page.locator("#mode-badge")).toHaveText("EDITOR");
@@ -844,6 +884,35 @@ test("Studio imports GLB animations and audio assets", async ({ page }) => {
     .toContain("Loaded model animated-triangle");
   await expect.poll(async () => canvas.getAttribute("data-model-animation-groups"))
     .toBe("1");
+  await expect(page.locator("#component-list")).toContainText("Clips: Bounce");
+
+  await page.getByLabel("Enabled").check();
+  await page.getByLabel("Collision mode").selectOption("box");
+  await expect(canvas).toHaveAttribute("data-collider-proxy-count", "1");
+  await expect.poll(async () => canvas.getAttribute("data-model-animation-groups"), {
+    timeout: 10000
+  }).toBe("1");
+
+  await page.locator("[data-collider-auto-fit]").click();
+  await expect(canvas).toHaveAttribute("data-last-collider-fit", /animated-triangle/);
+  await expect(page.getByLabel("Collider size X")).toHaveValue("1");
+  await expect(page.getByLabel("Collider size Y")).toHaveValue("1");
+  await expect(page.getByLabel("Collider size Z")).toHaveValue("0.05");
+  await expect(page.getByLabel("Collider offset X")).toHaveValue("0.5");
+  await expect(page.getByLabel("Collider offset Y")).toHaveValue("0.5");
+
+  await page.locator("[data-collider-reset]").click();
+  await expect(canvas).toHaveAttribute("data-last-collider-reset", /animated-triangle/);
+  await expect(page.getByLabel("Collider size X")).toHaveValue("1");
+  await expect(page.getByLabel("Collider size Y")).toHaveValue("1");
+  await expect(page.getByLabel("Collider size Z")).toHaveValue("1");
+  await expect(page.getByLabel("Collider offset X")).toHaveValue("0");
+  await expect(page.getByLabel("Collider offset Y")).toHaveValue("0");
+
+  await page.locator("[data-collider-auto-fit]").click();
+  await expect(page.getByLabel("Collider size Z")).toHaveValue("0.05");
+  await expect(page.getByLabel("Collider offset X")).toHaveValue("0.5");
+  await expect(page.getByLabel("Collider offset Y")).toHaveValue("0.5");
   await expect(page.locator("#component-list")).toContainText("Clips: Bounce");
 
   const clip = page.locator("[data-model-animation-clip]");

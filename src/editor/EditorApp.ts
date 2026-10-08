@@ -117,6 +117,7 @@ export class EditorApp {
     this.renderTree();
     this.renderInspector();
     this.syncEnvironmentInputs();
+    this.syncPlayerInputs();
     this.forge.mountUI(this.uiRoot, false);
     this.updateHistoryUI();
     this.startLoop();
@@ -131,6 +132,7 @@ export class EditorApp {
     this.renderTree();
     this.renderInspector();
     this.syncEnvironmentInputs();
+    this.syncPlayerInputs();
     this.forge.mountUI(this.uiRoot, false);
     this.updateHistoryUI();
     this.forge.resize();
@@ -286,6 +288,7 @@ export class EditorApp {
       this.forge.document.environment.skyTextureFileName = undefined;
       this.forge.applyEnvironment(this.forge.document.environment);
       this.syncEnvironmentInputs();
+    this.syncPlayerInputs();
       this.log("Sky image cleared. Using color sky.");
     });
     must<HTMLInputElement>("audio-file-input").addEventListener("change", (event) => {
@@ -373,6 +376,16 @@ export class EditorApp {
 
     for (const id of ["env-sky", "env-ambient", "env-fog", "env-fog-density"]) {
       must<HTMLInputElement>(id).addEventListener("change", () => this.applyEnvironmentInputs());
+    }
+
+    for (const id of [
+      "player-collider-height",
+      "player-collider-radius",
+      "player-walk-speed",
+      "player-run-speed",
+      "player-jump-power"
+    ]) {
+      must<HTMLInputElement>(id).addEventListener("change", () => this.applyPlayerInputs());
     }
 
     document.querySelectorAll<HTMLButtonElement>("[data-environment-preset]").forEach((button) => {
@@ -973,6 +986,7 @@ export class EditorApp {
       environment.skyTextureFileName = file.name;
       this.forge.applyEnvironment(environment);
       this.syncEnvironmentInputs();
+    this.syncPlayerInputs();
       this.log(`Sky image applied: ${file.name}`);
     } catch (error) {
       this.log(`Sky import failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -1328,7 +1342,7 @@ export class EditorApp {
 
     switch (type) {
       case "Collider":
-        components.Collider = { enabled: true };
+        components.Collider = { enabled: true, mode: "mesh" };
         break;
       case "Interactable":
         components.Interactable = { enabled: true, prompt: "E • Interact" };
@@ -1463,9 +1477,86 @@ export class EditorApp {
       case "Collider": {
         const component = components.Collider;
         if (!component) return;
+
         this.appendCheckboxField(container, "Enabled", component.enabled, (value) => {
           component.enabled = value;
         });
+
+        this.appendSelectField(container, "Collision mode", component.mode ?? "mesh", [
+          ["mesh", "Mesh"],
+          ["box", "Box Proxy"]
+        ], (value) => {
+          component.mode = value as "mesh" | "box";
+          if (component.mode === "box" && !component.size) {
+            component.size = [...(entity.size ?? [1, 1, 1])];
+          }
+          if (component.mode === "box" && !component.offset) {
+            component.offset = [0, 0, 0];
+          }
+        });
+
+        if ((component.mode ?? "mesh") === "box") {
+          const size = component.size ?? entity.size ?? [1, 1, 1];
+          const offset = component.offset ?? [0, 0, 0];
+
+          this.appendNumberField(container, "Collider size X", size[0], 0.1, (value) => {
+            component.size = [Math.max(0.05, Math.abs(value)), size[1], size[2]];
+          });
+          this.appendNumberField(container, "Collider size Y", size[1], 0.1, (value) => {
+            component.size = [size[0], Math.max(0.05, Math.abs(value)), size[2]];
+          });
+          this.appendNumberField(container, "Collider size Z", size[2], 0.1, (value) => {
+            component.size = [size[0], size[1], Math.max(0.05, Math.abs(value))];
+          });
+
+          this.appendNumberField(container, "Collider offset X", offset[0], 0.1, (value) => {
+            component.offset = [value, offset[1], offset[2]];
+          });
+          this.appendNumberField(container, "Collider offset Y", offset[1], 0.1, (value) => {
+            component.offset = [offset[0], value, offset[2]];
+          });
+          this.appendNumberField(container, "Collider offset Z", offset[2], 0.1, (value) => {
+            component.offset = [offset[0], offset[1], value];
+          });
+
+          const actions = document.createElement("div");
+          actions.className = "component-actions";
+
+          const autoFit = document.createElement("button");
+          autoFit.type = "button";
+          autoFit.dataset.colliderAutoFit = entity.id;
+          autoFit.textContent = "Auto-fit to Visual";
+          autoFit.addEventListener("click", () => {
+            this.checkpoint();
+            if (!this.forge.fitBoxColliderToVisual(entity.id)) {
+              this.log(`Could not auto-fit collider on ${entity.name}; visual geometry is not ready.`);
+              return;
+            }
+            this.setSelection(entity.id);
+            this.renderInspector();
+            this.log(`Collider auto-fit: ${entity.name}.`);
+          });
+
+          const reset = document.createElement("button");
+          reset.type = "button";
+          reset.dataset.colliderReset = entity.id;
+          reset.textContent = "Reset Proxy";
+          reset.addEventListener("click", () => {
+            this.checkpoint();
+            if (!this.forge.resetBoxCollider(entity.id)) return;
+            this.setSelection(entity.id);
+            this.renderInspector();
+            this.log(`Collider reset: ${entity.name}.`);
+          });
+
+          actions.append(autoFit, reset);
+          container.appendChild(actions);
+
+          const note = document.createElement("div");
+          note.className = "component-note";
+          note.textContent = "Box Proxy uses a separate invisible collision volume. Auto-fit reads the current visual bounds.";
+          container.appendChild(note);
+        }
         break;
       }
       case "Interactable": {
@@ -2245,6 +2336,7 @@ Forge.onUpdate((dt) => {
     };
     this.forge.applyEnvironment(this.forge.document.environment);
     this.syncEnvironmentInputs();
+    this.syncPlayerInputs();
     this.canvas.dataset.environmentPreset = name;
     this.log(`Environment preset: ${name}.`);
   }
@@ -2257,6 +2349,53 @@ Forge.onUpdate((dt) => {
     must<HTMLInputElement>("env-fog-density").value = String(environment.fogDensity ?? 0);
     must<HTMLDivElement>("sky-file-label").textContent =
       environment.skyTextureFileName ? `Sky: ${environment.skyTextureFileName}` : "Color sky";
+  }
+
+  private syncPlayerInputs(): void {
+    const player = this.forge.document.player ?? {};
+    must<HTMLInputElement>("player-collider-height").value = String(player.colliderHeight ?? 3.05);
+    must<HTMLInputElement>("player-collider-radius").value = String(player.colliderRadius ?? 0.45);
+    must<HTMLInputElement>("player-walk-speed").value = String(player.walkSpeed ?? 5.05);
+    must<HTMLInputElement>("player-run-speed").value = String(player.runSpeed ?? 8);
+    must<HTMLInputElement>("player-jump-power").value = String(player.jumpPower ?? 7.9);
+  }
+
+  private applyPlayerInputs(): void {
+    if (this.mode !== "editor") return;
+    this.checkpoint();
+
+    const radiusInput = must<HTMLInputElement>("player-collider-radius");
+    const heightInput = must<HTMLInputElement>("player-collider-height");
+    const walkInput = must<HTMLInputElement>("player-walk-speed");
+    const runInput = must<HTMLInputElement>("player-run-speed");
+    const jumpInput = must<HTMLInputElement>("player-jump-power");
+
+    const radius = Math.min(2, Math.max(0.2, Number(radiusInput.value) || 0.45));
+    const requestedHeight = Math.min(8, Math.max(1, Number(heightInput.value) || 3.05));
+    const height = Math.max(requestedHeight, radius * 2.1);
+    const walkSpeed = Math.min(20, Math.max(1, Number(walkInput.value) || 5.05));
+    const runSpeed = Math.min(30, Math.max(walkSpeed, Number(runInput.value) || 8));
+    const jumpPower = Math.min(20, Math.max(1, Number(jumpInput.value) || 7.9));
+
+    this.forge.document.player = {
+      ...(this.forge.document.player ?? {}),
+      colliderHeight: height,
+      colliderRadius: radius,
+      walkSpeed,
+      runSpeed,
+      jumpPower
+    };
+    heightInput.value = String(height);
+    radiusInput.value = String(radius);
+    walkInput.value = String(walkSpeed);
+    runInput.value = String(runSpeed);
+    jumpInput.value = String(jumpPower);
+    this.canvas.dataset.scenePlayerCollider = `${height.toFixed(3)},${radius.toFixed(3)}`;
+    this.canvas.dataset.scenePlayerMovement = `${walkSpeed.toFixed(3)},${runSpeed.toFixed(3)},${jumpPower.toFixed(3)}`;
+    this.log(
+      `Player settings updated: collider ${height.toFixed(2)} × ${radius.toFixed(2)} • `
+      + `walk ${walkSpeed.toFixed(2)} • run ${runSpeed.toFixed(2)} • jump ${jumpPower.toFixed(2)}.`
+    );
   }
 
   private applyEnvironmentInputs(): void {
@@ -2340,6 +2479,7 @@ Forge.onUpdate((dt) => {
     this.forge.loadDocument(sceneDocument, false);
     this.forge.mountUI(this.uiRoot, false);
     this.syncEnvironmentInputs();
+    this.syncPlayerInputs();
 
     if (wantedSelection && this.forge.getEntity(wantedSelection)) {
       this.setSelection(wantedSelection);
@@ -2380,7 +2520,14 @@ Forge.onUpdate((dt) => {
       this.forge,
       spawn,
       (message) => this.log(message),
-      (text, locked) => this.setInteractionPrompt(text, locked)
+      (text, locked) => this.setInteractionPrompt(text, locked),
+      {
+        colliderHeight: this.forge.document.player?.colliderHeight,
+        colliderRadius: this.forge.document.player?.colliderRadius,
+        walkSpeed: this.forge.document.player?.walkSpeed,
+        runSpeed: this.forge.document.player?.runSpeed,
+        jumpPower: this.forge.document.player?.jumpPower
+      }
     );
 
     // Scripts start only after the player and gameplay camera exist.
@@ -2476,6 +2623,7 @@ Forge.onUpdate((dt) => {
     this.forge.loadDocument(sceneDocument, false);
     this.forge.mountUI(this.uiRoot, false);
     this.syncEnvironmentInputs();
+    this.syncPlayerInputs();
     this.renderTree();
     this.renderInspector();
     this.updateHistoryUI();
