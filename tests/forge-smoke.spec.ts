@@ -810,6 +810,23 @@ test("Studio imports GLB animations and audio assets", async ({ page }) => {
     .toBe("1");
   await expect(page.locator("#component-list")).toContainText("Clips: Bounce");
 
+  await page.locator("#component-type").selectOption("Collider");
+  await page.locator("#add-component").click();
+  await page.getByLabel("Collision mode").selectOption("box");
+  await expect(canvas).toHaveAttribute("data-collider-proxy-count", "1");
+  await expect.poll(async () => canvas.getAttribute("data-model-animation-groups"), {
+    timeout: 10000
+  }).toBe("1");
+
+  await page.locator("[data-collider-auto-fit]").click();
+  await expect(canvas).toHaveAttribute("data-last-collider-fit", /animated-triangle/);
+  await expect(page.getByLabel("Collider size X")).toHaveValue("1");
+  await expect(page.getByLabel("Collider size Y")).toHaveValue("1");
+  await expect(page.getByLabel("Collider size Z")).toHaveValue("0.05");
+  await expect(page.getByLabel("Collider offset X")).toHaveValue("0.5");
+  await expect(page.getByLabel("Collider offset Y")).toHaveValue("0.5");
+  await expect(page.locator("#component-list")).toContainText("Clips: Bounce");
+
   const clip = page.locator("[data-model-animation-clip]");
   await expect(clip.locator("option")).toContainText(["First clip (Bounce)", "Bounce"]);
   await clip.selectOption("Bounce");
