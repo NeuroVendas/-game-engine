@@ -20,6 +20,7 @@ import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTextur
 import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import { Sound } from "@babylonjs/core/Audio/sound";
 import { ParticleSystem } from "@babylonjs/core/Particles/particleSystem";
+import type { AnimationGroup } from "@babylonjs/core/Animations/animationGroup";
 import { SceneLoader } from "@babylonjs/core/Loading/sceneLoader";
 import type { ForgeEntity, ForgePrimitive, ForgeSceneDocument } from "../types";
 import { ScriptRuntime } from "./ScriptRuntime";
@@ -48,6 +49,7 @@ export class ForgeEngine {
   private readonly entityLights = new Map<string, Light>();
   private readonly entitySounds = new Map<string, Sound>();
   private readonly entityParticles = new Map<string, ParticleSystem>();
+  private readonly entityAnimations = new Map<string, AnimationGroup[]>();
   private readonly hemi: HemisphericLight;
   private readonly key: DirectionalLight;
   private readonly shadowGenerator: ShadowGenerator | null;
@@ -210,6 +212,7 @@ export class ForgeEngine {
 
     for (const id of [...this.entitySounds.keys()]) this.disposeEntitySound(id);
     for (const id of [...this.entityParticles.keys()]) this.disposeEntityParticle(id);
+    for (const id of [...this.entityAnimations.keys()]) this.disposeEntityAnimations(id);
 
     // Detach Forge entity roots first so disposing one parent cannot accidentally
     // dispose another tracked Forge entity before its own cleanup pass.
@@ -414,6 +417,7 @@ export class ForgeEngine {
     this.entityLights.delete(id);
     this.disposeEntitySound(id);
     this.disposeEntityParticle(id);
+    this.disposeEntityAnimations(id);
 
     const oldMesh = this.entityMeshes.get(id);
     if (oldMesh) this.unregisterShadowCaster(oldMesh, true);
@@ -505,6 +509,7 @@ export class ForgeEngine {
     this.entityLights.delete(id);
     this.disposeEntitySound(id);
     this.disposeEntityParticle(id);
+    this.disposeEntityAnimations(id);
 
     const forgeChildren = this.document.entities
       .filter((candidate) => candidate.parentId === id)
@@ -1006,7 +1011,8 @@ export class ForgeEngine {
   }
 
   private async loadModel(entity: ForgeEntity, root: Mesh): Promise<void> {
-    const source = entity.components?.Model?.src?.trim();
+    const component = entity.components?.Model;
+    const source = component?.src?.trim();
     if (!source) return;
 
     try {
@@ -1019,7 +1025,10 @@ export class ForgeEngine {
         source.startsWith("data:") ? ".glb" : undefined
       );
 
+      for (const group of result.animationGroups) group.stop();
+
       if (root.isDisposed()) {
+        for (const group of result.animationGroups) group.dispose();
         for (const imported of result.meshes) imported.dispose(false, true);
         return;
       }
@@ -1037,13 +1046,37 @@ export class ForgeEngine {
         if (!imported.parent) imported.parent = root;
       }
 
+      if (result.animationGroups.length > 0) {
+        this.entityAnimations.set(entity.id, result.animationGroups);
+      } else {
+        this.entityAnimations.delete(entity.id);
+      }
+
+      const animationClips = result.animationGroups.map((group) => group.name);
       root.metadata = {
         ...(root.metadata ?? {}),
         modelLoaded: true,
-        modelMeshCount: result.meshes.length
+        modelMeshCount: result.meshes.length,
+        modelAnimationClips: animationClips
       };
+
+      this.refreshAnimationDiagnostics();
       this.applyColliderDebug(entity, root);
-      this.log(`Loaded model ${entity.name} • ${result.meshes.length} meshes`);
+
+      if (this.runtimeMode && component.animationAutoplay === true) {
+        this.playModelAnimation(entity.id, component.animation);
+      }
+
+      this.canvas.dispatchEvent(new CustomEvent("forge:model-loaded", {
+        detail: {
+          entityId: entity.id,
+          animationClips
+        }
+      }));
+
+      this.log(
+        `Loaded model ${entity.name} • ${result.meshes.length} meshes • ${animationClips.length} animation clip(s)`
+      );
     } catch (error) {
       root.metadata = {
         ...(root.metadata ?? {}),
@@ -1051,6 +1084,69 @@ export class ForgeEngine {
       };
       this.log(`Model failed on ${entity.name}: ${error instanceof Error ? error.message : String(error)}`);
     }
+  }
+
+  playModelAnimation(idOrName: string, clipName?: string): boolean {
+    const id = this.resolveEntityId(idOrName);
+    const entity = this.getEntity(id);
+    const groups = this.entityAnimations.get(id);
+    const component = entity?.components?.Model;
+    if (!entity || !component || !groups?.length) return false;
+
+    const requested = clipName?.trim() || component.animation?.trim();
+    const group = (requested ? groups.find((candidate) => candidate.name === requested) : undefined)
+      ?? groups[0];
+    if (!group) return false;
+
+    for (const candidate of groups) {
+      if (candidate !== group) candidate.stop();
+    }
+
+    const speed = Math.min(4, Math.max(0.05, Number(component.animationSpeed) || 1));
+    const loop = component.animationLoop ?? true;
+    group.stop();
+    group.start(loop, speed);
+    this.canvas.dataset.lastAnimationAction = `play:${id}:${group.name}`;
+    return true;
+  }
+
+  stopModelAnimation(idOrName: string, clipName?: string): boolean {
+    const id = this.resolveEntityId(idOrName);
+    const groups = this.entityAnimations.get(id);
+    if (!groups?.length) return false;
+
+    const requested = clipName?.trim();
+    const targets = requested
+      ? groups.filter((group) => group.name === requested)
+      : groups;
+    if (targets.length === 0) return false;
+
+    for (const group of targets) group.stop();
+    this.canvas.dataset.lastAnimationAction = `stop:${id}:${requested || "*"}`;
+    return true;
+  }
+
+  private disposeEntityAnimations(id: string): void {
+    const groups = this.entityAnimations.get(id);
+    if (!groups) return;
+
+    for (const group of groups) {
+      group.stop();
+      group.dispose();
+    }
+    this.entityAnimations.delete(id);
+    this.refreshAnimationDiagnostics();
+  }
+
+  private refreshAnimationDiagnostics(): void {
+    const entries = [...this.entityAnimations.entries()];
+    this.canvas.dataset.modelAnimationModels = String(entries.length);
+    this.canvas.dataset.modelAnimationGroups = String(
+      entries.reduce((count, [, groups]) => count + groups.length, 0)
+    );
+    this.canvas.dataset.modelAnimationClips = entries
+      .map(([id, groups]) => `${id}:${groups.map((group) => group.name).join("|")}`)
+      .join(",");
   }
 
   private applyColliderDebug(entity: ForgeEntity, root: Mesh): boolean {
