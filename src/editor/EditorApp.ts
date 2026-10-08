@@ -116,6 +116,7 @@ export class EditorApp {
     this.forge.mountUI(this.uiRoot, false);
     this.setTool("move");
     this.updateHistoryUI();
+    this.updateQuickActionUI();
   }
 
   async init(sceneDocument: ForgeSceneDocument): Promise<void> {
@@ -321,7 +322,10 @@ export class EditorApp {
       this.saveSelectionToProjectPrefabs();
     });
 
+    must<HTMLButtonElement>("copy-selected").addEventListener("click", () => this.copySelected());
+    must<HTMLButtonElement>("paste-selected").addEventListener("click", () => this.pasteClipboard());
     must<HTMLButtonElement>("duplicate-selected").addEventListener("click", () => this.duplicateSelected());
+    must<HTMLButtonElement>("rename-selected").addEventListener("click", () => this.beginRenameSelected());
     must<HTMLButtonElement>("delete-selected").addEventListener("click", () => this.deleteSelected());
     must<HTMLButtonElement>("code-selected").addEventListener("click", () => this.openScriptEditor());
     must<HTMLButtonElement>("collision-debug").addEventListener("click", () => this.toggleCollisionDebug());
@@ -425,6 +429,19 @@ export class EditorApp {
       this.renderTree();
       this.renderInspector();
       this.log(`Renamed to ${entity.name}`);
+    });
+
+    must<HTMLInputElement>("prop-name").addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        (event.currentTarget as HTMLInputElement).blur();
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        const entity = this.selectedId ? this.forge.getEntity(this.selectedId) : undefined;
+        if (entity) (event.currentTarget as HTMLInputElement).value = entity.name;
+        (event.currentTarget as HTMLInputElement).blur();
+      }
     });
 
     must<HTMLSelectElement>("prop-parent").addEventListener("change", () => this.applyParentSelection());
@@ -553,6 +570,12 @@ export class EditorApp {
 
         if (event.code === "Delete") {
           this.deleteSelected();
+          return;
+        }
+
+        if (event.code === "F2" && this.selectedId) {
+          event.preventDefault();
+          this.beginRenameSelected();
           return;
         }
 
@@ -1347,6 +1370,7 @@ export class EditorApp {
     };
     this.canvas.dataset.editorClipboardCount = String(captured.entities.length);
     this.canvas.dataset.editorClipboardRoot = captured.sourceName;
+    this.updateQuickActionUI();
     this.log(`Copied ${captured.sourceName} • ${captured.entities.length} object(s).`);
   }
 
@@ -1402,6 +1426,24 @@ export class EditorApp {
     this.log(`Deleted ${entity.name}`);
   }
 
+  private beginRenameSelected(): void {
+    if (this.mode !== "editor" || !this.selectedId) return;
+    const input = must<HTMLInputElement>("prop-name");
+    input.focus();
+    input.select();
+    this.canvas.dataset.editorRenameTarget = this.selectedId;
+  }
+
+  private updateQuickActionUI(): void {
+    const editable = this.mode === "editor";
+    const hasSelection = editable && Boolean(this.selectedId);
+    must<HTMLButtonElement>("copy-selected").disabled = !hasSelection;
+    must<HTMLButtonElement>("duplicate-selected").disabled = !hasSelection;
+    must<HTMLButtonElement>("rename-selected").disabled = !hasSelection;
+    must<HTMLButtonElement>("delete-selected").disabled = !hasSelection;
+    must<HTMLButtonElement>("paste-selected").disabled = !editable || !this.editorClipboard;
+  }
+
   private selectEntity(id: string): void {
     if (this.mode !== "editor") return;
     if (!this.forge.getMesh(id)) return;
@@ -1418,6 +1460,7 @@ export class EditorApp {
 
     this.selectedId = id;
     this.renderProjectPrefabs();
+    this.updateQuickActionUI();
 
     if (!id) {
       this.gizmos.attachToMesh(null);
@@ -1428,6 +1471,7 @@ export class EditorApp {
     if (!mesh) {
       this.selectedId = null;
       this.renderProjectPrefabs();
+      this.updateQuickActionUI();
       this.gizmos.attachToMesh(null);
       return;
     }
