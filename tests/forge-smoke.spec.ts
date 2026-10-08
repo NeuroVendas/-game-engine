@@ -851,8 +851,7 @@ test("Studio imports GLB animations and audio assets", async ({ page }) => {
     .toHaveValue("Characters");
   await expect(page.locator("#asset-folder-filter option")).toContainText(["All folders", "Characters"]);
 
-  await page.locator("#component-type").selectOption("Collider");
-  await page.locator("#add-component").click();
+  await page.getByLabel("Enabled").check();
   await page.getByLabel("Collision mode").selectOption("box");
   await expect(canvas).toHaveAttribute("data-collider-proxy-count", "1");
   await expect.poll(async () => canvas.getAttribute("data-model-animation-groups"), {
