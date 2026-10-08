@@ -222,6 +222,29 @@ test("platform home, games, favorites, profile and direct play work", async ({ p
   );
   expect(fullVelocity).toBeGreaterThan(earlyVelocity);
 
+  await page.keyboard.down("ShiftLeft");
+  await page.waitForTimeout(360);
+  const sprintVelocityRaw = (await canvas.getAttribute("data-player-velocity"))!;
+  const sprintVelocity = Math.hypot(
+    Number(sprintVelocityRaw.split(",")[0]),
+    Number(sprintVelocityRaw.split(",")[2])
+  );
+  expect(sprintVelocity).toBeGreaterThan(fullVelocity + 0.5);
+  await expect(canvas).toHaveAttribute("data-player-movement-state", "sprint");
+  await page.keyboard.up("ShiftLeft");
+
+  const thirdPersonRadiusBefore = Number(await canvas.getAttribute("data-camera-radius"));
+  expect(thirdPersonRadiusBefore).toBeGreaterThanOrEqual(2.3);
+
+  await page.keyboard.press("KeyC");
+  await expect(canvas).toHaveAttribute("data-camera-mode", "first-person");
+  expect(Number(await canvas.getAttribute("data-camera-radius"))).toBeLessThan(0.7);
+
+  await page.keyboard.press("KeyC");
+  await expect(canvas).toHaveAttribute("data-camera-mode", "third-person");
+  const restoredThirdPersonRadius = Number(await canvas.getAttribute("data-camera-radius"));
+  expect(Math.abs(restoredThirdPersonRadius - thirdPersonRadiusBefore)).toBeLessThan(0.2);
+
   await page.keyboard.up("KeyW");
   await page.waitForTimeout(220);
   const after = (await canvas.getAttribute("data-player-position"))!;
