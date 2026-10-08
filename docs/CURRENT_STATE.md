@@ -194,6 +194,7 @@ Major current creator/runtime capabilities:
 - lifecycle hooks
 - interaction
 - trigger enter/exit events
+- player checkpoint / respawn control
 - input/events
 - UI click events
 - object lookup
@@ -422,3 +423,14 @@ Current scene-level settings:
 - `player.jumpPower`
 
 Defaults remain compatible with existing scenes: height 3.05, radius 0.45, walk 5.05, run 8 and jump 7.9. Values are clamped at authoring/runtime boundaries, capsule height cannot collapse below its radius, and grounded/safe-ground probes use the configured capsule dimensions.
+
+
+## Checkpoints / respawn
+
+Runtime scripts can use the Player API to build checkpoint loops without directly manipulating the player mesh:
+
+- `Forge.player.setCheckpoint()` saves the player's current runtime position.
+- `Forge.player.setCheckpoint("Object Name")` uses a scene object's position as the checkpoint.
+- `Forge.player.respawn()` clears current motion and returns the runtime player to the saved checkpoint.
+
+The initial checkpoint is the resolved player spawn. This combines naturally with Trigger volumes for checkpoints, platformers, obbies and hazard/respawn gameplay.
