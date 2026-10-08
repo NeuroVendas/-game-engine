@@ -717,3 +717,38 @@ Creators can:
 ### Acceptance coverage
 
 The browser smoke imports a real animated GLB, WAV and PNG, reuses all three through Assets, verifies deduplication and persistent registry counts, renames/folders the model asset, exercises search/type/folder filtering, uses real drag-and-drop reuse, and confirms removing the texture asset does not remove the texture already applied to a scene object.
+
+
+## 24. Forge v0.5 — Visual quality pass
+
+This slice targets the recurring problem that early Forge games looked flat or prototype-like even when gameplay worked.
+
+### Scene post-processing
+
+Environment data now persists:
+
+- exposure
+- contrast
+- Standard / ACES tone mapping
+
+Lighting presets were expanded with Studio and Cinematic looks, and every preset now includes its intended post-processing values.
+
+### PBR primitive surfaces
+
+Forge primitives now use Babylon PBR materials. Existing material presets remain the creator-facing defaults, mapped onto physically meaningful roughness/metallic values.
+
+Creators can override:
+
+- roughness
+- metallic
+- texture U/V tiling
+
+Reset Surface clears overrides and returns to the selected material preset.
+
+### Local light shadows
+
+Point and Spot Light components can enable Cast Shadows and choose Low / Medium / High map quality. Each shadow-casting local light owns its shadow generator and shares Forge shadow-caster registration with model/primitive geometry.
+
+### Acceptance coverage
+
+Browser Smoke validates manual post-processing, ACES, Cinematic preset values, local shadow light lifecycle, PBR metal defaults, custom surface overrides/tiling and Reset Surface behavior.
