@@ -1123,6 +1123,58 @@ Forge.onKeyDown((code) => {
   expect(await canvas.getAttribute("data-runtime-error")).toBeNull();
 });
 
+test("Hazard component creates a Trigger and deals repeated player damage", async ({ page }) => {
+  await page.goto("/");
+  await page.locator("[data-launch-tab='develop']").click();
+  await page.locator("#new-place").click();
+  await page.locator("#new-place-name").fill("Hazard Zone Place");
+  await page.locator("#confirm-create-place").click();
+
+  const canvas = page.locator("#viewport");
+
+  await page.locator("#player-max-health").fill("30");
+  await page.locator("#player-max-health").dispatchEvent("change");
+  await page.locator("#player-auto-respawn").uncheck();
+
+  await page.locator("[data-object='empty']").click();
+  await page.locator("#prop-name").fill("Hazard Zone");
+  await page.locator("#prop-name").dispatchEvent("change");
+  await page.locator("#pos-x").fill("0");
+  await page.locator("#pos-x").dispatchEvent("change");
+  await page.locator("#pos-y").fill("2");
+  await page.locator("#pos-y").dispatchEvent("change");
+  await page.locator("#pos-z").fill("10");
+  await page.locator("#pos-z").dispatchEvent("change");
+
+  await page.locator("#component-type").selectOption("Hazard");
+  await page.locator("#add-component").click();
+
+  await expect(page.locator("#component-list")).toContainText("Trigger");
+  await expect(page.locator("#component-list")).toContainText("Hazard");
+  await expect(canvas).toHaveAttribute("data-trigger-volume-count", "1");
+
+  const hazard = page.locator(".component").filter({ hasText: "Hazard" }).first();
+  await hazard.getByLabel("Damage").fill("8");
+  await hazard.getByLabel("Damage").dispatchEvent("change");
+  await hazard.getByLabel("Interval").fill("0.15");
+  await hazard.getByLabel("Interval").dispatchEvent("change");
+
+  await page.locator("#play").click();
+  await expect(page.locator("#mode-badge")).toHaveText("PLAY");
+  await expect(canvas).toHaveAttribute("data-active-hazard-count", "1");
+  await expect.poll(async () => canvas.getAttribute("data-last-hazard-damage"), {
+    timeout: 3000,
+    intervals: [50, 75, 100]
+  }).toMatch(/Hazard_Zone:8\.00/);
+
+  await expect.poll(async () => canvas.getAttribute("data-player-dead"), {
+    timeout: 3500,
+    intervals: [100, 150, 200]
+  }).toBe("true");
+  await expect(canvas).toHaveAttribute("data-player-health", "0.000,30.000");
+  expect(await canvas.getAttribute("data-runtime-error")).toBeNull();
+});
+
 test("ModuleScript libraries can be required by gameplay scripts", async ({ page }) => {
   await page.goto("/");
   await page.locator("[data-launch-tab='develop']").click();

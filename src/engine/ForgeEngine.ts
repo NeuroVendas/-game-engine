@@ -53,6 +53,7 @@ export class ForgeEngine {
   private readonly entityColliderProxies = new Map<string, Mesh>();
   private readonly entityTriggerVolumes = new Map<string, Mesh>();
   private readonly activeTriggerIds = new Set<string>();
+  private readonly hazardTimers = new Map<string, number>();
   private readonly pendingAnimationPlays = new Map<string, string | undefined>();
   private readonly hemi: HemisphericLight;
   private readonly key: DirectionalLight;
@@ -226,6 +227,7 @@ export class ForgeEngine {
     this.refreshColliderProxyDiagnostics();
     this.entityTriggerVolumes.clear();
     this.activeTriggerIds.clear();
+    this.hazardTimers.clear();
     this.refreshTriggerDiagnostics();
 
     // Detach Forge entity roots first so disposing one parent cannot accidentally
@@ -1286,6 +1288,7 @@ export class ForgeEngine {
   private disposeTriggerVolume(id: string): void {
     const volume = this.entityTriggerVolumes.get(id);
     this.activeTriggerIds.delete(id);
+    this.hazardTimers.delete(id);
     if (!volume) {
       this.refreshTriggerDiagnostics();
       return;
@@ -1372,6 +1375,7 @@ export class ForgeEngine {
       insideNow.add(id);
       if (!this.activeTriggerIds.has(id)) {
         this.activeTriggerIds.add(id);
+        if (entity.components?.Hazard?.enabled) this.hazardTimers.set(id, 0);
         this.scripts.triggerEnter(id, actor);
         this.canvas.dataset.lastTriggerAction = `enter:${id}`;
       }
@@ -1380,11 +1384,52 @@ export class ForgeEngine {
     for (const id of [...this.activeTriggerIds]) {
       if (insideNow.has(id)) continue;
       this.activeTriggerIds.delete(id);
+      this.hazardTimers.delete(id);
       this.scripts.triggerExit(id, actor);
       this.canvas.dataset.lastTriggerAction = `exit:${id}`;
     }
 
     this.refreshTriggerDiagnostics();
+  }
+
+  tickActiveHazards(dt: number): number {
+    if (!this.runtimeMode) return 0;
+
+    let totalDamage = 0;
+    const hits: string[] = [];
+
+    for (const id of this.activeTriggerIds) {
+      const hazard = this.getEntity(id)?.components?.Hazard;
+      if (!hazard?.enabled) {
+        this.hazardTimers.delete(id);
+        continue;
+      }
+
+      const damage = Math.max(0, Number(hazard.damage) || 0);
+      const interval = Math.max(0.05, Number(hazard.interval) || 1);
+      let timer = (this.hazardTimers.get(id) ?? 0) - dt;
+
+      if (timer <= 0) {
+        if (damage > 0) {
+          totalDamage += damage;
+          hits.push(`${id}:${damage.toFixed(2)}`);
+        }
+        timer = interval;
+      }
+
+      this.hazardTimers.set(id, timer);
+    }
+
+    if (hits.length > 0) {
+      this.canvas.dataset.lastHazardDamage = hits.join(",");
+    }
+    this.canvas.dataset.activeHazardCount = String(
+      [...this.activeTriggerIds].filter(
+        (id) => this.getEntity(id)?.components?.Hazard?.enabled
+      ).length
+    );
+
+    return totalDamage;
   }
 
   private refreshTriggerDiagnostics(): void {
