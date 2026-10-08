@@ -703,6 +703,28 @@ test("Studio visualizes colliders and round-trips custom prefab hierarchies", as
   await page.locator("[data-primitive='box']").click();
   await page.locator("#prop-name").fill("Prefab Block");
   await page.locator("#prop-name").dispatchEvent("change");
+
+  const colliderCard = page.locator(".component").filter({ hasText: "Collider" }).first();
+  await colliderCard.getByLabel("Mode").selectOption("box");
+  await colliderCard.getByLabel("Size X").fill("3.5");
+  await colliderCard.getByLabel("Size X").dispatchEvent("change");
+  await colliderCard.getByLabel("Size Y").fill("4.25");
+  await colliderCard.getByLabel("Size Y").dispatchEvent("change");
+  await colliderCard.getByLabel("Size Z").fill("2.75");
+  await colliderCard.getByLabel("Size Z").dispatchEvent("change");
+  await colliderCard.getByLabel("Offset X").fill("0.5");
+  await colliderCard.getByLabel("Offset X").dispatchEvent("change");
+  await colliderCard.getByLabel("Offset Y").fill("1.25");
+  await colliderCard.getByLabel("Offset Y").dispatchEvent("change");
+  await colliderCard.getByLabel("Offset Z").fill("-0.75");
+  await colliderCard.getByLabel("Offset Z").dispatchEvent("change");
+
+  await expect(canvas).toHaveAttribute("data-collider-proxy-count", "1");
+  await expect(canvas).toHaveAttribute(
+    "data-collider-proxies",
+    /Prefab_Block:3\.50:4\.25:2\.75:0\.50:1\.25:-0\.75/
+  );
+
   await page.locator(".scene-item", { hasText: "Prefab Block" }).dragTo(
     page.locator(".scene-item", { hasText: "Custom Assembly" }).first()
   );
@@ -735,6 +757,14 @@ test("Studio visualizes colliders and round-trips custom prefab hierarchies", as
   expect(exported.name).toBe("Custom Assembly");
   expect(exported.entities).toHaveLength(3);
 
+  const exportedBlock = exported.entities.find((entity: any) => entity.name === "Prefab Block");
+  expect(exportedBlock?.components?.Collider).toEqual({
+    enabled: true,
+    mode: "box",
+    size: [3.5, 4.25, 2.75],
+    offset: [0.5, 1.25, -0.75]
+  });
+
   const exportedRoot = exported.entities.find((entity: any) => !entity.parentId);
   expect(exportedRoot).toBeTruthy();
   expect(exportedRoot.position).toEqual([0, 0, 0]);
@@ -753,6 +783,7 @@ test("Studio visualizes colliders and round-trips custom prefab hierarchies", as
   await expect(page.locator(".scene-item", { hasText: "Custom Assembly" })).toHaveCount(2);
   await expect(page.locator(".scene-item", { hasText: "Prefab Block" })).toHaveCount(2);
   await expect(page.locator(".scene-item", { hasText: "Prefab Sphere" })).toHaveCount(2);
+  await expect(canvas).toHaveAttribute("data-collider-proxy-count", "2");
 
   const importedId = await page.locator(".scene-item.selected").getAttribute("data-entity-id");
   expect(importedId).toBeTruthy();
