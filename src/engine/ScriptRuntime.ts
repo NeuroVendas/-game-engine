@@ -75,6 +75,11 @@ interface RuntimeAnimationAPI {
 interface RuntimePlayerAPI {
   setCheckpoint(idOrName?: string): boolean;
   respawn(): boolean;
+  getHealth(): number;
+  getMaxHealth(): number;
+  isDead(): boolean;
+  damage(amount: number): number;
+  heal(amount: number): number;
 }
 
 interface ForgeUserAPI {
@@ -99,6 +104,11 @@ interface ForgeUserAPI {
     get(): ForgeNodeAPI | null;
     setCheckpoint(idOrName?: string): boolean;
     respawn(): boolean;
+    getHealth(): number;
+    getMaxHealth(): number;
+    isDead(): boolean;
+    damage(amount: number): number;
+    heal(amount: number): number;
   };
   readonly camera: {
     getFov(): number;
@@ -174,7 +184,12 @@ export class ScriptRuntime {
   };
   private playerApi: RuntimePlayerAPI = {
     setCheckpoint: () => false,
-    respawn: () => false
+    respawn: () => false,
+    getHealth: () => 0,
+    getMaxHealth: () => 0,
+    isDead: () => false,
+    damage: () => 0,
+    heal: () => 0
   };
   private worldMutationApi: RuntimeWorldMutationAPI = {
     create: () => null,
@@ -395,7 +410,12 @@ export class ScriptRuntime {
       player: {
         get: () => this.findNode("__player-collider"),
         setCheckpoint: (idOrName?: string) => this.playerApi.setCheckpoint(idOrName),
-        respawn: () => this.playerApi.respawn()
+        respawn: () => this.playerApi.respawn(),
+        getHealth: () => this.playerApi.getHealth(),
+        getMaxHealth: () => this.playerApi.getMaxHealth(),
+        isDead: () => this.playerApi.isDead(),
+        damage: (amount: number) => this.playerApi.damage(amount),
+        heal: (amount: number) => this.playerApi.heal(amount)
       },
       camera: {
         getFov: () => {
