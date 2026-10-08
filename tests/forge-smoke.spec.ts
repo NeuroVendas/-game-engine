@@ -821,7 +821,7 @@ Forge.onStart(() => {
 
 
 test("Studio imports GLB animations and audio assets", async ({ page }) => {
-  test.setTimeout(75_000);
+  test.setTimeout(110_000);
   await page.goto("/");
   await page.locator("[data-launch-tab='develop']").click();
   await page.locator("#new-place").click();
@@ -872,6 +872,38 @@ test("Studio imports GLB animations and audio assets", async ({ page }) => {
   await expect(page.locator("#mode-badge")).toHaveText("EDITOR");
   await expect.poll(async () => canvas.getAttribute("data-model-animation-groups"))
     .toBe("1");
+
+  // Runtime scripts start synchronously while GLB loading is asynchronous.
+  // Verify Forge.animation.play queues the request instead of losing it.
+  await page.locator(".scene-item", { hasText: "animated-triangle" }).click();
+  await page.locator("[data-model-animation-autoplay]").evaluate((input) => {
+    const checkbox = input as HTMLInputElement;
+    checkbox.checked = false;
+    checkbox.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await expect(page.locator("[data-model-animation-autoplay]")).not.toBeChecked();
+
+  await page.locator("[data-object='script']").click();
+  await expect(page.locator("#scene-tree")).toContainText("Script");
+  await page.locator("#code-selected").click();
+  await page.locator("#script-source").fill(`
+Forge.onStart(() => {
+  const queued = Forge.animation.play("animated-triangle", "Bounce");
+  Forge.log("ANIMATION_SCRIPT_OK:" + queued);
+});
+`);
+  await page.locator("#script-save").click();
+  await page.locator("#script-close").click();
+
+  await page.locator("#play").click();
+  await expect(page.locator("#mode-badge")).toHaveText("PLAY");
+  await expect(page.locator("#output-log")).toContainText("ANIMATION_SCRIPT_OK:true");
+  await expect.poll(async () => canvas.getAttribute("data-last-animation-action"), {
+    timeout: 10000
+  }).toMatch(/play:.*:Bounce/);
+
+  await page.locator("#stop").click();
+  await expect(page.locator("#mode-badge")).toHaveText("EDITOR");
 
   await page.locator(".scene-item", { hasText: "Baseplate" }).click();
   await page.locator("#audio-file-input").setInputFiles({
