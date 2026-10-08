@@ -1469,7 +1469,9 @@ export class EditorApp {
       case "Trigger":
         components.Trigger = {
           enabled: true,
-          size: entity.size ? [...entity.size] : [4, 4, 4],
+          size: entity.kind === "empty"
+            ? [4, 4, 4]
+            : entity.size ? [...entity.size] : [4, 4, 4],
           offset: [0, 0, 0]
         };
         break;
