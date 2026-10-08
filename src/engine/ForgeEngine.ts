@@ -47,6 +47,7 @@ export class ForgeEngine {
 
   private readonly entityMeshes = new Map<string, Mesh>();
   private readonly entityLights = new Map<string, Light>();
+  private readonly entityLightShadows = new Map<string, ShadowGenerator>();
   private readonly entitySounds = new Map<string, Sound>();
   private readonly entityParticles = new Map<string, ParticleSystem>();
   private readonly entityAnimations = new Map<string, AnimationGroup[]>();
@@ -214,8 +215,7 @@ export class ForgeEngine {
     this.runtimeMode = runtimeMode;
     this.pendingAnimationPlays.clear();
 
-    for (const light of this.entityLights.values()) light.dispose();
-    this.entityLights.clear();
+    for (const id of [...this.entityLights.keys()]) this.disposeEntityLight(id);
 
     for (const id of [...this.entitySounds.keys()]) this.disposeEntitySound(id);
     for (const id of [...this.entityParticles.keys()]) this.disposeEntityParticle(id);
@@ -422,8 +422,7 @@ export class ForgeEngine {
     for (const childId of children) this.deleteEntity(childId);
 
     this.scripts.detach(id);
-    this.entityLights.get(id)?.dispose();
-    this.entityLights.delete(id);
+    this.disposeEntityLight(id);
     this.disposeEntitySound(id);
     this.disposeEntityParticle(id);
     this.disposeEntityAnimations(id);
@@ -576,10 +575,16 @@ export class ForgeEngine {
     if (mesh.name === "__forge-sky") return;
     mesh.receiveShadows = true;
     this.shadowGenerator?.addShadowCaster(mesh, descendants);
+    for (const generator of this.entityLightShadows.values()) {
+      generator.addShadowCaster(mesh, descendants);
+    }
   }
 
   unregisterShadowCaster(mesh: AbstractMesh, descendants = true): void {
     this.shadowGenerator?.removeShadowCaster(mesh, descendants);
+    for (const generator of this.entityLightShadows.values()) {
+      generator.removeShadowCaster(mesh, descendants);
+    }
   }
 
   rebuildEntity(id: string): void {
@@ -587,8 +592,7 @@ export class ForgeEngine {
     if (!entity) return;
 
     this.scripts.detach(id);
-    this.entityLights.get(id)?.dispose();
-    this.entityLights.delete(id);
+    this.disposeEntityLight(id);
     this.disposeEntitySound(id);
     this.disposeEntityParticle(id);
     this.disposeEntityAnimations(id);
@@ -949,6 +953,20 @@ export class ForgeEngine {
     return mesh;
   }
 
+  private disposeEntityLight(id: string): void {
+    this.entityLightShadows.get(id)?.dispose();
+    this.entityLightShadows.delete(id);
+    this.entityLights.get(id)?.dispose();
+    this.entityLights.delete(id);
+    this.refreshLightDiagnostics();
+  }
+
+  private refreshLightDiagnostics(): void {
+    this.canvas.dataset.localLights = String(this.entityLights.size);
+    this.canvas.dataset.localShadowLights = String(this.entityLightShadows.size);
+    this.canvas.dataset.localShadowLightIds = [...this.entityLightShadows.keys()].join(",");
+  }
+
   private createLight(entity: ForgeEntity, mesh: Mesh): void {
     const component = entity.components?.Light;
     if (!component) return;
@@ -972,6 +990,33 @@ export class ForgeEngine {
     light.intensity = component.intensity ?? 1;
     light.range = component.range ?? 18;
     this.entityLights.set(entity.id, light);
+
+    if (component.castShadows) {
+      const mapSize = component.shadowQuality === "high"
+        ? 2048
+        : component.shadowQuality === "low"
+          ? 512
+          : 1024;
+      try {
+        const generator = new ShadowGenerator(mapSize, light);
+        generator.usePercentageCloserFiltering = true;
+        generator.bias = 0.001;
+        generator.normalBias = 0.035;
+
+        for (const candidate of this.entityMeshes.values()) {
+          if (candidate.name === "__forge-sky" || candidate === mesh) continue;
+          generator.addShadowCaster(candidate, true);
+        }
+
+        this.entityLightShadows.set(entity.id, generator);
+      } catch (error) {
+        this.log(
+          `Local shadows failed on ${entity.name}: ${error instanceof Error ? error.message : String(error)}`
+        );
+      }
+    }
+
+    this.refreshLightDiagnostics();
   }
 
   private disposeEntitySound(id: string): void {
