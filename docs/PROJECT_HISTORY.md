@@ -631,3 +631,31 @@ The same Model loop/speed settings are used by runtime playback. Calls made from
 ### Acceptance coverage
 
 Browser Smoke generates a real animated GLB fixture with a `Bounce` translation clip and validates clip discovery, Inspector selection, Preview, Stop, autoplay in Play, and clean return to Editor.
+
+
+## 21. Forge v0.5 — Box proxy colliders
+
+Collider authoring now supports a dedicated collision volume instead of forcing every object or imported model to collide against its visible mesh.
+
+### Collider modes
+
+The Collider component supports:
+
+- `mesh` — use the visible primitive/model geometry
+- `box` — use an invisible local box proxy
+
+Box Proxy exposes:
+
+- Size X / Y / Z
+- Offset X / Y / Z
+- **Fit Proxy To Visual**, which computes the local bounds of the current visible primitive or imported GLB geometry
+
+The proxy inherits the Forge entity transform, remains non-pickable, and becomes the collision source while visible model meshes stop colliding.
+
+### Studio visualization
+
+The existing Colliders toggle now displays the actual box proxy volume when Box Proxy mode is active. The proxy is hidden in normal Editor view and during Play.
+
+### Persistence
+
+Proxy mode, size and offset are canonical scene data and survive custom prefab export/import. Browser acceptance coverage validates authoring, diagnostics, prefab round-trip and Editor -> Play -> Editor state.

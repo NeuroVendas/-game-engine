@@ -703,6 +703,40 @@ test("Studio visualizes colliders and round-trips custom prefab hierarchies", as
   await page.locator("[data-primitive='box']").click();
   await page.locator("#prop-name").fill("Prefab Block");
   await page.locator("#prop-name").dispatchEvent("change");
+
+  const colliderCard = page.locator(".component").filter({ hasText: "Collider" }).first();
+  await colliderCard.getByLabel("Mode").evaluate((select) => {
+    const input = select as HTMLSelectElement;
+    input.value = "box";
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+
+  const setColliderNumber = async (label: string, value: string) => {
+    await colliderCard.getByLabel(label).evaluate((input, nextValue) => {
+      const field = input as HTMLInputElement;
+      field.value = String(nextValue);
+      field.dispatchEvent(new Event("change", { bubbles: true }));
+    }, value);
+  };
+
+  await setColliderNumber("Size X", "3.5");
+  await expect(canvas).toHaveAttribute(
+    "data-collider-proxies",
+    /Block:3\.50:2\.00:2\.00:0\.00:0\.00:0\.00/
+  );
+
+  await setColliderNumber("Size Y", "4.25");
+  await setColliderNumber("Size Z", "2.75");
+  await setColliderNumber("Offset X", "0.5");
+  await setColliderNumber("Offset Y", "1.25");
+  await setColliderNumber("Offset Z", "-0.75");
+
+  await expect(canvas).toHaveAttribute("data-collider-proxy-count", "1");
+  await expect(canvas).toHaveAttribute(
+    "data-collider-proxies",
+    /Block:3\.50:4\.25:2\.75:0\.50:1\.25:-0\.75/
+  );
+
   await page.locator(".scene-item", { hasText: "Prefab Block" }).dragTo(
     page.locator(".scene-item", { hasText: "Custom Assembly" }).first()
   );
@@ -735,6 +769,14 @@ test("Studio visualizes colliders and round-trips custom prefab hierarchies", as
   expect(exported.name).toBe("Custom Assembly");
   expect(exported.entities).toHaveLength(3);
 
+  const exportedBlock = exported.entities.find((entity: any) => entity.name === "Prefab Block");
+  expect(exportedBlock?.components?.Collider).toEqual({
+    enabled: true,
+    mode: "box",
+    size: [3.5, 4.25, 2.75],
+    offset: [0.5, 1.25, -0.75]
+  });
+
   const exportedRoot = exported.entities.find((entity: any) => !entity.parentId);
   expect(exportedRoot).toBeTruthy();
   expect(exportedRoot.position).toEqual([0, 0, 0]);
@@ -753,6 +795,7 @@ test("Studio visualizes colliders and round-trips custom prefab hierarchies", as
   await expect(page.locator(".scene-item", { hasText: "Custom Assembly" })).toHaveCount(2);
   await expect(page.locator(".scene-item", { hasText: "Prefab Block" })).toHaveCount(2);
   await expect(page.locator(".scene-item", { hasText: "Prefab Sphere" })).toHaveCount(2);
+  await expect(canvas).toHaveAttribute("data-collider-proxy-count", "2");
 
   const importedId = await page.locator(".scene-item.selected").getAttribute("data-entity-id");
   expect(importedId).toBeTruthy();
@@ -842,9 +885,47 @@ test("Studio imports GLB animations and audio assets", async ({ page }) => {
   await expect(page.locator("#scene-tree")).toContainText("animated-triangle");
   await expect.poll(async () => page.locator("#output-log").textContent())
     .toContain("Loaded model animated-triangle");
+  const modelLoadCount = async () => {
+    const output = await page.locator("#output-log").textContent() ?? "";
+    return (output.match(/Loaded model animated-triangle/g) ?? []).length;
+  };
+  await expect.poll(modelLoadCount).toBe(1);
   await expect.poll(async () => canvas.getAttribute("data-model-animation-groups"))
     .toBe("1");
   await expect(page.locator("#component-list")).toContainText("Clips: Bounce");
+
+  const modelCollider = page.locator(".component").filter({ hasText: "Collider" }).first();
+  await expect(modelCollider).toBeVisible();
+
+  await modelCollider.getByLabel("Enabled").evaluate((input) => {
+    const checkbox = input as HTMLInputElement;
+    checkbox.checked = true;
+    checkbox.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await expect(modelCollider.getByLabel("Enabled")).toBeChecked();
+
+  await modelCollider.getByLabel("Mode").evaluate((select) => {
+    const input = select as HTMLSelectElement;
+    input.value = "box";
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await expect(modelCollider.getByLabel("Mode")).toHaveValue("box");
+
+  await page.locator("[data-collider-fit]").evaluate((button) => {
+    (button as HTMLButtonElement).click();
+  });
+
+  await expect(page.locator("#output-log"))
+    .toContainText("Collider fitted to visual bounds: animated-triangle");
+  await expect(canvas).toHaveAttribute("data-collider-proxy-count", "1");
+  await expect(canvas).toHaveAttribute(
+    "data-collider-proxies",
+    /:1\.00:1\.00:0\.05:-?0\.50:0\.50:0\.00/
+  );
+  await expect.poll(async () => canvas.getAttribute("data-model-animation-groups"), {
+    timeout: 10000
+  }).toBe("1");
+  await expect.poll(modelLoadCount).toBe(1);
 
   const clip = page.locator("[data-model-animation-clip]");
   await expect(clip.locator("option")).toContainText(["First clip (Bounce)", "Bounce"]);

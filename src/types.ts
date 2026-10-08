@@ -7,6 +7,9 @@ export type ForgeScriptKind = "Script" | "LocalScript" | "ModuleScript";
 export interface ForgeComponents {
   Collider?: {
     enabled: boolean;
+    mode?: "mesh" | "box";
+    size?: [number, number, number];
+    offset?: [number, number, number];
   };
   Interactable?: {
     enabled: boolean;

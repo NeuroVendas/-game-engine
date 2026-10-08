@@ -1328,7 +1328,12 @@ export class EditorApp {
 
     switch (type) {
       case "Collider":
-        components.Collider = { enabled: true };
+        components.Collider = {
+          enabled: true,
+          mode: "mesh",
+          size: entity.size ? [...entity.size] : [2, 2, 2],
+          offset: [0, 0, 0]
+        };
         break;
       case "Interactable":
         components.Interactable = { enabled: true, prompt: "E • Interact" };
@@ -1463,9 +1468,88 @@ export class EditorApp {
       case "Collider": {
         const component = components.Collider;
         if (!component) return;
+
         this.appendCheckboxField(container, "Enabled", component.enabled, (value) => {
           component.enabled = value;
-        });
+          this.forge.refreshEntityCollider(entity.id);
+        }, false);
+
+        this.appendSelectField(container, "Mode", component.mode ?? "mesh", [
+          ["mesh", "Mesh"],
+          ["box", "Box Proxy"]
+        ], (value) => {
+          component.mode = value as "mesh" | "box";
+          if (component.mode === "box") {
+            component.size ??= entity.size ? [...entity.size] : [2, 2, 2];
+            component.offset ??= [0, 0, 0];
+          }
+          this.forge.refreshEntityCollider(entity.id);
+        }, false);
+
+        if ((component.mode ?? "mesh") === "box") {
+          const size = component.size ?? (entity.size ? [...entity.size] : [2, 2, 2]);
+          const offset = component.offset ?? [0, 0, 0];
+          component.size = size;
+          component.offset = offset;
+
+          this.appendNumberField(container, "Size X", size[0], 0.1, (value) => {
+            const current = component.size ?? size;
+            component.size = [Math.max(0.05, Math.abs(value)), current[1], current[2]];
+            this.forge.refreshEntityCollider(entity.id);
+          }, false);
+          this.appendNumberField(container, "Size Y", size[1], 0.1, (value) => {
+            const current = component.size ?? size;
+            component.size = [current[0], Math.max(0.05, Math.abs(value)), current[2]];
+            this.forge.refreshEntityCollider(entity.id);
+          }, false);
+          this.appendNumberField(container, "Size Z", size[2], 0.1, (value) => {
+            const current = component.size ?? size;
+            component.size = [current[0], current[1], Math.max(0.05, Math.abs(value))];
+            this.forge.refreshEntityCollider(entity.id);
+          }, false);
+
+          this.appendNumberField(container, "Offset X", offset[0], 0.1, (value) => {
+            const current = component.offset ?? offset;
+            component.offset = [value, current[1], current[2]];
+            this.forge.refreshEntityCollider(entity.id);
+          }, false);
+          this.appendNumberField(container, "Offset Y", offset[1], 0.1, (value) => {
+            const current = component.offset ?? offset;
+            component.offset = [current[0], value, current[2]];
+            this.forge.refreshEntityCollider(entity.id);
+          }, false);
+          this.appendNumberField(container, "Offset Z", offset[2], 0.1, (value) => {
+            const current = component.offset ?? offset;
+            component.offset = [current[0], current[1], value];
+            this.forge.refreshEntityCollider(entity.id);
+          }, false);
+
+          const actions = document.createElement("div");
+          actions.className = "component-actions";
+
+          const fit = document.createElement("button");
+          fit.type = "button";
+          fit.dataset.colliderFit = entity.id;
+          fit.textContent = "Fit Proxy To Visual";
+          fit.addEventListener("click", () => {
+            this.checkpoint();
+            if (!this.forge.fitBoxColliderToVisual(entity.id)) {
+              this.log(`Could not fit collider: visual geometry for ${entity.name} is not loaded yet.`);
+              return;
+            }
+            this.setSelection(entity.id);
+            this.renderInspector();
+            this.log(`Collider fitted to visual bounds: ${entity.name}.`);
+          });
+          actions.appendChild(fit);
+          container.appendChild(actions);
+
+          const note = document.createElement("div");
+          note.className = "component-note";
+          note.textContent = "Box Proxy uses this local volume for collisions instead of the visible mesh.";
+          container.appendChild(note);
+        }
+
         break;
       }
       case "Interactable": {
@@ -1985,7 +2069,8 @@ Forge.onUpdate((dt) => {
     labelText: string,
     value: number,
     step: number,
-    apply: (value: number) => void
+    apply: (value: number) => void,
+    rebuildEntity = true
   ): void {
     const label = document.createElement("label");
     label.textContent = labelText;
@@ -2002,7 +2087,7 @@ Forge.onUpdate((dt) => {
       }
       this.checkpoint();
       apply(next);
-      if (this.selectedId) {
+      if (rebuildEntity && this.selectedId) {
         const selectedId = this.selectedId;
         this.forge.rebuildEntity(selectedId);
         this.setSelection(selectedId);
@@ -2019,7 +2104,8 @@ Forge.onUpdate((dt) => {
     container: HTMLDivElement,
     labelText: string,
     value: boolean,
-    apply: (value: boolean) => void
+    apply: (value: boolean) => void,
+    rebuildEntity = true
   ): void {
     const label = document.createElement("label");
     label.textContent = labelText;
@@ -2030,7 +2116,7 @@ Forge.onUpdate((dt) => {
     input.addEventListener("change", () => {
       this.checkpoint();
       apply(input.checked);
-      if (this.selectedId) {
+      if (rebuildEntity && this.selectedId) {
         const selectedId = this.selectedId;
         this.forge.rebuildEntity(selectedId);
         this.setSelection(selectedId);
@@ -2048,7 +2134,8 @@ Forge.onUpdate((dt) => {
     labelText: string,
     value: string,
     options: Array<[string, string]>,
-    apply: (value: string) => void
+    apply: (value: string) => void,
+    rebuildEntity = true
   ): void {
     const label = document.createElement("label");
     label.textContent = labelText;
@@ -2065,7 +2152,7 @@ Forge.onUpdate((dt) => {
     select.addEventListener("change", () => {
       this.checkpoint();
       apply(select.value);
-      if (this.selectedId) {
+      if (rebuildEntity && this.selectedId) {
         const selectedId = this.selectedId;
         this.forge.rebuildEntity(selectedId);
         this.setSelection(selectedId);
