@@ -813,3 +813,26 @@ Lethal damage clears player motion and enters a dead state. Dead players cannot 
 ### Acceptance coverage
 
 Browser Smoke configures a 60-health player, applies scripted damage/heal, validates lethal death, performs manual respawn, then enables Auto respawn and validates a second lethal hit returns the player to full health automatically.
+
+
+## 27. Forge v0.5 — Hazard damage zones
+
+Forge now has a configurable Hazard component for lava, lasers, toxic areas and other repeated-damage gameplay.
+
+### Authoring
+
+Hazard exposes:
+
+- Enabled
+- Damage
+- Interval
+
+Adding a Hazard automatically creates a practical Trigger Volume when the object does not already have one.
+
+### Runtime
+
+Every active Hazard Trigger tracks an independent damage timer. The engine aggregates due damage each frame and routes it through the built-in player health system, so normal death/manual respawn/auto-respawn behavior remains consistent.
+
+### Acceptance coverage
+
+Browser Smoke creates a 30-health player and a Hazard at the blank-scene spawn, verifies the automatic Trigger, configures 8 damage every 0.15 seconds and confirms the player reaches the dead state through repeated hazard ticks.
