@@ -42,6 +42,8 @@ export interface ForgeComponents {
     intensity?: number;
     range?: number;
     angle?: number;
+    castShadows?: boolean;
+    shadowQuality?: "low" | "medium" | "high";
   };
   Sound?: {
     src: string;
