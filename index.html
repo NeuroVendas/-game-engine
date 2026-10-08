@@ -547,6 +547,15 @@
                   <option value="neon">Neon</option>
                 </select>
               </label>
+              <label>Roughness<input id="prop-roughness" type="number" min="0" max="1" step="0.05" value="0.48" /></label>
+              <label>Metallic<input id="prop-metallic" type="number" min="0" max="1" step="0.05" value="0.02" /></label>
+              <label>Texture tiling
+                <span class="triplet compact-triplet">
+                  <input id="prop-texture-u" type="number" min="0.01" step="0.1" value="1" aria-label="Texture U tiling" />
+                  <input id="prop-texture-v" type="number" min="0.01" step="0.1" value="1" aria-label="Texture V tiling" />
+                </span>
+              </label>
+              <button id="reset-surface" type="button">Reset Surface to Preset</button>
               <label>Emissive<input id="prop-emissive" type="color" value="#000000" /></label>
               <label>Transparency<input id="prop-transparency" type="number" min="0" max="1" step="0.05" value="0" /></label>
               <label>Texture URL<input id="prop-texture" type="text" placeholder="https://.../texture.png" /></label>
