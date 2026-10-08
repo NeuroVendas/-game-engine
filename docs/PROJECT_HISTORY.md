@@ -706,10 +706,14 @@ Creators can:
 - Insert another instance of an imported GLB
 - Insert another Sound object from imported audio
 - Apply an imported texture to a selected primitive
-- Search assets
-- Filter by asset kind
+- Rename assets without renaming existing instances
+- Organize assets into lightweight folders
+- Search assets and folders
+- Filter by asset kind and folder
+- Drag Model/Audio assets into Workspace or under a hierarchy parent
+- Drag Texture assets onto Forge primitives
 - Remove assets from the library without mutating existing scene instances
 
 ### Acceptance coverage
 
-The browser smoke imports a real animated GLB, WAV and PNG, reuses all three through Assets, verifies deduplication and persistent registry counts, exercises search/type filtering, and confirms removing the texture asset does not remove the texture already applied to a scene object.
+The browser smoke imports a real animated GLB, WAV and PNG, reuses all three through Assets, verifies deduplication and persistent registry counts, renames/folders the model asset, exercises search/type/folder filtering, uses real drag-and-drop reuse, and confirms removing the texture asset does not remove the texture already applied to a scene object.
