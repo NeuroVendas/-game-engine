@@ -836,6 +836,7 @@ test("Studio imports GLB animations and audio assets", async ({ page }) => {
   await expect(page.locator("#component-list")).toContainText("Clips: Bounce");
   await expect(page.locator("#asset-library")).toContainText("animated-triangle");
   await expect(canvas).toHaveAttribute("data-asset-library-count", "1");
+  await expect(canvas).toHaveAttribute("data-asset-registry-count", "1");
   await expect(page.locator("#asset-library [data-asset-kind='model']")).toHaveCount(1);
 
   await page.locator("#component-type").selectOption("Collider");
@@ -940,6 +941,7 @@ Forge.onStart(() => {
   await modelAsset.locator("[data-asset-action='model']").click();
   await expect(page.locator(".scene-item", { hasText: "animated-triangle" })).toHaveCount(2);
   await expect(canvas).toHaveAttribute("data-asset-library-count", "1");
+  await expect(canvas).toHaveAttribute("data-asset-registry-count", "1");
 
   await page.locator(".scene-item", { hasText: "Baseplate" }).click();
   await page.locator("#audio-file-input").setInputFiles({
@@ -952,6 +954,7 @@ Forge.onStart(() => {
   await expect(page.locator("#component-list")).toContainText("Sound");
   await expect(page.locator("#asset-library")).toContainText("silence");
   await expect(canvas).toHaveAttribute("data-asset-library-count", "2");
+  await expect(canvas).toHaveAttribute("data-asset-registry-count", "2");
 
   // Reuse audio from the library.
   await page.locator(".scene-item", { hasText: "Baseplate" }).click();
@@ -969,6 +972,7 @@ Forge.onStart(() => {
   });
   await expect(page.locator("#asset-library")).toContainText("pixel");
   await expect(canvas).toHaveAttribute("data-asset-library-count", "3");
+  await expect(canvas).toHaveAttribute("data-asset-registry-count", "3");
 
   await page.locator("[data-primitive='box']").click();
   await page.locator("#prop-name").fill("Texture Target");
@@ -976,6 +980,14 @@ Forge.onStart(() => {
 
   const textureAsset = page.locator("#asset-library .asset-library-item").filter({ hasText: "pixel" });
   await textureAsset.locator("[data-asset-action='texture']").click();
+  await expect.poll(async () => page.locator("#prop-texture").inputValue())
+    .toMatch(/^data:image\/png;base64,/);
+
+  // Removing from Assets does not mutate existing instances using that resource.
+  await textureAsset.locator("[data-asset-remove]").click();
+  await expect(canvas).toHaveAttribute("data-asset-registry-count", "2");
+  await expect(canvas).toHaveAttribute("data-asset-library-count", "2");
+  await expect(page.locator("#asset-library")).not.toContainText("pixel");
   await expect.poll(async () => page.locator("#prop-texture").inputValue())
     .toMatch(/^data:image\/png;base64,/);
 
