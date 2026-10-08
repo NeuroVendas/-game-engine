@@ -146,6 +146,9 @@ export interface ForgeSceneDocument {
     runSpeed?: number;
     jumpPower?: number;
   };
+  rendering?: {
+    quality?: "low" | "medium" | "high";
+  };
   environment?: {
     skyColor?: string;
     skyTexture?: string;
