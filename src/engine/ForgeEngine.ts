@@ -468,6 +468,7 @@ export class ForgeEngine {
             mesh !== proxy
             && mesh.metadata?.forgeEntityId === id
             && mesh.metadata?.forgeColliderProxy !== true
+            && mesh.metadata?.forgeTriggerVolume !== true
             && mesh.getTotalVertices() > 0
         )
       : [root];
@@ -1464,6 +1465,7 @@ export class ForgeEngine {
         target !== proxy
         && target.metadata?.forgeEntityId === entity.id
         && target.metadata?.forgeColliderProxy !== true
+        && target.metadata?.forgeTriggerVolume !== true
     );
     const meshTargets: AbstractMesh[] = [root, ...modelMeshes];
 
