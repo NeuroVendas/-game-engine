@@ -5,6 +5,7 @@ import { Engine } from "@babylonjs/core/Engines/engine";
 import { Scene } from "@babylonjs/core/scene";
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { Ray } from "@babylonjs/core/Culling/ray";
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
 import { DirectionalLight } from "@babylonjs/core/Lights/directionalLight";
 import { PointLight } from "@babylonjs/core/Lights/pointLight";
@@ -538,6 +539,100 @@ export class ForgeEngine {
 
     this.rebuildEntity(id);
     this.canvas.dataset.lastColliderReset = id;
+    return true;
+  }
+
+  dropEntityToGround(id: string): boolean {
+    const entity = this.getEntity(id);
+    const root = this.getMesh(id);
+    if (!entity || !root) return false;
+
+    const subtreeIds = new Set<string>();
+    const visit = (entityId: string) => {
+      if (subtreeIds.has(entityId)) return;
+      subtreeIds.add(entityId);
+      for (const child of this.document.entities) {
+        if (child.parentId === entityId) visit(child.id);
+      }
+    };
+    visit(id);
+
+    const visualMeshes: AbstractMesh[] = [];
+    for (const entityId of subtreeIds) {
+      const entityRoot = this.entityMeshes.get(entityId);
+      if (!entityRoot) continue;
+
+      const candidates: AbstractMesh[] = [
+        entityRoot,
+        ...entityRoot.getChildMeshes(false)
+      ];
+
+      for (const mesh of candidates) {
+        if (mesh.metadata?.forgeColliderProxy === true) continue;
+        if (mesh.metadata?.forgeTriggerVolume === true) continue;
+        if (mesh.getTotalVertices() <= 0) continue;
+        if (!visualMeshes.includes(mesh)) visualMeshes.push(mesh);
+      }
+    }
+
+    if (visualMeshes.length === 0) return false;
+
+    const minimum = new Vector3(
+      Number.POSITIVE_INFINITY,
+      Number.POSITIVE_INFINITY,
+      Number.POSITIVE_INFINITY
+    );
+    const maximum = new Vector3(
+      Number.NEGATIVE_INFINITY,
+      Number.NEGATIVE_INFINITY,
+      Number.NEGATIVE_INFINITY
+    );
+
+    for (const mesh of visualMeshes) {
+      mesh.computeWorldMatrix(true);
+      const bounds = mesh.getBoundingInfo().boundingBox;
+      minimum.minimizeInPlace(bounds.minimumWorld);
+      maximum.maximizeInPlace(bounds.maximumWorld);
+    }
+
+    if (
+      !Number.isFinite(minimum.x)
+      || !Number.isFinite(minimum.y)
+      || !Number.isFinite(minimum.z)
+    ) return false;
+
+    const centerX = (minimum.x + maximum.x) * 0.5;
+    const centerZ = (minimum.z + maximum.z) * 0.5;
+    const ray = new Ray(
+      new Vector3(centerX, minimum.y + 0.08, centerZ),
+      Vector3.Down(),
+      10000
+    );
+
+    const hit = this.scene.pickWithRay(ray, (mesh) => {
+      if (mesh.isDisposed() || !mesh.isEnabled()) return false;
+      if (mesh.name === "__forge-sky" || mesh.name === "__player-collider") return false;
+      if (mesh.metadata?.forgeColliderProxy === true) return false;
+      if (mesh.metadata?.forgeTriggerVolume === true) return false;
+
+      const forgeId = mesh.metadata?.forgeEntityId as string | undefined;
+      if (forgeId && subtreeIds.has(forgeId)) return false;
+
+      return mesh.visibility > 0.001 && mesh.getTotalVertices() > 0;
+    });
+
+    if (!hit?.hit || !hit.pickedPoint) return false;
+
+    const deltaY = hit.pickedPoint.y - minimum.y;
+    if (deltaY > 0.12) return false;
+
+    const absolute = root.getAbsolutePosition().clone();
+    root.setAbsolutePosition(absolute.add(new Vector3(0, deltaY, 0)));
+    root.computeWorldMatrix(true);
+    this.syncEntityFromMesh(id);
+
+    this.canvas.dataset.lastDropToGround =
+      `${id}:${deltaY.toFixed(3)}:${hit.pickedPoint.y.toFixed(3)}`;
     return true;
   }
 
