@@ -39,6 +39,7 @@ export class PlayerController {
   private walkSpeed = 5.05;
   private runSpeed = 8.0;
   private jumpPower = 7.9;
+  private checkpointPosition = Vector3.Zero();
 
   private readonly onKeyDown = (event: KeyboardEvent) => {
     if (["KeyW", "KeyA", "KeyS", "KeyD", "Space", "ShiftLeft", "ShiftRight"].includes(event.code)) {
@@ -129,6 +130,8 @@ export class PlayerController {
     this.body.visibility = 0;
 
     this.snapToSafeGround();
+    this.checkpointPosition.copyFrom(this.body.position);
+    this.syncCheckpointDiagnostics();
 
     this.avatarRoot = new TransformNode("__forge-classic-avatar", scene);
     this.avatarRoot.parent = this.body;
@@ -370,6 +373,62 @@ export class PlayerController {
     return current + difference * Math.min(1, Math.max(0, t));
   }
 
+  setCheckpoint(idOrName?: string): boolean {
+    let checkpoint = this.body.position.clone();
+
+    if (idOrName?.trim()) {
+      const entity = this.forge.document.entities.find(
+        (candidate) => candidate.id === idOrName || candidate.name === idOrName
+      );
+      if (!entity) return false;
+      const mesh = this.forge.getMesh(entity.id);
+      if (!mesh) return false;
+      const position = mesh.getAbsolutePosition();
+      checkpoint = new Vector3(
+        position.x,
+        position.y + this.colliderHeight / 2,
+        position.z
+      );
+    }
+
+    this.checkpointPosition.copyFrom(checkpoint);
+    this.syncCheckpointDiagnostics();
+    this.forge.canvas.dataset.lastPlayerAction =
+      `checkpoint:${idOrName?.trim() || "current"}`;
+    return true;
+  }
+
+  respawn(): boolean {
+    if (!Number.isFinite(this.checkpointPosition.x)) return false;
+
+    this.horizontalVelocity.copyFromFloats(0, 0, 0);
+    this.verticalVelocity = 0;
+    this.jumpBuffer = 0;
+    this.coyoteTime = 0;
+    this.body.position.copyFrom(this.checkpointPosition);
+    this.body.computeWorldMatrix(true);
+
+    this.camera.target.copyFrom(
+      this.body.position.add(new Vector3(0, 0.54, 0))
+    );
+
+    this.forge.canvas.dataset.playerPosition = [
+      this.body.position.x.toFixed(3),
+      this.body.position.y.toFixed(3),
+      this.body.position.z.toFixed(3)
+    ].join(",");
+    this.forge.canvas.dataset.lastPlayerAction = "respawn";
+    return true;
+  }
+
+  private syncCheckpointDiagnostics(): void {
+    this.forge.canvas.dataset.playerCheckpoint = [
+      this.checkpointPosition.x.toFixed(3),
+      this.checkpointPosition.y.toFixed(3),
+      this.checkpointPosition.z.toFixed(3)
+    ].join(",");
+  }
+
   dispose(): void {
     window.removeEventListener("keydown", this.onKeyDown);
     window.removeEventListener("keyup", this.onKeyUp);
@@ -391,6 +450,8 @@ export class PlayerController {
     delete this.forge.canvas.dataset.playerWalkSpeed;
     delete this.forge.canvas.dataset.playerRunSpeed;
     delete this.forge.canvas.dataset.playerJumpPower;
+    delete this.forge.canvas.dataset.playerCheckpoint;
+    delete this.forge.canvas.dataset.lastPlayerAction;
     delete this.forge.canvas.dataset.playerMovementState;
     delete this.forge.canvas.dataset.avatarRig;
     delete this.forge.canvas.dataset.avatarShape;
