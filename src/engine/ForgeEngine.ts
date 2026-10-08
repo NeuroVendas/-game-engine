@@ -228,6 +228,7 @@ export class ForgeEngine {
     }
 
     this.applyHierarchy();
+    this.setCollisionDebug(this.collisionDebugEnabled);
 
     if (this.runtimeMode && startScripts) {
       this.startRuntimeScripts();
@@ -370,6 +371,7 @@ export class ForgeEngine {
 
   setCollisionDebug(enabled: boolean): void {
     this.collisionDebugEnabled = enabled;
+    const active = enabled && !this.runtimeMode;
     let visibleCount = 0;
 
     for (const entity of this.document.entities) {
@@ -378,8 +380,8 @@ export class ForgeEngine {
       if (this.applyColliderDebug(entity, mesh)) visibleCount += 1;
     }
 
-    this.canvas.dataset.collisionDebug = String(enabled);
-    this.canvas.dataset.collisionDebugCount = String(enabled ? visibleCount : 0);
+    this.canvas.dataset.collisionDebug = String(active);
+    this.canvas.dataset.collisionDebugCount = String(active ? visibleCount : 0);
   }
 
   duplicateEntity(id: string): ForgeEntity | null {
