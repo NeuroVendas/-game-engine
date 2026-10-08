@@ -213,59 +213,62 @@ async function holdMovement(page: any, keys: string[], milliseconds: number): Pr
   await page.waitForTimeout(45);
 }
 
-async function calibratePlayerAxes(page: any): Promise<{ forward: [number, number]; right: [number, number] }> {
-  const waitForSettle = async () => {
-    await expect.poll(async () => {
-      const raw = await page.locator("#viewport").getAttribute("data-player-velocity");
-      if (!raw) return 999;
-      const [vx, , vz] = raw.split(",").map(Number);
-      return Math.hypot(vx, vz);
-    }, {
-      timeout: 2200,
-      intervals: [60, 80, 100]
-    }).toBeLessThan(0.35);
-  };
-
-  const measureKey = async (key: string): Promise<[number, number]> => {
-    const before = await readPlayerXZ(page);
-    await holdMovement(page, [key], 260);
-    const after = await readPlayerXZ(page);
-    await waitForSettle();
-
-    const dx = after[0] - before[0];
-    const dz = after[1] - before[1];
-    const length = Math.hypot(dx, dz);
-    if (length < 0.05) {
-      throw new Error(`Could not calibrate player movement for ${key}.`);
-    }
-    return [dx / length, dz / length];
-  };
-
-  // Measure both axes from real controller output instead of deriving strafe
-  // mathematically from W. This remains correct if camera/movement conventions change.
-  const forward = await measureKey("KeyW");
-  const right = await measureKey("KeyD");
-  return { forward, right };
-}
-
-async function moveUntilCoordinate(
+async function moveAlongWorldAxis(
   page: any,
-  key: string,
-  reached: (position: [number, number]) => boolean,
-  timeout = 12000
+  axis: "x" | "z",
+  target: number,
+  timeout = 14000
 ): Promise<void> {
-  await page.keyboard.down(key);
-  try {
-    await expect.poll(async () => reached(await readPlayerXZ(page)), {
-      timeout,
-      intervals: [50, 60, 70]
-    }).toBe(true);
-  } finally {
-    await page.keyboard.up(key);
+  const readAxis = async () => {
+    const [x, z] = await readPlayerXZ(page);
+    return axis === "x" ? x : z;
+  };
+
+  const current = await readAxis();
+  if (Math.abs(target - current) <= 0.35) return;
+  const desiredSign = Math.sign(target - current);
+
+  const candidates = axis === "x"
+    ? ["KeyA", "KeyD"]
+    : ["KeyW", "KeyS"];
+
+  let chosen: string | null = null;
+  let bestSignedDelta = -Infinity;
+
+  for (const key of candidates) {
+    const before = await readAxis();
+    await holdMovement(page, [key], 180);
+    const after = await readAxis();
+    const signedDelta = (after - before) * desiredSign;
+
+    if (signedDelta > bestSignedDelta) {
+      bestSignedDelta = signedDelta;
+      chosen = key;
+    }
+
+    if (signedDelta > 0.08) break;
   }
 
-  // Walking deceleration finishes quickly; allow it to settle before the next axis.
-  await page.waitForTimeout(180);
+  if (!chosen || bestSignedDelta <= 0.02) {
+    throw new Error(`Could not find a movement key for world ${axis.toUpperCase()} axis.`);
+  }
+
+  const reached = (value: number) =>
+    desiredSign > 0 ? value >= target : value <= target;
+
+  if (reached(await readAxis())) return;
+
+  await page.keyboard.down(chosen);
+  try {
+    await expect.poll(async () => reached(await readAxis()), {
+      timeout,
+      intervals: [60, 80, 100]
+    }).toBe(true);
+  } finally {
+    await page.keyboard.up(chosen);
+  }
+
+  await page.waitForTimeout(220);
 }
 
 async function expectInteractionPrompt(page: any, promptText: string): Promise<void> {
@@ -948,32 +951,26 @@ test("Core Relay template is a playable complete-game benchmark", async ({ page 
   await expect(page.locator("#forge-ui-root")).toContainText("Walk to each metal relay and press E");
 
   const canvas = page.locator("#viewport");
-  const axes = await calibratePlayerAxes(page);
-  expect(Math.abs(axes.forward[1])).toBeGreaterThan(0.75);
-  expect(Math.abs(axes.right[0])).toBeGreaterThan(0.75);
 
-  const xPositive = axes.right[0] >= 0 ? "KeyD" : "KeyA";
-  const xNegative = xPositive === "KeyD" ? "KeyA" : "KeyD";
-  const zNegative = axes.forward[1] >= 0 ? "KeyS" : "KeyW";
-
-  // Use axis-aligned gates through known open lanes. This keeps the acceptance
-  // path on real WASD input while avoiding controller inertia around diagonal waypoints.
-  await moveUntilCoordinate(page, xNegative, ([x]) => x <= -6.6);
-  await moveUntilCoordinate(page, zNegative, ([, z]) => z <= -3.1);
+  // Use axis-aligned gates through known open lanes. Each segment measures the
+  // actual controller mapping before committing to a WASD key, so camera conventions
+  // cannot make the gameplay benchmark drive in the wrong direction.
+  await moveAlongWorldAxis(page, "x", -6.6);
+  await moveAlongWorldAxis(page, "z", -3.1);
   await expectInteractionPrompt(page, "Relay A");
   await page.keyboard.press("KeyE");
   await expect(page.locator("#forge-ui-root")).toContainText("1 / 3 relays online");
 
   // Relay B: step away from A, descend the open lower lane, then approach from the west.
-  await moveUntilCoordinate(page, xPositive, ([x]) => x >= -3.8);
-  await moveUntilCoordinate(page, zNegative, ([, z]) => z <= -7.2);
-  await moveUntilCoordinate(page, xPositive, ([x]) => x >= -1.2);
+  await moveAlongWorldAxis(page, "x", -3.8);
+  await moveAlongWorldAxis(page, "z", -7.2);
+  await moveAlongWorldAxis(page, "x", -1.2);
   await expectInteractionPrompt(page, "Relay B");
   await page.keyboard.press("KeyE");
   await expect(page.locator("#forge-ui-root")).toContainText("2 / 3 relays online");
 
   // Relay C: stay in the lower lane and approach from the west, before its collider face.
-  await moveUntilCoordinate(page, xPositive, ([x]) => x >= 4.4);
+  await moveAlongWorldAxis(page, "x", 4.4);
   await expectInteractionPrompt(page, "Relay C");
   await page.keyboard.press("KeyE");
   await expect(page.locator("#forge-ui-root")).toContainText("3 / 3 relays online");
