@@ -626,7 +626,7 @@ Creator scripts can call:
 - `Forge.animation.play(idOrName, clipName?)`
 - `Forge.animation.stop(idOrName, clipName?)`
 
-The same Model loop/speed settings are used by runtime playback.
+The same Model loop/speed settings are used by runtime playback. Calls made from `onStart` before the async GLB loader has finished are queued per model and replayed as soon as its AnimationGroups become available; `stop` cancels a pending request.
 
 ### Acceptance coverage
 
