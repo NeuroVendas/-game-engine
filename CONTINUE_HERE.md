@@ -30,6 +30,15 @@
 - **Remaining verification:** a live new-user sign-up through Supabase mail delivery was **not** performed after the fix (automated tests mocked signup/resend to avoid creating accounts/sending mail). User's already-verified account can sign in with the existing credentials. Do not assert end-to-end email delivery without a new manual test.
 - **Other work:** Echo Vault/UI/character improvements live in draft [PR #28](https://github.com/NeuroVendas/-game-engine/pull/28), NOT released in the public v0.5 hotfix. Do not overwrite main with that feature stack without reviewing/rebasing its changes.
 
+## Echo Vault and Studio usability release — 2026-10-09
+
+- **PR [#28](https://github.com/NeuroVendas/-game-engine/pull/28) MERGED into `main`** in commit `42069324032839aad16bad6ead73a10f4d01ca2e`. This follows and PRESERVES PR #29 email-confirmation fixes.
+- **Released capabilities:** Echo Vault as second official catalog game plus editable/remixable template (`public/scenes/echo-vault.forge.json`, 119 entities); 3 interactive energy nodes, health hazards, checkpoint, HUD/UI, scripts including `ModuleScript`, particle VFX, sound, vault unlock and victory trigger. Studio toolbar wraps to prevent scrolling/clipping; `Code` now opens a real script editor, creating a Script for an empty scene; Forge Scout player visual upgraded with jacket, hair, cuffs and boots while retaining collision and player controls.
+- **Quality gate:** CI PASS, Cloud Smoke PASS, focused browser PASS including a full real-WASD mission playthrough and all 22 Browser Smoke scenarios PASS ([workflow 37977797737](https://github.com/NeuroVendas/-game-engine/actions/runs/37977797737), **22/22**).
+- **Production:** [Publish Forge v0.5 Website workflow 37979557033](https://github.com/NeuroVendas/-game-engine/actions/runs/37979557033) PASS. External HTTP verification of `https://neurovendas.github.io/-game-engine/revision.txt` returned **`42069324032839aad16bad6ead73a10f4d01ca2e`** exactly, and the public homepage served the Echo Vault template.
+- **Next:** ask user to hard-refresh the [live Forge](https://neurovendas.github.io/-game-engine/), open **Games → ECHO VAULT**, test player visuals/controls and **Develop → Templates → Echo Vault**. User-provided visual screenshots are the next feedback source. Consider modern Studio panel layout, dockable script workspace, UI typography and player animations after confirming this release; desktop installer remains a future separate feature.
+- Keep automated QA on actual game interactions. A prior acceptance route failed behind a solid crate after the third relay, and was fixed by routing around the crate using real WASD. No collisions were disabled and no player teleports were added to test code.
+
 ## 1. Start here if you are a DIFFERENT AI / Codex / Work
 
 1. This is **Forge =]**, NOT the `happy-coding` or `evolution-neuro` repository.
