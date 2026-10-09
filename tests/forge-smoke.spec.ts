@@ -1634,11 +1634,15 @@ test("Core Relay template is a playable complete-game benchmark", async ({ page 
   await page.keyboard.press("KeyE");
   await expect(page.locator("#forge-ui-root")).toContainText("1 / 3 relays online");
 
-  // Relay B: approach from the west without asking the player to walk
-  // through the console's solid box collider. Stop at a reachable side lane.
+  // Relay A can still be next to (or touching) the capsule after the
+  // interaction is pressed. Escape its WEST side first, move around the
+  // front on an open lane, and only then head south toward Relay B.
+  // Never command x=-3.8 directly across Relay A's solid collider.
+  await moveAlongWorldAxis(page, "x", -9.95);
+  await moveAlongWorldAxis(page, "z", -3.0);
   await moveAlongWorldAxis(page, "x", -3.8);
   await moveAlongWorldAxis(page, "z", -9.4);
-  // Stay outside the west collider face until aligned with Relay B.
+  // Stay outside the west face of Relay B until the actual prompt appears.
   await moveAlongWorldAxis(page, "x", -2.35, 16000, "Relay B");
   await expectInteractionPrompt(page, "Relay B");
   await page.keyboard.press("KeyE");
