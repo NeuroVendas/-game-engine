@@ -1,10 +1,10 @@
 # Forge =] Current State
 
-> Living technical inventory through v0.5 code commit `5a26dfe1` (Particle VFX + full Core Relay acceptance path).
+> Updated 2026-10-09 after merged v0.5.0 PR #27, source commit `ec68a21d815a`.
 >
-> Package version: `0.5.0`.
+> Package version: `0.5.0`. **Current source branch: `main`.**
 >
-> Active branch: `forge-v0.5`. The previous `forge-v0.4` branch is retained as historical foundation.
+> CI/build, Cloud Smoke and two independent **16/16 full Browser Smoke** runs passed on the release source. The product remains an evolving creator platform, not a completed v1 engine.
 
 ## Product structure
 
