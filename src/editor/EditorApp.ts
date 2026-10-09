@@ -128,6 +128,50 @@ export class EditorApp {
       if (button && !button.disabled) activateColliderFit(id);
     });
 
+    // Handle Reset Proxy before pointer-triggered Inspector rerenders in the
+    // same way as Fit Proxy. The rebuilt UI would otherwise swallow the click.
+    const resetTarget = (event: Event): HTMLButtonElement | null => {
+      const target = event.target;
+      if (!(target instanceof Element)) return null;
+      const button = target.closest<HTMLButtonElement>("[data-collider-reset]");
+      return button && this.componentList.contains(button) ? button : null;
+    };
+    const activateColliderReset = (id: string | undefined) => {
+      const entity = id ? this.forge.getEntity(id) : undefined;
+      if (!entity || this.mode !== "editor" || entity.id !== this.selectedId) return;
+
+      this.canvas.dataset.lastColliderResetAttempt = id!;
+      try {
+        this.checkpoint();
+        if (!this.forge.resetBoxCollider(entity.id)) {
+          this.log(`Could not reset collider proxy on ${entity.name}.`);
+          return;
+        }
+        this.setSelection(entity.id);
+        this.renderInspector();
+        this.log(`Collider reset: ${entity.name}.`);
+      } catch (error) {
+        this.log(`Collider reset failed on ${entity.name}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    };
+    let resetHandledOnPointerDown: string | null = null;
+    this.componentList.addEventListener("pointerdown", (event) => {
+      const button = resetTarget(event);
+      if (!button || button.disabled) return;
+      resetHandledOnPointerDown = button.dataset.colliderReset ?? null;
+      activateColliderReset(resetHandledOnPointerDown ?? undefined);
+    }, true);
+    this.componentList.addEventListener("click", (event) => {
+      const button = resetTarget(event);
+      const id = button?.dataset.colliderReset;
+      if (resetHandledOnPointerDown) {
+        const handledId = resetHandledOnPointerDown;
+        resetHandledOnPointerDown = null;
+        if (!id || id === handledId) return;
+      }
+      if (button && !button.disabled) activateColliderReset(id);
+    });
+
     this.canvas.addEventListener("forge:model-loaded", ((event: Event) => {
       const detail = (event as CustomEvent<{ entityId?: string }>).detail;
       if (this.mode === "editor" && detail?.entityId === this.selectedId) {
@@ -1900,20 +1944,11 @@ export class EditorApp {
             && this.forge.getMesh(entity.id)?.metadata?.modelLoaded !== true;
           fit.disabled = loadingModel;
           fit.textContent = loadingModel ? "Loading model…" : "Fit Proxy To Visual";
-          fit.type = "button";
 
           const reset = document.createElement("button");
           reset.type = "button";
           reset.dataset.colliderReset = entity.id;
           reset.textContent = "Reset Proxy";
-          reset.addEventListener("click", () => {
-            this.checkpoint();
-            if (!this.forge.resetBoxCollider(entity.id)) return;
-            this.setSelection(entity.id);
-            this.renderInspector();
-            this.log(`Collider reset: ${entity.name}.`);
-          });
-
           actions.append(fit, reset);
           container.appendChild(actions);
 
