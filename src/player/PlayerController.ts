@@ -61,8 +61,13 @@ export class PlayerController {
 
     if (event.code === "KeyC" && !event.repeat) {
       if (!this.firstPerson) {
-        // The last rendered third-person radius is the one the player saw.
-        // Collision adjustments between frames must not overwrite their saved zoom.
+        // Capture the actual visible zoom immediately before the mode switch.
+        // Collision handling is suspended across the first-person transition,
+        // so that returning to third-person cannot snap through the avatar.
+        this.thirdPersonRadius = Math.min(
+          this.thirdPersonMaxRadius,
+          Math.max(this.thirdPersonMinRadius, this.camera.radius)
+        );
         this.firstPerson = true;
         this.cameraCollisionGrace = 0;
         // First-person starts within the player's collider; avoid self-collision.
