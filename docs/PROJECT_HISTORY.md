@@ -928,3 +928,13 @@ This checkpoint documents the v0.5 stack's **verification progress, not a comple
 - No merge to `main` occurred as part of this milestone.
 - The generated `forge-preview-v05` branch still builds from historical `forge-v0.5`, not automatically from PR #27.
 - The exact next steps, PR links, branch SHAs, blocker reproduction commands, and safety rules are in root `CONTINUE_HERE.md` and `docs/RECOVERY.md`. Revalidate on the current head before any release.
+
+## 32. Forge v0.5 — verified release merge (2026-10-09)
+
+The v0.5 creator/gameplay stack was integrated into `main` via [PR #27](https://github.com/NeuroVendas/-game-engine/pull/27), merge commit `ec68a21d815aaf7eba06117ef030ebb50ebede28`, source commit `c51b083454e19ff5ff513047ccc7ea7c40807807`.
+
+The final Core Relay benchmark uses real PlayerController keyboard events, physics and collisions. The Playwright runner releases movement keys on browser render frames after reaching a route crossing/interaction target, eliminating transport-lag overshoot without teleporting or disabling collision.
+
+**Before merging:** CI/typecheck/build passed; Cloud Smoke passed; focused Studio/GLB/player/Core Relay scenarios passed 3/3 on two independent runs; full Browser Smoke passed **16/16 on each of two independent runs** ([run 37961664515](https://github.com/NeuroVendas/-game-engine/actions/runs/37961664515); [run 37961840395](https://github.com/NeuroVendas/-game-engine/actions/runs/37961840395)). The PR was marked ready and merged after the gates were green. This fixes the outstanding v0.5 release blocker recorded in chapter 31.
+
+`feature/v05-stabilization`, `release/v05-rc` and PRs #13–#26 are historical branches/PRs already integrated through #27. Future work should start on new feature branches from current `main`. Preview publication is separate and needs workflow/revision verification.
