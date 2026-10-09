@@ -1448,7 +1448,8 @@ test("Studio imports GLB animations and audio assets", async ({ page }) => {
   }).toBe("1");
 
   await modelCollider.locator("[data-collider-reset]").click();
-  await expect(canvas).toHaveAttribute("data-last-collider-reset", /animated-triangle/);
+  // Diagnostics expose the stable Forge entity ID, not the display name.
+  await expect(canvas).toHaveAttribute("data-last-collider-reset", /animated_triangle/);
   await expect(canvas).toHaveAttribute(
     "data-collider-proxies",
     /:1\.00:1\.00:1\.00:0\.00:0\.00:0\.00/
