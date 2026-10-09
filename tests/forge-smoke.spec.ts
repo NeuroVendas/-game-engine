@@ -315,12 +315,13 @@ async function moveAlongWorldAxis(
       const dx = destination[0] - lastPosition[0];
       const dz = destination[1] - lastPosition[1];
       const distance = Math.hypot(dx, dz);
-      const speed = Math.hypot(...lastVelocity);
-      if (distance <= 0.42 && speed <= 0.85) return;
+      // Releasing the keys already brakes with the actual grounded friction.
+      // Requiring low speed here creates a bang-bang oscillation near a target.
+      if (distance <= 0.42) return;
 
       // Brake in world space before reaching a collider or overshooting a turn.
-      const steerX = dx - lastVelocity[0] * 0.18;
-      const steerZ = dz - lastVelocity[1] * 0.18;
+      const steerX = dx - lastVelocity[0] * 0.07;
+      const steerZ = dz - lastVelocity[1] * 0.07;
       const forward = steerX * fx + steerZ * fz;
       const sideways = steerX * fz - steerZ * fx;
       const wanted = new Set<string>();
@@ -340,7 +341,7 @@ async function moveAlongWorldAxis(
     );
   } finally {
     await setMovement(new Set());
-    await page.waitForTimeout(140);
+    await page.waitForTimeout(250);
   }
 }
 
