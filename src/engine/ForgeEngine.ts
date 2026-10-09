@@ -529,6 +529,9 @@ export class ForgeEngine {
     const size = maximum.subtract(minimum);
     const center = minimum.add(maximum).scale(0.5);
 
+    // Fitting is an explicit creator request for an active physical collider.
+    // Imported GLB assets start with collision disabled until the creator opts in.
+    collider.enabled = true;
     collider.mode = "box";
     collider.size = [
       Math.max(0.05, Math.abs(size.x)),
