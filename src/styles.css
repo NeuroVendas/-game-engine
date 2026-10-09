@@ -1452,3 +1452,48 @@ input, textarea { cursor: text; }
 .playable-template-card {
   border-color: #829866;
 }
+
+/* Echo Vault: a real playable built-in showcase rather than a generic card. */
+.echo-thumb, .echo-vault-template {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 60%, #22e7d24b 0%, transparent 32%),
+    repeating-linear-gradient(90deg, transparent 0 23px, #46bcd10b 23px 25px),
+    linear-gradient(150deg, #04101c, #163b56 59%, #0a192b) !important;
+  color: #a7f7fb;
+}
+.echo-thumb::after, .echo-vault-template::after {
+  content:"";
+  position:absolute;
+  inset:auto 7% 0;
+  height:30%;
+  background:linear-gradient(0deg, #30e2d138,transparent);
+  pointer-events:none;
+}
+.echo-orbit {
+  position:absolute;
+  width:84px;
+  height:84px;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%) rotate(-25deg);
+  border:5px solid #5fe5f2;
+  border-radius:50%;
+  box-shadow:0 0 15px #1bd5e999, inset 0 0 18px #1bd5e955;
+}
+.echo-orbit::after {
+  content:"";
+  position:absolute;
+  inset:13px;
+  border:6px solid #a3edb0;
+  border-radius:50%;
+  transform:rotate(43deg) scaleX(.73);
+  box-shadow:0 0 9px #8af6bc;
+}
+.echo-thumb .thumb-label, .echo-vault-template span {
+  position:relative;
+  z-index:2;
+  text-shadow:0 2px 8px #000;
+}
