@@ -28,7 +28,7 @@ jobs:
       - run: npm run build
 
       - name: Stamp source revision for deployment verification
-        run: printf '%s\\n' "$GITHUB_SHA" > dist/revision.txt
+        run: printf '%s\n' "$GITHUB_SHA" > dist/revision.txt
 
       - name: Publish dist to forge-preview branch
         run: |
