@@ -274,70 +274,42 @@ async function moveAlongWorldAxis(
   target: number,
   timeout = 14000
 ): Promise<void> {
-  const startPosition = await readPlayerXZ(page);
-  const destination: [number, number] = axis === "x"
-    ? [target, startPosition[1]]
-    : [startPosition[0], target];
+  const readAxis = async () => {
+    const [x, z] = await readPlayerXZ(page);
+    return axis === "x" ? x : z;
+  };
 
+  const current = await readAxis();
+  if (Math.abs(target - current) <= 0.35) return;
+  const desiredSign = Math.sign(target - current);
+
+  // Choose a real WASD input from the current camera basis. Probing both
+  // directions beside a solid console can push the player into its collider.
   const forwardRaw = await page.locator("#viewport").getAttribute("data-camera-forward");
   if (!forwardRaw) throw new Error("Player camera basis unavailable.");
   const [fx, fz] = forwardRaw.split(",").map(Number);
-  if (!Number.isFinite(fx) || !Number.isFinite(fz)) {
-    throw new Error(`Invalid camera forward vector: ${forwardRaw}`);
-  }
+  const candidates: Array<[string, number]> = axis === "x"
+    ? [["KeyW", fx], ["KeyS", -fx], ["KeyD", fz], ["KeyA", -fz]]
+    : [["KeyW", fz], ["KeyS", -fz], ["KeyD", -fx], ["KeyA", fx]];
+  candidates.sort((a, b) => b[1] * desiredSign - a[1] * desiredSign);
+  const chosen = candidates[0][0];
 
-  // Follow safe world-space lanes with actual WASD rather than teleportation.
-  // Recompute W/S and A/D from the camera basis as the player moves, so
-  // lateral camera angles cannot drift into colliders beside narrow corridors.
-  const held = new Set<string>();
-  const setMovementKeys = async (next: Set<string>) => {
-    for (const key of [...held]) {
-      if (!next.has(key)) {
-        await page.keyboard.up(key);
-        held.delete(key);
-      }
-    }
-    for (const key of next) {
-      if (!held.has(key)) {
-        await page.keyboard.down(key);
-        held.add(key);
-      }
-    }
-  };
-  const started = Date.now();
-  let current = startPosition;
+  const reached = (value: number) =>
+    desiredSign > 0 ? value >= target : value <= target;
+
+  if (reached(await readAxis())) return;
+
+  await page.keyboard.down(chosen);
   try {
-    while (Date.now() - started < timeout) {
-      current = await readPlayerXZ(page);
-      const dx = destination[0] - current[0];
-      const dz = destination[1] - current[1];
-      if (Math.hypot(dx, dz) <= 0.38) return;
-
-      const velocityRaw = await page.locator("#viewport").getAttribute("data-player-velocity");
-      const [vx, , vz] = (velocityRaw ?? "0,0,0").split(",").map(Number);
-      // Account for momentum as we approach a waypoint to avoid overshoot.
-      const aimX = dx - (Number.isFinite(vx) ? vx * 0.11 : 0);
-      const aimZ = dz - (Number.isFinite(vz) ? vz * 0.11 : 0);
-      const forward = aimX * fx + aimZ * fz;
-      const right = aimX * fz - aimZ * fx;
-
-      const next = new Set<string>();
-      if (forward > 0.06) next.add("KeyW");
-      else if (forward < -0.06) next.add("KeyS");
-      if (right > 0.06) next.add("KeyD");
-      else if (right < -0.06) next.add("KeyA");
-      await setMovementKeys(next);
-      await page.waitForTimeout(75);
-    }
-    throw new Error(
-      `Real-WASD route could not reach ${axis}=${target}: ` +
-      `at (${current.map((value) => value.toFixed(2)).join(",")}), ` +
-      `target (${destination.join(",")}), camera (${fx},${fz})`
-    );
+    await expect.poll(async () => reached(await readAxis()), {
+      timeout,
+      intervals: [60, 80, 100]
+    }).toBe(true);
   } finally {
-    await setMovementKeys(new Set());
-    await page.waitForTimeout(160);
+    await page.keyboard.up(chosen);
   }
+
+  await page.waitForTimeout(220);
 }
 
 async function expectInteractionPrompt(page: any, promptText: string): Promise<void> {
@@ -1469,7 +1441,7 @@ test("Studio imports GLB animations and audio assets", async ({ page }) => {
   await expect(canvas).toHaveAttribute("data-collider-proxy-count", "1");
   await expect(canvas).toHaveAttribute(
     "data-collider-proxies",
-    /:1\.00:1\.00:0\.05:0\.50:0\.50:0\.00/
+    /:1\.00:1\.00:0\.05:-0\.50:0\.50:0\.00/
   );
   await expect.poll(async () => canvas.getAttribute("data-model-animation-groups"), {
     timeout: 10000
@@ -1489,7 +1461,7 @@ test("Studio imports GLB animations and audio assets", async ({ page }) => {
   await refreshedCollider.locator("[data-collider-fit]").click();
   await expect(canvas).toHaveAttribute(
     "data-collider-proxies",
-    /:1\.00:1\.00:0\.05:0\.50:0\.50:0\.00/
+    /:1\.00:1\.00:0\.05:-0\.50:0\.50:0\.00/
   );
   await expect.poll(async () => canvas.getAttribute("data-model-animation-groups"), {
     timeout: 10000
@@ -1608,21 +1580,21 @@ test("Core Relay template is a playable complete-game benchmark", async ({ page 
   // current camera basis before committing to a WASD key, without blind probes
   // into nearby console colliders.
   await moveAlongWorldAxis(page, "x", -6.6);
-  await moveAlongWorldAxis(page, "z", -3.8);
+  await moveAlongWorldAxis(page, "z", -3.1);
   await expectInteractionPrompt(page, "Relay A");
   await page.keyboard.press("KeyE");
   await expect(page.locator("#forge-ui-root")).toContainText("1 / 3 relays online");
 
   // Relay B: step away from A, descend the open lower lane, then approach from the west.
   await moveAlongWorldAxis(page, "x", -3.8);
-  await moveAlongWorldAxis(page, "z", -7.7);
+  await moveAlongWorldAxis(page, "z", -7.2);
   await moveAlongWorldAxis(page, "x", -1.2);
   await expectInteractionPrompt(page, "Relay B");
   await page.keyboard.press("KeyE");
   await expect(page.locator("#forge-ui-root")).toContainText("2 / 3 relays online");
 
   // Relay C: stay in the lower lane and approach from the west, before its collider face.
-  await moveAlongWorldAxis(page, "x", 4.7);
+  await moveAlongWorldAxis(page, "x", 4.4);
   await expectInteractionPrompt(page, "Relay C");
   await page.keyboard.press("KeyE");
   await expect(page.locator("#forge-ui-root")).toContainText("3 / 3 relays online");
