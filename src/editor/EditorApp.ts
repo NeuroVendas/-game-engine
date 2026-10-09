@@ -79,17 +79,11 @@ export class EditorApp {
     this.forge = new ForgeEngine(canvas, (message) => this.log(message));
     registerDefaultScripts(this.forge.scripts);
 
-    // Inspector content is rebuilt whenever a component is edited or a GLB loads.
-    // Delegate actions to its persistent container so transient button replacement
-    // cannot consume clicks or strand controls with old event handlers.
-    this.componentList.addEventListener("click", (event) => {
-      const target = event.target;
-      if (!(target instanceof Element)) return;
-      const fitButton = target.closest<HTMLButtonElement>("[data-collider-fit]");
-      if (!fitButton || !this.componentList.contains(fitButton) || this.mode !== "editor") return;
-      const id = fitButton.dataset.colliderFit;
+    // Attach fit actions to a stable Inspector root. Imported models can finish
+    // loading between pointerdown and click and rebuild their Inspector buttons.
+    const activateColliderFit = (id: string | undefined) => {
       const entity = id ? this.forge.getEntity(id) : undefined;
-      if (!entity || entity.id !== this.selectedId) return;
+      if (!entity || this.mode !== "editor" || entity.id !== this.selectedId) return;
 
       this.canvas.dataset.lastColliderFit = `attempt:${id}`;
       try {
@@ -107,6 +101,31 @@ export class EditorApp {
         this.canvas.dataset.lastColliderFit = `error:${entity.id}`;
         this.log(`Collider fit failed on ${entity.name}: ${error instanceof Error ? error.message : String(error)}`);
       }
+    };
+    const fitTarget = (event: Event): HTMLButtonElement | null => {
+      const target = event.target;
+      if (!(target instanceof Element)) return null;
+      const button = target.closest<HTMLButtonElement>("[data-collider-fit]");
+      return button && this.componentList.contains(button) ? button : null;
+    };
+    let fitHandledOnPointerDown: string | null = null;
+    this.componentList.addEventListener("pointerdown", (event) => {
+      const button = fitTarget(event);
+      if (!button || button.disabled) return;
+      fitHandledOnPointerDown = button.dataset.colliderFit ?? null;
+      // Use the first pointer event, before an asynchronous model-loaded refresh
+      // can remove the button under the cursor.
+      activateColliderFit(fitHandledOnPointerDown ?? undefined);
+    }, true);
+    this.componentList.addEventListener("click", (event) => {
+      const button = fitTarget(event);
+      const id = button?.dataset.colliderFit;
+      if (fitHandledOnPointerDown) {
+        const handledId = fitHandledOnPointerDown;
+        fitHandledOnPointerDown = null;
+        if (!id || id === handledId) return;
+      }
+      if (button && !button.disabled) activateColliderFit(id);
     });
 
     this.canvas.addEventListener("forge:model-loaded", ((event: Event) => {
