@@ -24,6 +24,7 @@ export class PlayerController {
   private horizontalVelocity = Vector3.Zero();
   private coyoteTime = 0;
   private jumpBuffer = 0;
+  private jumpCount = 0;
   private grounded = false;
   private firstPerson = false;
   private interactPressed = false;
@@ -242,6 +243,7 @@ export class PlayerController {
     forge.canvas.dataset.playerJumpPower = this.jumpPower.toFixed(3);
     forge.canvas.dataset.playerKillY = this.killY.toFixed(3);
     this.syncHealthDiagnostics();
+    this.forge.canvas.dataset.playerJumpCount = "0";
 
     window.addEventListener("keydown", this.onKeyDown, { passive: false });
     window.addEventListener("keyup", this.onKeyUp);
@@ -301,6 +303,9 @@ export class PlayerController {
 
     if (this.jumpBuffer > 0 && this.coyoteTime > 0) {
       this.verticalVelocity = this.jumpPower;
+      this.jumpCount += 1;
+      this.forge.canvas.dataset.playerJumpCount = String(this.jumpCount);
+      this.forge.canvas.dataset.lastPlayerJumpImpulse = this.verticalVelocity.toFixed(3);
       this.jumpBuffer = 0;
       this.coyoteTime = 0;
       this.grounded = false;
@@ -570,6 +575,8 @@ export class PlayerController {
     delete this.forge.canvas.dataset.avatarRig;
     delete this.forge.canvas.dataset.avatarShape;
     delete this.forge.canvas.dataset.avatarAnimation;
+    delete this.forge.canvas.dataset.playerJumpCount;
+    delete this.forge.canvas.dataset.lastPlayerJumpImpulse;
 
     for (const part of this.avatarParts) {
       this.forge.unregisterShadowCaster(part, false);
