@@ -29,6 +29,6 @@ jobs:
       - run: npx playwright install --with-deps chromium
       # Run fragile creator/gameplay paths first, so regressions fail fast.
       - name: Focused Studio + gameplay regressions
-        run: npx playwright test -g "platform home, games, favorites, profile and direct play work|Studio imports GLB animations and audio assets|Core Relay template is a playable complete-game benchmark"
+        run: npx playwright test -g "platform home, games, favorites, profile and direct play work|Studio imports GLB animations and audio assets|Core Relay template is a playable complete-game benchmark|Echo Vault is a playable, remixable first-party game visible without an account|Code button opens a real script editor in a blank project|Studio toolbar wraps without horizontal scrolling or clipped controls"
       - name: Complete Browser Smoke
         run: npm run test:browser
