@@ -1,70 +1,31 @@
-# Forge =] — Recovery and cross-AI handoff
+# Forge =] — recovery / cross-AI guide
 
-> If prior ChatGPT/Work/Codex history is unavailable, **start at [the root handoff](../CONTINUE_HERE.md)**. It contains the live test evidence, last verified commit, outstanding regression and links to the PR stack.
->
-> Updated 2026-10-08 (America/Asuncion).
+**Authoritative first step:** read [`../CONTINUE_HERE.md`](../CONTINUE_HERE.md). All important decisions, verified results and next tasks are recorded there.
 
-## Identity / safety
+**Repository:** `NeuroVendas/-game-engine`. Not `NeuroVendas/happy-coding` or `NeuroVendas/evolution-neuro`.
 
-Repository: **`NeuroVendas/-game-engine`** — https://github.com/NeuroVendas/-game-engine
+**Current release:** Forge `0.5.0` is in **`main`** after [PR #27](https://github.com/NeuroVendas/-game-engine/pull/27), merged 2026-10-09 with commit `ec68a21d815aaf7eba06117ef030ebb50ebede28`. Feature stack PRs #13–#26, `feature/v05-stabilization`, `release/v05-rc` and `forge-v0.5` are historical. No need to remerge. Parallel PR #19 is overlapping and must not be merged blindly.
 
-Do not modify `NeuroVendas/happy-coding` or `NeuroVendas/evolution-neuro` for Forge. Keep credentials, Supabase keys/tokens and user information out of repository docs/logs.
+**Release verification at source commit `c51b083454e19ff5ff513047ccc7ea7c40807807`:** CI/build PASS; Cloud PASS; 3/3 focused browser tests PASS twice; full 16/16 browser tests PASS twice — [dev run](https://github.com/NeuroVendas/-game-engine/actions/runs/37961664515), [release run](https://github.com/NeuroVendas/-game-engine/actions/runs/37961840395). Post-merge main may receive further docs/preview-only commits.
 
-## Actual work branches, NOT default main
+**Generated preview:** workflow `.github/workflows/deploy-preview.yml` publishes `main` build output into `forge-preview-v05`. The preview branch is **not editable source**; its `revision.txt` records the built `main` commit. Verify the workflow successfully published before saying a live preview is ready. Do not hand-edit or force-push build artifacts.
 
-- **Working branch**: `feature/v05-stabilization` — [PR #26](https://github.com/NeuroVendas/-game-engine/pull/26), stacked on PR #25.
-- **Full release candidate**: `release/v05-rc` — [PR #27](https://github.com/NeuroVendas/-game-engine/pull/27) targeting `main`, **draft / unmerged until all verification passes**.
-- Historical basis `forge-v0.5` is **not** the latest development tip. `forge-v0.4` is the older platform/creator foundation.
-- `forge-preview-v05` is **generated output**, published by `.github/workflows/deploy-preview.yml` from `forge-v0.5`, **not automatically from the latest PR #26 or #27**. Do not hand-edit it or assume it is the latest runtime.
-- Do **not** merge parallel overlap PR #19 into the active stacked code indiscriminately.
-- The handoff's last tested head on October 8: `af9f80d0c0248a1982e369bd0ba5836b43ac6b57`; **consult current GitHub head and checks first** as documentation commits may follow.
-
-## Live release blocker
-
-At the last verified source revision:
-- **Forge CI / TypeScript / build: PASS**.
-- **Forge Cloud Smoke: PASS**.
-- **Forge Browser Smoke: FAIL**, specifically flaky real-WASD navigation in the Core Relay benchmark.
-- The latest log shows `moveAlongWorldAxis(page, "z", -3.1)` timing out near position `[-7.46,-2.30]`, with `destination=[-7.476,-3.1]`, `velocity=[0.00,5.05]`, `camera=[0,1]`.
-- Browser-focused GLB import/Fit/Reset and platform/player tests were passing in that run; previously fixed Trigger/Hazard/respawn bugs must remain covered.
-- For evidence, see [Browser failed run 37869295897](https://github.com/NeuroVendas/-game-engine/actions/runs/37869295897), [CI success 37869295914](https://github.com/NeuroVendas/-game-engine/actions/runs/37869295914), [Cloud success 37869295899](https://github.com/NeuroVendas/-game-engine/actions/runs/37869295899).
-- **Do not weaken the test or use teleportation to make Core Relay pass.** Investigate real movement input, camera basis, waypoint control/overshoot, collision surfaces and browser frame timing. Complete reproducible full browser pass is mandatory.
-
-## First commands for next agent
+## Rebuild and validate
 
 ```bash
 git clone https://github.com/NeuroVendas/-game-engine.git
 cd -- -game-engine
-git fetch --all
-git switch feature/v05-stabilization
+git switch main
+git pull --ff-only
 npm install
 npm run check
 npm run build
-npx playwright test -g "Core Relay template is a playable complete-game benchmark"
 npm run test:browser
 npm run test:cloud
 ```
 
-## Read in order
+The canonical `forge.scene` v1 schema is `src/types.ts`, Studio `src/editor/EditorApp.ts`, rendering/world `src/engine/ForgeEngine.ts`, scripts `src/engine/ScriptRuntime.ts`, player `src/player/PlayerController.ts`, cloud `src/platform/CloudStore.ts`, acceptance `tests/forge-smoke.spec.ts`, playable benchmark `public/scenes/core-relay.forge.json`.
 
-1. `CONTINUE_HERE.md` — live status and next action; authoritative.
-2. `AGENTS.md` — code-assistant rules.
-3. `docs/CURRENT_STATE.md` — capability inventory.
-4. `docs/PROJECT_HISTORY.md` — implementation milestones.
-5. `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, `docs/DECISIONS.md`, `docs/VISION.md`, `docs/PROJECT_HELIOS.md`, `docs/AI_CONTRACT.md`.
-6. `src/types.ts`, `src/editor/EditorApp.ts`, `src/engine/ForgeEngine.ts`, `src/engine/ScriptRuntime.ts`, `src/player/PlayerController.ts`, `src/main.ts`, `tests/forge-smoke.spec.ts`, `public/scenes/core-relay.forge.json`.
+Stack: TypeScript, Vite, Babylon.js, Supabase, Playwright, GitHub Actions. Supabase dedicated Forge region `sa-east-1`; never publish secrets in documentation. Play is reversible simulation, Stop returns to authoring state. AI, scripts and Studio all work against canonical scene data. Core Relay is the playable small-game benchmark; Project Helios is the longer-term reactor game benchmark.
 
-## Technical and product invariants
-
-Stack: TypeScript, Vite, Babylon.js, Supabase, Playwright, GitHub Actions. Dedicated Supabase Forge project is in region `sa-east-1`, integration at `src/platform/CloudStore.ts`.
-
-- Forge =] is an original, approachable, AI-first social game creation Studio and 3D runtime. Keep its classic, creator-friendly identity.
-- Code, Studio and AI must edit the **same structured `forge.scene v1` representation** defined by `src/types.ts`.
-- Play mode is temporary simulation; Stop restores authoring state unless deliberately applied.
-- `public/scenes/core-relay.forge.json` is the small-game acceptance benchmark with interactables, scripts, UI, sounds, collision, win state and VFX. `docs/PROJECT_HELIOS.md` is the long-term reactor game benchmark.
-- Do not reintroduce compile-only confidence, hidden errors, fragile preview assumptions, fake cloud data, private account cache leaks, or destructive/unreviewed merge strategies.
-- Update tests alongside behavior; update root handoff and history before finishing. The user expects an actual final bug/integration review.
-
-## How to finish release safely
-
-Fix Core Relay input/path instability, run **all** commands above on the current head, inspect passing GitHub checks on the PR, and fast-forward `release/v05-rc` from the proven stabilization commit. Keep the release draft if any gate is red; after all checks are green and preview/playtest is reviewed, merge PR #27 to main once, without duplicating already stacked feature PRs. Re-check post-merge status and document the shipped SHA.
+Read `AGENTS.md`, `docs/CURRENT_STATE.md`, `docs/PROJECT_HISTORY.md`, `docs/ROADMAP.md`, `docs/ARCHITECTURE.md`, `docs/PROJECT_HELIOS.md`. Create a new feature branch from **main** for further work; use real gameplay and regression checks, and update `CONTINUE_HERE.md` before handing over.
