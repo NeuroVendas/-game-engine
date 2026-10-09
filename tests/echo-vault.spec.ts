@@ -18,7 +18,7 @@ test("Echo Vault is a playable, remixable first-party game visible without an ac
   await expect(canvas).toHaveAttribute("data-player-dead", "false");
   await expect(canvas).not.toHaveAttribute("data-runtime-error", /./);
 
-  await page.locator("#game-session-home").click();
+  await page.locator("#exit-game").click();
   await expect(page.locator("#launcher")).toBeVisible();
 
   await page.locator("[data-launch-tab='develop']").click();
