@@ -275,89 +275,97 @@ async function moveAlongWorldAxis(
   timeout = 16000,
   stopWhenPrompt?: string
 ): Promise<void> {
-  const startPosition = await readPlayerXZ(page);
-  const destination: [number, number] = axis === "x"
-    ? [target, startPosition[1]]
-    : [startPosition[0], target];
-  const axisIndex = axis === "x" ? 0 : 1;
-  const initialTravel = target - startPosition[axisIndex];
-  const travelSign = Math.sign(initialTravel);
-  if (Math.abs(initialTravel) <= 0.3) return;
+  const initial = await readPlayerXZ(page);
+  const idx = axis === "x" ? 0 : 1;
+  const sign = Math.sign(target - initial[idx]);
+  if (Math.abs(target - initial[idx]) <= 0.30) return;
+  if (stopWhenPrompt && (await page.locator("#interaction-prompt").textContent())?.includes(stopWhenPrompt)) {
+    return;
+  }
+
   const forwardRaw = await page.locator("#viewport").getAttribute("data-camera-forward");
   if (!forwardRaw) throw new Error("Player camera basis unavailable.");
   const [fx, fz] = forwardRaw.split(",").map(Number);
   if (!Number.isFinite(fx) || !Number.isFinite(fz)) {
     throw new Error(`Invalid camera forward vector: ${forwardRaw}`);
   }
-
-  // Drive through the real keyboard/controller/physics stack. A one-key
-  // projection drifts sideways whenever the camera is diagonal, so steer
-  // toward the world waypoint and damp measured velocity every few frames.
-  const held = new Set<string>();
-  const setMovement = async (wanted: Set<string>) => {
-    for (const key of [...held]) {
-      if (!wanted.has(key)) {
-        await page.keyboard.up(key);
-        held.delete(key);
-      }
-    }
-    for (const key of wanted) {
-      if (!held.has(key)) {
-        await page.keyboard.down(key);
-        held.add(key);
-      }
-    }
-  };
-  const origin = Date.now();
-  let lastPosition = startPosition;
-  let lastVelocity: [number, number] = [0, 0];
-  try {
-    while (Date.now() - origin < timeout) {
-      lastPosition = await readPlayerXZ(page);
-      // Proximity interactions are based on the live capsule-to-entity
-      // distance. Do not overshoot a real interaction trying to hit an
-      // arbitrary waypoint beyond the interactable's reach.
-      if (stopWhenPrompt) {
-        const prompt = await page.locator("#interaction-prompt").textContent();
-        if (prompt?.includes(stopWhenPrompt)) return;
-      }
-      const velocityRaw = await page.locator("#viewport").getAttribute("data-player-velocity");
-      const [vx, , vz] = (velocityRaw ?? "0,0,0").split(",").map(Number);
-      lastVelocity = [Number.isFinite(vx) ? vx : 0, Number.isFinite(vz) ? vz : 0];
-      const dx = destination[0] - lastPosition[0];
-      const dz = destination[1] - lastPosition[1];
-      const remaining = travelSign * (target - lastPosition[axisIndex]);
-      // A waypoint is a CROSSING GATE, not a point the player must stop on.
-      // Browser frame intervals can move the capsule past a narrow proximity
-      // tolerance in one update; steering back oscillates indefinitely.
-      // Stop at or beyond the gate, and let regular player friction settle.
-      if (remaining <= 0.30) return;
-
-      // Brake in world space before reaching a collider or overshooting a turn.
-      const steerX = dx - lastVelocity[0] * 0.07;
-      const steerZ = dz - lastVelocity[1] * 0.07;
-      const forward = steerX * fx + steerZ * fz;
-      const sideways = steerX * fz - steerZ * fx;
-      const wanted = new Set<string>();
-      if (forward > 0.08) wanted.add("KeyW");
-      else if (forward < -0.08) wanted.add("KeyS");
-      if (sideways > 0.08) wanted.add("KeyD");
-      else if (sideways < -0.08) wanted.add("KeyA");
-      await setMovement(wanted);
-      await page.waitForTimeout(85);
-    }
-    throw new Error(
-      `WASD route to ${axis}=${target} blocked: ` +
-      `position=[${lastPosition.map((value) => value.toFixed(2)).join(",")}], ` +
-      `destination=[${destination.join(",")}], ` +
-      `velocity=[${lastVelocity.map((value) => value.toFixed(2)).join(",")}], ` +
-      `camera=[${fx},${fz}], expectedPrompt=${stopWhenPrompt ?? "none"}, ` +
-      `actualPrompt=${await page.locator("#interaction-prompt").textContent()}`
-    );
-  } finally {
-    await setMovement(new Set());
-    await page.waitForTimeout(250);
+  const wantedX = axis === "x" ? sign : 0;
+  const wantedZ = axis === "z" ? sign : 0;
+  const directions = [
+    { key: "KeyW", dx: fx, dz: fz },
+    { key: "KeyS", dx: -fx, dz: -fz },
+    { key: "KeyD", dx: fz, dz: -fx },
+    { key: "KeyA", dx: -fz, dz: fx }
+  ];
+  const best = directions.map((item) => ({
+    ...item,
+    score: item.dx * wantedX + item.dz * wantedZ
+  })).sort((a, b) => b.score - a.score)[0];
+  if (best.score < 0.90) {
+    throw new Error(`Core Relay route needs a stable cardinal camera: ${forwardRaw}`);
   }
+
+  // Playwright/SwiftShader can stall its Node->browser round trips for 0.5s+
+  // under load, causing multi-meter overshoot. Keep genuine Playwright
+  // keyboard DOWN, but watch the real capsule every browser animation frame
+  // and send the matching DOM keyup immediately when the gate or in-game
+  // interaction prompt is reached. The actual PlayerController key handlers,
+  // Babylon physics and colliders still perform ALL movement.
+  const watch = page.evaluate(
+    ({ axis, target, sign, key, timeout, stopWhenPrompt }) => new Promise<void>((resolve, reject) => {
+      const canvas = document.getElementById("viewport") as HTMLCanvasElement | null;
+      const promptEl = document.getElementById("interaction-prompt");
+      if (!canvas) { reject(new Error("Viewport missing")); return; }
+      const start = performance.now();
+      let stopped = false;
+      const release = () => {
+        if (stopped) return;
+        stopped = true;
+        window.dispatchEvent(new KeyboardEvent("keyup", {
+          code: key, key: key.replace(/^Key/, "").toLowerCase(),
+          bubbles: true, cancelable: true
+        }));
+      };
+      const frame = () => {
+        const raw = canvas.dataset.playerPosition ?? "";
+        const parts = raw.split(",").map(Number);
+        const coordinate = parts[axis === "x" ? 0 : 2];
+        const prompt = promptEl?.textContent ?? "";
+        if (stopWhenPrompt && prompt.includes(stopWhenPrompt)) {
+          release(); resolve(); return;
+        }
+        if (Number.isFinite(coordinate) && sign * (target - coordinate) <= 0.25) {
+          release(); resolve(); return;
+        }
+        if (performance.now() - start > timeout) {
+          release();
+          reject(new Error(
+            `Real WASD movement toward ${axis}=${target} timed out: ` +
+            `position=${raw}, prompt=${prompt}, camera=${canvas.dataset.cameraForward}, ` +
+            `velocity=${canvas.dataset.playerVelocity}`
+          ));
+          return;
+        }
+        requestAnimationFrame(frame);
+      };
+      requestAnimationFrame(frame);
+    }),
+    { axis, target, sign, key: best.key, timeout, stopWhenPrompt }
+  );
+  await page.keyboard.down(best.key);
+  try {
+    await watch;
+  } finally {
+    await page.keyboard.up(best.key);
+  }
+
+  // Allow grounded movement friction to settle before the next segment.
+  await expect.poll(async () => {
+    const raw = await page.locator("#viewport").getAttribute("data-player-velocity");
+    if (!raw) return Infinity;
+    const [vx, , vz] = raw.split(",").map(Number);
+    return Math.hypot(vx, vz);
+  }, { timeout: 2500, intervals: [40, 50, 70] }).toBeLessThan(0.55);
 }
 
 async function expectInteractionPrompt(page: any, promptText: string): Promise<void> {
