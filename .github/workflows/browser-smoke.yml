@@ -29,6 +29,6 @@ jobs:
       - run: npx playwright install --with-deps chromium
       # Run fragile creator/gameplay paths first, so regressions fail fast.
       - name: Focused Studio + gameplay regressions
-        run: npx playwright test -g "platform home, games, favorites, profile and direct play work|Studio imports GLB animations and audio assets|Core Relay template is a playable complete-game benchmark"
+        run: npx playwright test -g "platform home, games, favorites, profile and direct play work|Studio imports GLB animations and audio assets|Core Relay template is a playable complete-game benchmark|signup and resend confirmation point back to the active Forge website|expired confirmation shows actionable message without taking Forge Cloud offline"
       - name: Complete Browser Smoke
         run: npm run test:browser
