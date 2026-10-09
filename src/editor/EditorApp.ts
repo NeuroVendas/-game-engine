@@ -427,7 +427,7 @@ export class EditorApp {
     must<HTMLButtonElement>("duplicate-selected").addEventListener("click", () => this.duplicateSelected());
     must<HTMLButtonElement>("rename-selected").addEventListener("click", () => this.beginRenameSelected());
     must<HTMLButtonElement>("delete-selected").addEventListener("click", () => this.deleteSelected());
-    must<HTMLButtonElement>("code-selected").addEventListener("click", () => this.openScriptEditor());
+    must<HTMLButtonElement>("code-selected").addEventListener("click", () => this.openOrCreateScriptEditor());
     must<HTMLButtonElement>("collision-debug").addEventListener("click", () => this.toggleCollisionDebug());
     must<HTMLButtonElement>("add-component").addEventListener("click", () => this.addSelectedComponent());
     must<HTMLButtonElement>("script-close").addEventListener("click", () => this.scriptDialog.close());
@@ -2428,6 +2428,29 @@ Forge.onUpdate((dt) => {
   // Game logic runs here every frame.
 });
 `;
+  }
+
+  private openOrCreateScriptEditor(): void {
+    if (this.mode !== "editor") return;
+    const selected = this.selectedId ? this.forge.getEntity(this.selectedId) : null;
+    if (selected?.components?.Script) {
+      this.openScriptEditor(selected.id);
+      return;
+    }
+
+    // "Code" should launch an editor, not just write an instruction to Output.
+    // Prefer existing scripts so opening Code doesn't mutate the scene.
+    const firstScript = this.forge.exportDocument().entities.find((item) => item.components?.Script);
+    if (firstScript) {
+      this.selectEntity(firstScript.id);
+      this.openScriptEditor(firstScript.id);
+      return;
+    }
+
+    // Brand-new projects have no scripts. Give them a real editable Script,
+    // complete with undo checkpoint, and open it immediately.
+    this.createStudioObject("script");
+    this.openScriptEditor();
   }
 
   private openScriptEditor(entityId = this.selectedId): void {

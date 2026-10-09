@@ -39,6 +39,7 @@ import {
 import type { ForgeSceneDocument } from "./types";
 import heliosFallback from "../public/scenes/project-helios.forge.json";
 import coreRelayTemplate from "../public/scenes/core-relay.forge.json";
+import echoVaultTemplate from "../public/scenes/echo-vault.forge.json";
 
 type LauncherPage = "home" | "games" | "favorites" | "friends" | "develop";
 type GameFilter = "all" | "favorites" | "recent";
@@ -118,9 +119,15 @@ function officialScene(): ForgeSceneDocument {
 }
 
 function sceneKey(scene: ForgeSceneDocument): string {
-  if (scene.platform?.isOfficial) return "official:helios";
-  if (scene.platform?.cloudId) return `cloud:${scene.platform.cloudId}`;
-  return `local:${scene.name.toLowerCase()}`;
+  return projectId(scene);
+}
+
+function echoVaultScene(): ForgeSceneDocument {
+  return structuredClone(echoVaultTemplate as ForgeSceneDocument);
+}
+
+function isEchoVault(scene: ForgeSceneDocument): boolean {
+  return scene.platform?.isOfficial === true && scene.platform.slug === "echo-vault";
 }
 
 function dedupeScenes(scenes: ForgeSceneDocument[]): ForgeSceneDocument[] {
@@ -140,13 +147,14 @@ function dedupeScenes(scenes: ForgeSceneDocument[]): ForgeSceneDocument[] {
 function catalogPlaces(): ForgeSceneDocument[] {
   return dedupeScenes([
     officialScene(),
+    echoVaultScene(),
     ...projects,
-    ...publicCloudProjects.filter((scene) => !scene.platform?.isOfficial)
+    ...publicCloudProjects
   ]);
 }
 
 function developPlaces(): ForgeSceneDocument[] {
-  return dedupeScenes([officialScene(), ...projects]);
+  return dedupeScenes([officialScene(), echoVaultScene(), ...projects]);
 }
 
 function sceneById(id: string): ForgeSceneDocument | null {
@@ -417,14 +425,15 @@ function projectCard(scene: ForgeSceneDocument, context: "game" | "develop"): HT
   card.dataset.placeName = scene.name;
 
   const title = escapeHtml(scene.name);
-  const thumbClass = official ? "helios-thumb" : "user-thumb";
-  const subtitle = official ? "Industrial reactor benchmark" : sceneDescription(scene);
+  const echo = isEchoVault(scene);
+  const thumbClass = echo ? "echo-thumb" : official ? "helios-thumb" : "user-thumb";
+  const subtitle = sceneDescription(scene);
   const favorite = isFavorite(scene);
   const visibility = scene.platform?.visibility ?? "private";
 
   card.innerHTML = `
     <div class="game-thumb ${thumbClass}">
-      ${official ? '<div class="reactor-ring"></div>' : '<span>=]</span>'}
+      ${echo ? '<div class="echo-orbit"></div>' : official ? '<div class="reactor-ring"></div>' : '<span>=]</span>'}
       <span class="thumb-label">${title}</span>
     </div>
     <div class="game-info">
@@ -537,8 +546,9 @@ function openGameDetails(scene: ForgeSceneDocument, syncHash = true): void {
   must<HTMLElement>("game-detail-meta").textContent = metaLabel(scene);
 
   const thumb = must<HTMLElement>("game-detail-thumb");
-  thumb.className = `game-detail-thumb ${official ? "helios-thumb" : "user-thumb"}`;
-  thumb.innerHTML = official ? '<div class="reactor-ring"></div><span>PROJECT HELIOS</span>' : '<span>=]</span>';
+  const echo = isEchoVault(scene);
+  thumb.className = `game-detail-thumb ${echo ? "echo-thumb" : official ? "helios-thumb" : "user-thumb"}`;
+  thumb.innerHTML = echo ? '<div class="echo-orbit"></div><span>ECHO VAULT</span>' : official ? '<div class="reactor-ring"></div><span>PROJECT HELIOS</span>' : '<span>=]</span>';
 
   const description = must<HTMLTextAreaElement>("game-detail-description");
   description.value = sceneDescription(scene);
@@ -1224,11 +1234,15 @@ document.querySelectorAll<HTMLElement>("[data-template-create]").forEach((node) 
 
 document.querySelectorAll<HTMLElement>("[data-template-scene]").forEach((node) => {
   node.addEventListener("click", () => {
-    if (node.dataset.templateScene !== "core-relay") return;
+    const template = node.dataset.templateScene;
+    const source = template === "core-relay" ? coreRelayTemplate
+      : template === "echo-vault" ? echoVaultTemplate
+      : null;
+    if (!source) return;
 
-    const scene = structuredClone(coreRelayTemplate as ForgeSceneDocument);
+    const scene = structuredClone(source as ForgeSceneDocument);
     delete scene.platform;
-    scene.name = uniqueProjectName("Core Relay");
+    scene.name = uniqueProjectName(template === "core-relay" ? "Core Relay" : "Echo Vault");
     projects.unshift(scene);
     saveProjects(projects);
     renderAll();

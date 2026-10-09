@@ -1,0 +1,2594 @@
+{
+  "format": "forge.scene",
+  "version": 1,
+  "name": "ECHO VAULT • Power Shift",
+  "playerSpawn": [
+    0,
+    2,
+    19
+  ],
+  "player": {
+    "maxHealth": 100,
+    "autoRespawn": true,
+    "walkSpeed": 5.8,
+    "runSpeed": 8.9,
+    "jumpPower": 8.6,
+    "killY": -10
+  },
+  "environment": {
+    "skyColor": "#071522",
+    "ambientColor": "#4f6f88",
+    "fogColor": "#0c1e31",
+    "fogDensity": 0.005
+  },
+  "platform": {
+    "slug": "echo-vault",
+    "isOfficial": true,
+    "visibility": "public",
+    "description": "Infiltrate the neon facility. Activate three power nodes, survive energy hazards, unlock the vault and escape. Built entirely with Forge Studio primitives, scripts, UI, triggers, collisions, VFX and sound.",
+    "thumbnailKind": "industrial"
+  },
+  "entities": [
+    {
+      "id": "Baseplate",
+      "name": "Blacksite foundations",
+      "kind": "ground",
+      "position": [
+        0,
+        -0.3,
+        -2
+      ],
+      "size": [
+        82,
+        0.6,
+        82
+      ],
+      "color": "#182b3b",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "Spawn",
+      "name": "Entry portal",
+      "kind": "cylinder",
+      "position": [
+        0,
+        0.09,
+        19
+      ],
+      "size": [
+        4,
+        0.18,
+        4
+      ],
+      "color": "#28b9d9",
+      "material": "metal",
+      "components": {
+        "Spawn": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "VaultCore",
+      "name": "Echo reactor",
+      "kind": "cylinder",
+      "position": [
+        0,
+        2,
+        -5
+      ],
+      "size": [
+        5,
+        4,
+        5
+      ],
+      "color": "#203846",
+      "material": "metal",
+      "emissive": "#0d5363",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "CoreBand",
+      "name": "Reactor halo",
+      "kind": "cylinder",
+      "position": [
+        0,
+        4.2,
+        -5
+      ],
+      "size": [
+        6,
+        0.22,
+        6
+      ],
+      "color": "#58f2e9",
+      "material": "metal",
+      "emissive": "#1d9a95",
+      "components": {}
+    },
+    {
+      "id": "GateDoor",
+      "name": "Vault door",
+      "kind": "box",
+      "position": [
+        0,
+        2,
+        -25
+      ],
+      "size": [
+        8,
+        4,
+        1
+      ],
+      "color": "#ff8f4d",
+      "material": "metal",
+      "emissive": "#5a2415",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "WestWall",
+      "name": "West security wall",
+      "kind": "box",
+      "position": [
+        -16,
+        2,
+        -2
+      ],
+      "size": [
+        1,
+        4,
+        53
+      ],
+      "color": "#253b4e",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "EastWall",
+      "name": "East security wall",
+      "kind": "box",
+      "position": [
+        16,
+        2,
+        -2
+      ],
+      "size": [
+        1,
+        4,
+        53
+      ],
+      "color": "#253b4e",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "NorthWall",
+      "name": "North security wall",
+      "kind": "box",
+      "position": [
+        0,
+        2,
+        24
+      ],
+      "size": [
+        32,
+        4,
+        1
+      ],
+      "color": "#253b4e",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "SouthWall-12.5",
+      "name": "South curtain wall",
+      "kind": "box",
+      "position": [
+        -12.5,
+        2,
+        -26
+      ],
+      "size": [
+        7,
+        4,
+        1
+      ],
+      "color": "#253b4e",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "SouthWall12.5",
+      "name": "South curtain wall",
+      "kind": "box",
+      "position": [
+        12.5,
+        2,
+        -26
+      ],
+      "size": [
+        7,
+        4,
+        1
+      ],
+      "color": "#253b4e",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "Buttress_-16_-20",
+      "name": "Structural pillar",
+      "kind": "box",
+      "position": [
+        -16,
+        2,
+        -20
+      ],
+      "size": [
+        1.4,
+        4.2,
+        1.4
+      ],
+      "color": "#3c5669",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "WallLamp_-16_-20",
+      "name": "WallLamp_-16_-20",
+      "kind": "empty",
+      "position": [
+        -14.7,
+        3.8,
+        -20
+      ],
+      "components": {
+        "Light": {
+          "type": "point",
+          "color": "#48d7d7",
+          "range": 10,
+          "intensity": 0.55
+        }
+      }
+    },
+    {
+      "id": "Buttress_-16_-8",
+      "name": "Structural pillar",
+      "kind": "box",
+      "position": [
+        -16,
+        2,
+        -8
+      ],
+      "size": [
+        1.4,
+        4.2,
+        1.4
+      ],
+      "color": "#3c5669",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "WallLamp_-16_-8",
+      "name": "WallLamp_-16_-8",
+      "kind": "empty",
+      "position": [
+        -14.7,
+        3.8,
+        -8
+      ],
+      "components": {
+        "Light": {
+          "type": "point",
+          "color": "#48d7d7",
+          "range": 10,
+          "intensity": 0.55
+        }
+      }
+    },
+    {
+      "id": "Buttress_-16_5",
+      "name": "Structural pillar",
+      "kind": "box",
+      "position": [
+        -16,
+        2,
+        5
+      ],
+      "size": [
+        1.4,
+        4.2,
+        1.4
+      ],
+      "color": "#3c5669",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "WallLamp_-16_5",
+      "name": "WallLamp_-16_5",
+      "kind": "empty",
+      "position": [
+        -14.7,
+        3.8,
+        5
+      ],
+      "components": {
+        "Light": {
+          "type": "point",
+          "color": "#48d7d7",
+          "range": 10,
+          "intensity": 0.55
+        }
+      }
+    },
+    {
+      "id": "Buttress_-16_17",
+      "name": "Structural pillar",
+      "kind": "box",
+      "position": [
+        -16,
+        2,
+        17
+      ],
+      "size": [
+        1.4,
+        4.2,
+        1.4
+      ],
+      "color": "#3c5669",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "WallLamp_-16_17",
+      "name": "WallLamp_-16_17",
+      "kind": "empty",
+      "position": [
+        -14.7,
+        3.8,
+        17
+      ],
+      "components": {
+        "Light": {
+          "type": "point",
+          "color": "#48d7d7",
+          "range": 10,
+          "intensity": 0.55
+        }
+      }
+    },
+    {
+      "id": "Buttress_16_-20",
+      "name": "Structural pillar",
+      "kind": "box",
+      "position": [
+        16,
+        2,
+        -20
+      ],
+      "size": [
+        1.4,
+        4.2,
+        1.4
+      ],
+      "color": "#3c5669",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "WallLamp_16_-20",
+      "name": "WallLamp_16_-20",
+      "kind": "empty",
+      "position": [
+        14.7,
+        3.8,
+        -20
+      ],
+      "components": {
+        "Light": {
+          "type": "point",
+          "color": "#5d90ef",
+          "range": 10,
+          "intensity": 0.55
+        }
+      }
+    },
+    {
+      "id": "Buttress_16_-8",
+      "name": "Structural pillar",
+      "kind": "box",
+      "position": [
+        16,
+        2,
+        -8
+      ],
+      "size": [
+        1.4,
+        4.2,
+        1.4
+      ],
+      "color": "#3c5669",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "WallLamp_16_-8",
+      "name": "WallLamp_16_-8",
+      "kind": "empty",
+      "position": [
+        14.7,
+        3.8,
+        -8
+      ],
+      "components": {
+        "Light": {
+          "type": "point",
+          "color": "#5d90ef",
+          "range": 10,
+          "intensity": 0.55
+        }
+      }
+    },
+    {
+      "id": "Buttress_16_5",
+      "name": "Structural pillar",
+      "kind": "box",
+      "position": [
+        16,
+        2,
+        5
+      ],
+      "size": [
+        1.4,
+        4.2,
+        1.4
+      ],
+      "color": "#3c5669",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "WallLamp_16_5",
+      "name": "WallLamp_16_5",
+      "kind": "empty",
+      "position": [
+        14.7,
+        3.8,
+        5
+      ],
+      "components": {
+        "Light": {
+          "type": "point",
+          "color": "#5d90ef",
+          "range": 10,
+          "intensity": 0.55
+        }
+      }
+    },
+    {
+      "id": "Buttress_16_17",
+      "name": "Structural pillar",
+      "kind": "box",
+      "position": [
+        16,
+        2,
+        17
+      ],
+      "size": [
+        1.4,
+        4.2,
+        1.4
+      ],
+      "color": "#3c5669",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "WallLamp_16_17",
+      "name": "WallLamp_16_17",
+      "kind": "empty",
+      "position": [
+        14.7,
+        3.8,
+        17
+      ],
+      "components": {
+        "Light": {
+          "type": "point",
+          "color": "#5d90ef",
+          "range": 10,
+          "intensity": 0.55
+        }
+      }
+    },
+    {
+      "id": "FloorStripeN-12",
+      "name": "North passage marker",
+      "kind": "box",
+      "position": [
+        -12,
+        0.03,
+        9
+      ],
+      "size": [
+        2.9,
+        0.045,
+        0.16
+      ],
+      "color": "#2f7792",
+      "material": "metal",
+      "emissive": "#125478",
+      "components": {}
+    },
+    {
+      "id": "FloorStripeS-12",
+      "name": "South passage marker",
+      "kind": "box",
+      "position": [
+        -12,
+        0.03,
+        -20
+      ],
+      "size": [
+        2.9,
+        0.045,
+        0.16
+      ],
+      "color": "#3a748f",
+      "material": "metal",
+      "emissive": "#1a4e69",
+      "components": {}
+    },
+    {
+      "id": "FloorStripeN-8",
+      "name": "North passage marker",
+      "kind": "box",
+      "position": [
+        -8,
+        0.03,
+        9
+      ],
+      "size": [
+        2.9,
+        0.045,
+        0.16
+      ],
+      "color": "#2f7792",
+      "material": "metal",
+      "emissive": "#125478",
+      "components": {}
+    },
+    {
+      "id": "FloorStripeS-8",
+      "name": "South passage marker",
+      "kind": "box",
+      "position": [
+        -8,
+        0.03,
+        -20
+      ],
+      "size": [
+        2.9,
+        0.045,
+        0.16
+      ],
+      "color": "#3a748f",
+      "material": "metal",
+      "emissive": "#1a4e69",
+      "components": {}
+    },
+    {
+      "id": "FloorStripeN-4",
+      "name": "North passage marker",
+      "kind": "box",
+      "position": [
+        -4,
+        0.03,
+        9
+      ],
+      "size": [
+        2.9,
+        0.045,
+        0.16
+      ],
+      "color": "#2f7792",
+      "material": "metal",
+      "emissive": "#125478",
+      "components": {}
+    },
+    {
+      "id": "FloorStripeS-4",
+      "name": "South passage marker",
+      "kind": "box",
+      "position": [
+        -4,
+        0.03,
+        -20
+      ],
+      "size": [
+        2.9,
+        0.045,
+        0.16
+      ],
+      "color": "#3a748f",
+      "material": "metal",
+      "emissive": "#1a4e69",
+      "components": {}
+    },
+    {
+      "id": "FloorStripeN0",
+      "name": "North passage marker",
+      "kind": "box",
+      "position": [
+        0,
+        0.03,
+        9
+      ],
+      "size": [
+        2.9,
+        0.045,
+        0.16
+      ],
+      "color": "#2f7792",
+      "material": "metal",
+      "emissive": "#125478",
+      "components": {}
+    },
+    {
+      "id": "FloorStripeS0",
+      "name": "South passage marker",
+      "kind": "box",
+      "position": [
+        0,
+        0.03,
+        -20
+      ],
+      "size": [
+        2.9,
+        0.045,
+        0.16
+      ],
+      "color": "#3a748f",
+      "material": "metal",
+      "emissive": "#1a4e69",
+      "components": {}
+    },
+    {
+      "id": "FloorStripeN4",
+      "name": "North passage marker",
+      "kind": "box",
+      "position": [
+        4,
+        0.03,
+        9
+      ],
+      "size": [
+        2.9,
+        0.045,
+        0.16
+      ],
+      "color": "#2f7792",
+      "material": "metal",
+      "emissive": "#125478",
+      "components": {}
+    },
+    {
+      "id": "FloorStripeS4",
+      "name": "South passage marker",
+      "kind": "box",
+      "position": [
+        4,
+        0.03,
+        -20
+      ],
+      "size": [
+        2.9,
+        0.045,
+        0.16
+      ],
+      "color": "#3a748f",
+      "material": "metal",
+      "emissive": "#1a4e69",
+      "components": {}
+    },
+    {
+      "id": "FloorStripeN8",
+      "name": "North passage marker",
+      "kind": "box",
+      "position": [
+        8,
+        0.03,
+        9
+      ],
+      "size": [
+        2.9,
+        0.045,
+        0.16
+      ],
+      "color": "#2f7792",
+      "material": "metal",
+      "emissive": "#125478",
+      "components": {}
+    },
+    {
+      "id": "FloorStripeS8",
+      "name": "South passage marker",
+      "kind": "box",
+      "position": [
+        8,
+        0.03,
+        -20
+      ],
+      "size": [
+        2.9,
+        0.045,
+        0.16
+      ],
+      "color": "#3a748f",
+      "material": "metal",
+      "emissive": "#1a4e69",
+      "components": {}
+    },
+    {
+      "id": "FloorStripeN12",
+      "name": "North passage marker",
+      "kind": "box",
+      "position": [
+        12,
+        0.03,
+        9
+      ],
+      "size": [
+        2.9,
+        0.045,
+        0.16
+      ],
+      "color": "#2f7792",
+      "material": "metal",
+      "emissive": "#125478",
+      "components": {}
+    },
+    {
+      "id": "FloorStripeS12",
+      "name": "South passage marker",
+      "kind": "box",
+      "position": [
+        12,
+        0.03,
+        -20
+      ],
+      "size": [
+        2.9,
+        0.045,
+        0.16
+      ],
+      "color": "#3a748f",
+      "material": "metal",
+      "emissive": "#1a4e69",
+      "components": {}
+    },
+    {
+      "id": "Crate_-10_-14",
+      "name": "Utility container",
+      "kind": "box",
+      "position": [
+        -10,
+        0.55,
+        -14
+      ],
+      "size": [
+        1.35,
+        1.1,
+        1.35
+      ],
+      "color": "#405369",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "CrateBand_-10_-14",
+      "name": "Container line",
+      "kind": "box",
+      "position": [
+        -10,
+        1.12,
+        -14
+      ],
+      "size": [
+        1.4,
+        0.1,
+        1.4
+      ],
+      "color": "#6cd6df",
+      "material": "metal",
+      "emissive": "#1c6e75",
+      "components": {}
+    },
+    {
+      "id": "Crate_-10_-2",
+      "name": "Utility container",
+      "kind": "box",
+      "position": [
+        -10,
+        0.55,
+        -2
+      ],
+      "size": [
+        1.35,
+        1.1,
+        1.35
+      ],
+      "color": "#405369",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "CrateBand_-10_-2",
+      "name": "Container line",
+      "kind": "box",
+      "position": [
+        -10,
+        1.12,
+        -2
+      ],
+      "size": [
+        1.4,
+        0.1,
+        1.4
+      ],
+      "color": "#6cd6df",
+      "material": "metal",
+      "emissive": "#1c6e75",
+      "components": {}
+    },
+    {
+      "id": "Crate_-10_10",
+      "name": "Utility container",
+      "kind": "box",
+      "position": [
+        -10,
+        0.55,
+        10
+      ],
+      "size": [
+        1.35,
+        1.1,
+        1.35
+      ],
+      "color": "#405369",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "CrateBand_-10_10",
+      "name": "Container line",
+      "kind": "box",
+      "position": [
+        -10,
+        1.12,
+        10
+      ],
+      "size": [
+        1.4,
+        0.1,
+        1.4
+      ],
+      "color": "#6cd6df",
+      "material": "metal",
+      "emissive": "#1c6e75",
+      "components": {}
+    },
+    {
+      "id": "Crate_10_-14",
+      "name": "Utility container",
+      "kind": "box",
+      "position": [
+        10,
+        0.55,
+        -14
+      ],
+      "size": [
+        1.35,
+        1.1,
+        1.35
+      ],
+      "color": "#405369",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "CrateBand_10_-14",
+      "name": "Container line",
+      "kind": "box",
+      "position": [
+        10,
+        1.12,
+        -14
+      ],
+      "size": [
+        1.4,
+        0.1,
+        1.4
+      ],
+      "color": "#6cd6df",
+      "material": "metal",
+      "emissive": "#1c6e75",
+      "components": {}
+    },
+    {
+      "id": "Crate_10_-2",
+      "name": "Utility container",
+      "kind": "box",
+      "position": [
+        10,
+        0.55,
+        -2
+      ],
+      "size": [
+        1.35,
+        1.1,
+        1.35
+      ],
+      "color": "#405369",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "CrateBand_10_-2",
+      "name": "Container line",
+      "kind": "box",
+      "position": [
+        10,
+        1.12,
+        -2
+      ],
+      "size": [
+        1.4,
+        0.1,
+        1.4
+      ],
+      "color": "#6cd6df",
+      "material": "metal",
+      "emissive": "#1c6e75",
+      "components": {}
+    },
+    {
+      "id": "Crate_10_10",
+      "name": "Utility container",
+      "kind": "box",
+      "position": [
+        10,
+        0.55,
+        10
+      ],
+      "size": [
+        1.35,
+        1.1,
+        1.35
+      ],
+      "color": "#405369",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "CrateBand_10_10",
+      "name": "Container line",
+      "kind": "box",
+      "position": [
+        10,
+        1.12,
+        10
+      ],
+      "size": [
+        1.4,
+        0.1,
+        1.4
+      ],
+      "color": "#6cd6df",
+      "material": "metal",
+      "emissive": "#1c6e75",
+      "components": {}
+    },
+    {
+      "id": "OutsideTower0",
+      "name": "Outer perimeter tower",
+      "kind": "box",
+      "position": [
+        -18,
+        3,
+        16
+      ],
+      "size": [
+        2,
+        6,
+        2
+      ],
+      "color": "#304459",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "TowerBeacon0",
+      "name": "Beacon cap",
+      "kind": "box",
+      "position": [
+        -18,
+        6.1,
+        16
+      ],
+      "size": [
+        2.2,
+        0.22,
+        2.2
+      ],
+      "color": "#65c6fc",
+      "material": "metal",
+      "emissive": "#226f90",
+      "components": {}
+    },
+    {
+      "id": "OutsideTower1",
+      "name": "Outer perimeter tower",
+      "kind": "box",
+      "position": [
+        20,
+        3,
+        16
+      ],
+      "size": [
+        2,
+        6,
+        2
+      ],
+      "color": "#304459",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "TowerBeacon1",
+      "name": "Beacon cap",
+      "kind": "box",
+      "position": [
+        20,
+        6.1,
+        16
+      ],
+      "size": [
+        2.2,
+        0.22,
+        2.2
+      ],
+      "color": "#e58b4f",
+      "material": "metal",
+      "emissive": "#82421c",
+      "components": {}
+    },
+    {
+      "id": "OutsideTower2",
+      "name": "Outer perimeter tower",
+      "kind": "box",
+      "position": [
+        -22,
+        3,
+        8
+      ],
+      "size": [
+        2,
+        6,
+        2
+      ],
+      "color": "#304459",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "TowerBeacon2",
+      "name": "Beacon cap",
+      "kind": "box",
+      "position": [
+        -22,
+        6.1,
+        8
+      ],
+      "size": [
+        2.2,
+        0.22,
+        2.2
+      ],
+      "color": "#65c6fc",
+      "material": "metal",
+      "emissive": "#226f90",
+      "components": {}
+    },
+    {
+      "id": "OutsideTower3",
+      "name": "Outer perimeter tower",
+      "kind": "box",
+      "position": [
+        18,
+        3,
+        8
+      ],
+      "size": [
+        2,
+        6,
+        2
+      ],
+      "color": "#304459",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "TowerBeacon3",
+      "name": "Beacon cap",
+      "kind": "box",
+      "position": [
+        18,
+        6.1,
+        8
+      ],
+      "size": [
+        2.2,
+        0.22,
+        2.2
+      ],
+      "color": "#e58b4f",
+      "material": "metal",
+      "emissive": "#82421c",
+      "components": {}
+    },
+    {
+      "id": "OutsideTower4",
+      "name": "Outer perimeter tower",
+      "kind": "box",
+      "position": [
+        -20,
+        3,
+        0
+      ],
+      "size": [
+        2,
+        6,
+        2
+      ],
+      "color": "#304459",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "TowerBeacon4",
+      "name": "Beacon cap",
+      "kind": "box",
+      "position": [
+        -20,
+        6.1,
+        0
+      ],
+      "size": [
+        2.2,
+        0.22,
+        2.2
+      ],
+      "color": "#65c6fc",
+      "material": "metal",
+      "emissive": "#226f90",
+      "components": {}
+    },
+    {
+      "id": "OutsideTower5",
+      "name": "Outer perimeter tower",
+      "kind": "box",
+      "position": [
+        22,
+        3,
+        0
+      ],
+      "size": [
+        2,
+        6,
+        2
+      ],
+      "color": "#304459",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "TowerBeacon5",
+      "name": "Beacon cap",
+      "kind": "box",
+      "position": [
+        22,
+        6.1,
+        0
+      ],
+      "size": [
+        2.2,
+        0.22,
+        2.2
+      ],
+      "color": "#e58b4f",
+      "material": "metal",
+      "emissive": "#82421c",
+      "components": {}
+    },
+    {
+      "id": "OutsideTower6",
+      "name": "Outer perimeter tower",
+      "kind": "box",
+      "position": [
+        -18,
+        3,
+        -8
+      ],
+      "size": [
+        2,
+        6,
+        2
+      ],
+      "color": "#304459",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "TowerBeacon6",
+      "name": "Beacon cap",
+      "kind": "box",
+      "position": [
+        -18,
+        6.1,
+        -8
+      ],
+      "size": [
+        2.2,
+        0.22,
+        2.2
+      ],
+      "color": "#65c6fc",
+      "material": "metal",
+      "emissive": "#226f90",
+      "components": {}
+    },
+    {
+      "id": "OutsideTower7",
+      "name": "Outer perimeter tower",
+      "kind": "box",
+      "position": [
+        20,
+        3,
+        -8
+      ],
+      "size": [
+        2,
+        6,
+        2
+      ],
+      "color": "#304459",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "TowerBeacon7",
+      "name": "Beacon cap",
+      "kind": "box",
+      "position": [
+        20,
+        6.1,
+        -8
+      ],
+      "size": [
+        2.2,
+        0.22,
+        2.2
+      ],
+      "color": "#e58b4f",
+      "material": "metal",
+      "emissive": "#82421c",
+      "components": {}
+    },
+    {
+      "id": "OutsideTower8",
+      "name": "Outer perimeter tower",
+      "kind": "box",
+      "position": [
+        -22,
+        3,
+        -16
+      ],
+      "size": [
+        2,
+        6,
+        2
+      ],
+      "color": "#304459",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "TowerBeacon8",
+      "name": "Beacon cap",
+      "kind": "box",
+      "position": [
+        -22,
+        6.1,
+        -16
+      ],
+      "size": [
+        2.2,
+        0.22,
+        2.2
+      ],
+      "color": "#65c6fc",
+      "material": "metal",
+      "emissive": "#226f90",
+      "components": {}
+    },
+    {
+      "id": "OutsideTower9",
+      "name": "Outer perimeter tower",
+      "kind": "box",
+      "position": [
+        18,
+        3,
+        -16
+      ],
+      "size": [
+        2,
+        6,
+        2
+      ],
+      "color": "#304459",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "TowerBeacon9",
+      "name": "Beacon cap",
+      "kind": "box",
+      "position": [
+        18,
+        6.1,
+        -16
+      ],
+      "size": [
+        2.2,
+        0.22,
+        2.2
+      ],
+      "color": "#e58b4f",
+      "material": "metal",
+      "emissive": "#82421c",
+      "components": {}
+    },
+    {
+      "id": "RelayA",
+      "name": "Power Node A",
+      "kind": "box",
+      "position": [
+        -10,
+        1,
+        -7
+      ],
+      "size": [
+        2.6,
+        2,
+        2.2
+      ],
+      "color": "#314354",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        },
+        "Interactable": {
+          "enabled": true,
+          "prompt": "E • Reroute power A"
+        },
+        "Script": {
+          "name": "echo.relay.a",
+          "kind": "Script",
+          "enabled": true,
+          "source": "const state = Forge.require(\"echo.state\");\nForge.onInteract(() => {\n  const result = state.activate(\"A\");\n  if (result.newlyActivated) {\n    Forge.self.setColor(\"#54f6bd\");\n    Forge.world.get(\"RelayStatusA\")?.setColor(\"#54f6bd\");\n    Forge.vfx.restart(\"PulseA\");\n    Forge.audio.play(\"RelayBeep\");\n  }\n  Forge.ui.setText(\"ObjectiveText\",result.message);\n  Forge.ui.setText(\"CounterText\",result.count+\" / 3 POWER NODES\");\n  if (result.complete) Forge.emit(\"echo.complete\");\n});"
+        }
+      }
+    },
+    {
+      "id": "RelayStatusA",
+      "name": "Power indicator A",
+      "kind": "box",
+      "position": [
+        -10,
+        2.12,
+        -8.14
+      ],
+      "size": [
+        1.8,
+        0.25,
+        0.12
+      ],
+      "color": "#59dafa",
+      "material": "metal",
+      "emissive": "#59dafa",
+      "components": {}
+    },
+    {
+      "id": "PulseA",
+      "name": "PulseA",
+      "kind": "empty",
+      "position": [
+        -10,
+        2.8,
+        -7
+      ],
+      "components": {
+        "Particle": {
+          "enabled": true,
+          "preset": "sparks",
+          "color": "#59dafa",
+          "emitRate": 80,
+          "capacity": 280,
+          "lifetime": 0.8,
+          "size": 0.18,
+          "speed": 2,
+          "autoplay": false
+        }
+      }
+    },
+    {
+      "id": "RelayGlowA",
+      "name": "RelayGlowA",
+      "kind": "empty",
+      "position": [
+        -10,
+        3.2,
+        -7
+      ],
+      "components": {
+        "Light": {
+          "type": "point",
+          "color": "#59dafa",
+          "range": 11,
+          "intensity": 0.75
+        }
+      }
+    },
+    {
+      "id": "RelayPlatformA",
+      "name": "Node A pedestal",
+      "kind": "box",
+      "position": [
+        -10,
+        0.18,
+        -7
+      ],
+      "size": [
+        4,
+        0.35,
+        3.8
+      ],
+      "color": "#294556",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "RelayB",
+      "name": "Power Node B",
+      "kind": "box",
+      "position": [
+        0,
+        1,
+        -16
+      ],
+      "size": [
+        2.6,
+        2,
+        2.2
+      ],
+      "color": "#314354",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        },
+        "Interactable": {
+          "enabled": true,
+          "prompt": "E • Reroute power B"
+        },
+        "Script": {
+          "name": "echo.relay.b",
+          "kind": "Script",
+          "enabled": true,
+          "source": "const state = Forge.require(\"echo.state\");\nForge.onInteract(() => {\n  const result = state.activate(\"B\");\n  if (result.newlyActivated) {\n    Forge.self.setColor(\"#54f6bd\");\n    Forge.world.get(\"RelayStatusB\")?.setColor(\"#54f6bd\");\n    Forge.vfx.restart(\"PulseB\");\n    Forge.audio.play(\"RelayBeep\");\n  }\n  Forge.ui.setText(\"ObjectiveText\",result.message);\n  Forge.ui.setText(\"CounterText\",result.count+\" / 3 POWER NODES\");\n  if (result.complete) Forge.emit(\"echo.complete\");\n});"
+        }
+      }
+    },
+    {
+      "id": "RelayStatusB",
+      "name": "Power indicator B",
+      "kind": "box",
+      "position": [
+        0,
+        2.12,
+        -17.14
+      ],
+      "size": [
+        1.8,
+        0.25,
+        0.12
+      ],
+      "color": "#d59afa",
+      "material": "metal",
+      "emissive": "#d59afa",
+      "components": {}
+    },
+    {
+      "id": "PulseB",
+      "name": "PulseB",
+      "kind": "empty",
+      "position": [
+        0,
+        2.8,
+        -16
+      ],
+      "components": {
+        "Particle": {
+          "enabled": true,
+          "preset": "sparks",
+          "color": "#d59afa",
+          "emitRate": 80,
+          "capacity": 280,
+          "lifetime": 0.8,
+          "size": 0.18,
+          "speed": 2,
+          "autoplay": false
+        }
+      }
+    },
+    {
+      "id": "RelayGlowB",
+      "name": "RelayGlowB",
+      "kind": "empty",
+      "position": [
+        0,
+        3.2,
+        -16
+      ],
+      "components": {
+        "Light": {
+          "type": "point",
+          "color": "#d59afa",
+          "range": 11,
+          "intensity": 0.75
+        }
+      }
+    },
+    {
+      "id": "RelayPlatformB",
+      "name": "Node B pedestal",
+      "kind": "box",
+      "position": [
+        0,
+        0.18,
+        -16
+      ],
+      "size": [
+        4,
+        0.35,
+        3.8
+      ],
+      "color": "#294556",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "RelayC",
+      "name": "Power Node C",
+      "kind": "box",
+      "position": [
+        10,
+        1,
+        -7
+      ],
+      "size": [
+        2.6,
+        2,
+        2.2
+      ],
+      "color": "#314354",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        },
+        "Interactable": {
+          "enabled": true,
+          "prompt": "E • Reroute power C"
+        },
+        "Script": {
+          "name": "echo.relay.c",
+          "kind": "Script",
+          "enabled": true,
+          "source": "const state = Forge.require(\"echo.state\");\nForge.onInteract(() => {\n  const result = state.activate(\"C\");\n  if (result.newlyActivated) {\n    Forge.self.setColor(\"#54f6bd\");\n    Forge.world.get(\"RelayStatusC\")?.setColor(\"#54f6bd\");\n    Forge.vfx.restart(\"PulseC\");\n    Forge.audio.play(\"RelayBeep\");\n  }\n  Forge.ui.setText(\"ObjectiveText\",result.message);\n  Forge.ui.setText(\"CounterText\",result.count+\" / 3 POWER NODES\");\n  if (result.complete) Forge.emit(\"echo.complete\");\n});"
+        }
+      }
+    },
+    {
+      "id": "RelayStatusC",
+      "name": "Power indicator C",
+      "kind": "box",
+      "position": [
+        10,
+        2.12,
+        -8.14
+      ],
+      "size": [
+        1.8,
+        0.25,
+        0.12
+      ],
+      "color": "#f4bf5c",
+      "material": "metal",
+      "emissive": "#f4bf5c",
+      "components": {}
+    },
+    {
+      "id": "PulseC",
+      "name": "PulseC",
+      "kind": "empty",
+      "position": [
+        10,
+        2.8,
+        -7
+      ],
+      "components": {
+        "Particle": {
+          "enabled": true,
+          "preset": "sparks",
+          "color": "#f4bf5c",
+          "emitRate": 80,
+          "capacity": 280,
+          "lifetime": 0.8,
+          "size": 0.18,
+          "speed": 2,
+          "autoplay": false
+        }
+      }
+    },
+    {
+      "id": "RelayGlowC",
+      "name": "RelayGlowC",
+      "kind": "empty",
+      "position": [
+        10,
+        3.2,
+        -7
+      ],
+      "components": {
+        "Light": {
+          "type": "point",
+          "color": "#f4bf5c",
+          "range": 11,
+          "intensity": 0.75
+        }
+      }
+    },
+    {
+      "id": "RelayPlatformC",
+      "name": "Node C pedestal",
+      "kind": "box",
+      "position": [
+        10,
+        0.18,
+        -7
+      ],
+      "size": [
+        4,
+        0.35,
+        3.8
+      ],
+      "color": "#294556",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "CoreLight",
+      "name": "CoreLight",
+      "kind": "empty",
+      "position": [
+        0,
+        5,
+        -5
+      ],
+      "components": {
+        "Light": {
+          "type": "point",
+          "color": "#37e6e3",
+          "range": 21,
+          "intensity": 1.5
+        }
+      }
+    },
+    {
+      "id": "EntranceLight",
+      "name": "EntranceLight",
+      "kind": "empty",
+      "position": [
+        0,
+        5,
+        18
+      ],
+      "components": {
+        "Light": {
+          "type": "point",
+          "color": "#7cd7ff",
+          "range": 20,
+          "intensity": 0.9
+        }
+      }
+    },
+    {
+      "id": "ExitLight",
+      "name": "ExitLight",
+      "kind": "empty",
+      "position": [
+        0,
+        5,
+        -23
+      ],
+      "components": {
+        "Light": {
+          "type": "point",
+          "color": "#ffd18a",
+          "range": 15,
+          "intensity": 0.9
+        }
+      }
+    },
+    {
+      "id": "VaultVictoryVFX",
+      "name": "VaultVictoryVFX",
+      "kind": "empty",
+      "position": [
+        0,
+        4,
+        -24
+      ],
+      "components": {
+        "Particle": {
+          "enabled": true,
+          "preset": "energy",
+          "color": "#73ffc3",
+          "emitRate": 80,
+          "capacity": 280,
+          "lifetime": 0.8,
+          "size": 0.18,
+          "speed": 2,
+          "autoplay": false
+        }
+      }
+    },
+    {
+      "id": "CoreAmbience",
+      "name": "CoreAmbience",
+      "kind": "empty",
+      "position": [
+        0,
+        4,
+        -5
+      ],
+      "components": {
+        "Particle": {
+          "enabled": true,
+          "preset": "energy",
+          "color": "#61d6ff",
+          "emitRate": 22,
+          "capacity": 280,
+          "lifetime": 0.8,
+          "size": 0.18,
+          "speed": 2,
+          "autoplay": true
+        }
+      }
+    },
+    {
+      "id": "Laser0",
+      "name": "Active electric barrier 0",
+      "kind": "box",
+      "position": [
+        5.5,
+        1.35,
+        -4
+      ],
+      "size": [
+        0.2,
+        2.7,
+        3.6
+      ],
+      "color": "#fc477c",
+      "material": "metal",
+      "emissive": "#9b1b4c",
+      "components": {
+        "Trigger": {
+          "enabled": true,
+          "size": [
+            1.1,
+            3,
+            3.8
+          ],
+          "offset": [
+            0,
+            0,
+            0
+          ]
+        },
+        "Hazard": {
+          "enabled": true,
+          "damage": 10,
+          "interval": 0.85
+        }
+      }
+    },
+    {
+      "id": "LaserSparks0",
+      "name": "LaserSparks0",
+      "kind": "empty",
+      "position": [
+        5.5,
+        2.5,
+        -4
+      ],
+      "components": {
+        "Particle": {
+          "enabled": true,
+          "preset": "sparks",
+          "color": "#ff6f95",
+          "emitRate": 22,
+          "capacity": 280,
+          "lifetime": 0.8,
+          "size": 0.18,
+          "speed": 2,
+          "autoplay": true
+        }
+      }
+    },
+    {
+      "id": "Laser1",
+      "name": "Active electric barrier 1",
+      "kind": "box",
+      "position": [
+        -5.5,
+        1.35,
+        -1.5
+      ],
+      "size": [
+        0.2,
+        2.7,
+        3.6
+      ],
+      "color": "#fc477c",
+      "material": "metal",
+      "emissive": "#9b1b4c",
+      "components": {
+        "Trigger": {
+          "enabled": true,
+          "size": [
+            1.1,
+            3,
+            3.8
+          ],
+          "offset": [
+            0,
+            0,
+            0
+          ]
+        },
+        "Hazard": {
+          "enabled": true,
+          "damage": 10,
+          "interval": 0.85
+        }
+      }
+    },
+    {
+      "id": "LaserSparks1",
+      "name": "LaserSparks1",
+      "kind": "empty",
+      "position": [
+        -5.5,
+        2.5,
+        -1.5
+      ],
+      "components": {
+        "Particle": {
+          "enabled": true,
+          "preset": "sparks",
+          "color": "#ff6f95",
+          "emitRate": 22,
+          "capacity": 280,
+          "lifetime": 0.8,
+          "size": 0.18,
+          "speed": 2,
+          "autoplay": true
+        }
+      }
+    },
+    {
+      "id": "Laser2",
+      "name": "Active electric barrier 2",
+      "kind": "box",
+      "position": [
+        5.5,
+        1.35,
+        1
+      ],
+      "size": [
+        0.2,
+        2.7,
+        3.6
+      ],
+      "color": "#fc477c",
+      "material": "metal",
+      "emissive": "#9b1b4c",
+      "components": {
+        "Trigger": {
+          "enabled": true,
+          "size": [
+            1.1,
+            3,
+            3.8
+          ],
+          "offset": [
+            0,
+            0,
+            0
+          ]
+        },
+        "Hazard": {
+          "enabled": true,
+          "damage": 10,
+          "interval": 0.85
+        }
+      }
+    },
+    {
+      "id": "LaserSparks2",
+      "name": "LaserSparks2",
+      "kind": "empty",
+      "position": [
+        5.5,
+        2.5,
+        1
+      ],
+      "components": {
+        "Particle": {
+          "enabled": true,
+          "preset": "sparks",
+          "color": "#ff6f95",
+          "emitRate": 22,
+          "capacity": 280,
+          "lifetime": 0.8,
+          "size": 0.18,
+          "speed": 2,
+          "autoplay": true
+        }
+      }
+    },
+    {
+      "id": "CheckpointPad",
+      "name": "Checkpoint",
+      "kind": "cylinder",
+      "position": [
+        0,
+        0.08,
+        11.5
+      ],
+      "size": [
+        4.6,
+        0.16,
+        4.6
+      ],
+      "color": "#3b99a9",
+      "material": "metal",
+      "components": {
+        "Trigger": {
+          "enabled": true,
+          "size": [
+            5,
+            3,
+            5
+          ],
+          "offset": [
+            0,
+            1.5,
+            0
+          ]
+        },
+        "Script": {
+          "name": "echo.checkpoint",
+          "kind": "Script",
+          "enabled": true,
+          "source": "let touched = false;\nForge.onTriggerEnter(() => {\n if (touched) return;\n touched = true;\n Forge.player.setCheckpoint(\"CheckpointPad\");\n Forge.ui.setText(\"InfoText\",\"CHECKPOINT SECURED • Respawn active\");\n Forge.audio.play(\"RelayBeep\");\n Forge.log(\"ECHO_CHECKPOINT\");\n});"
+        }
+      }
+    },
+    {
+      "id": "ExitTrigger",
+      "name": "Vault exit objective",
+      "kind": "box",
+      "position": [
+        0,
+        1,
+        -29
+      ],
+      "size": [
+        8,
+        2,
+        3
+      ],
+      "color": "#163b46",
+      "material": "metal",
+      "components": {
+        "Trigger": {
+          "enabled": true,
+          "size": [
+            8,
+            4,
+            3
+          ]
+        },
+        "Script": {
+          "name": "echo.escape",
+          "kind": "Script",
+          "enabled": true,
+          "source": "let escaped=false;\nForge.onTriggerEnter(() => {\n  const state=Forge.require(\"echo.state\");\n  if(escaped||state.count()!==3)return;\n  escaped=true;\n  Forge.ui.setText(\"ObjectiveText\",\"MISSION COMPLETE • ECHO VAULT ESCAPED\");\n  Forge.ui.setText(\"InfoText\",\"ALL SYSTEMS RESTORED • WELL PLAYED\");\n  Forge.vfx.restart(\"VaultVictoryVFX\");\n  Forge.log(\"ECHO_VAULT_WIN\");\n});"
+        }
+      }
+    },
+    {
+      "id": "LightRail0",
+      "name": "Ceiling light rail",
+      "kind": "box",
+      "position": [
+        0,
+        5.1,
+        18
+      ],
+      "size": [
+        7,
+        0.14,
+        0.3
+      ],
+      "color": "#59d6ff",
+      "material": "metal",
+      "emissive": "#1c6b99",
+      "components": {}
+    },
+    {
+      "id": "LightRail1",
+      "name": "Ceiling light rail",
+      "kind": "box",
+      "position": [
+        0,
+        5.1,
+        11
+      ],
+      "size": [
+        7,
+        0.14,
+        0.3
+      ],
+      "color": "#59d6ff",
+      "material": "metal",
+      "emissive": "#1c6b99",
+      "components": {}
+    },
+    {
+      "id": "LightRail2",
+      "name": "Ceiling light rail",
+      "kind": "box",
+      "position": [
+        0,
+        5.1,
+        4
+      ],
+      "size": [
+        7,
+        0.14,
+        0.3
+      ],
+      "color": "#59d6ff",
+      "material": "metal",
+      "emissive": "#1c6b99",
+      "components": {}
+    },
+    {
+      "id": "LightRail3",
+      "name": "Ceiling light rail",
+      "kind": "box",
+      "position": [
+        0,
+        5.1,
+        -3
+      ],
+      "size": [
+        7,
+        0.14,
+        0.3
+      ],
+      "color": "#59d6ff",
+      "material": "metal",
+      "emissive": "#1c6b99",
+      "components": {}
+    },
+    {
+      "id": "LightRail4",
+      "name": "Ceiling light rail",
+      "kind": "box",
+      "position": [
+        0,
+        5.1,
+        -10
+      ],
+      "size": [
+        7,
+        0.14,
+        0.3
+      ],
+      "color": "#59d6ff",
+      "material": "metal",
+      "emissive": "#1c6b99",
+      "components": {}
+    },
+    {
+      "id": "LightRail5",
+      "name": "Ceiling light rail",
+      "kind": "box",
+      "position": [
+        0,
+        5.1,
+        -17
+      ],
+      "size": [
+        7,
+        0.14,
+        0.3
+      ],
+      "color": "#59d6ff",
+      "material": "metal",
+      "emissive": "#1c6b99",
+      "components": {}
+    },
+    {
+      "id": "VaultArch0",
+      "name": "Ceramic overhead beam",
+      "kind": "box",
+      "position": [
+        0,
+        5.1,
+        13
+      ],
+      "size": [
+        31,
+        0.4,
+        0.55
+      ],
+      "color": "#263f54",
+      "material": "metal",
+      "components": {}
+    },
+    {
+      "id": "VaultArch1",
+      "name": "Ceramic overhead beam",
+      "kind": "box",
+      "position": [
+        0,
+        5.1,
+        4
+      ],
+      "size": [
+        31,
+        0.4,
+        0.55
+      ],
+      "color": "#263f54",
+      "material": "metal",
+      "components": {}
+    },
+    {
+      "id": "VaultArch2",
+      "name": "Ceramic overhead beam",
+      "kind": "box",
+      "position": [
+        0,
+        5.1,
+        -5
+      ],
+      "size": [
+        31,
+        0.4,
+        0.55
+      ],
+      "color": "#263f54",
+      "material": "metal",
+      "components": {}
+    },
+    {
+      "id": "VaultArch3",
+      "name": "Ceramic overhead beam",
+      "kind": "box",
+      "position": [
+        0,
+        5.1,
+        -14
+      ],
+      "size": [
+        31,
+        0.4,
+        0.55
+      ],
+      "color": "#263f54",
+      "material": "metal",
+      "components": {}
+    },
+    {
+      "id": "RelayBeep",
+      "name": "RelayBeep",
+      "kind": "empty",
+      "position": [
+        0,
+        1,
+        -5
+      ],
+      "size": [
+        1,
+        1,
+        1
+      ],
+      "components": {
+        "Sound": {
+          "src": "./assets/core-relay-beep.wav",
+          "fileName": "core-relay-beep.wav",
+          "volume": 0.65,
+          "loop": false,
+          "autoplay": false,
+          "spatial": false,
+          "maxDistance": 30
+        }
+      }
+    },
+    {
+      "id": "StateModule",
+      "name": "echo.state",
+      "kind": "empty",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "components": {
+        "Script": {
+          "name": "echo.state",
+          "kind": "ModuleScript",
+          "enabled": true,
+          "source": "const active = new Set();\nForge.module({\n activate(id) {\n   const before=active.size;\n   active.add(id);\n   const count=active.size;\n   return {count,complete:count===3,newlyActivated:count>before,message:count===3?\"VAULT UNLOCKED • REACH THE EXIT\":\"NODE \"+id+\" ONLINE • \"+(3-count)+\" REMAIN\"};\n },\n count(){return active.size;}\n});"
+        }
+      }
+    },
+    {
+      "id": "GameController",
+      "name": "echo.controller",
+      "kind": "empty",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "components": {
+        "Script": {
+          "name": "echo.controller",
+          "kind": "Script",
+          "enabled": true,
+          "source": "let timer=0;\nForge.onStart(() => {\n Forge.ui.setText(\"ObjectiveText\",\"INFILTRATE • ACTIVATE 3 POWER NODES\");\n Forge.ui.setText(\"CounterText\",\"0 / 3 POWER NODES\");\n Forge.ui.setText(\"InfoText\",\"Find the neon terminals • Press E to activate\");\n Forge.log(\"ECHO_VAULT_READY\");\n});\nForge.onUpdate((dt)=> {\n timer+=dt;\n if(timer>.25){timer=0;Forge.ui.setText(\"HealthText\",\"SHIELD \"+Math.round(Forge.player.getHealth())+\"/\"+Math.round(Forge.player.getMaxHealth()));}\n const core=Forge.world.get(\"CoreBand\");\n if(core) core.rotate(0,dt*14,0);\n});\nForge.on(\"echo.complete\",()=> {\n Forge.world.get(\"GateDoor\")?.move(0,6,0);\n Forge.world.get(\"VaultCore\")?.setColor(\"#55e3bc\");\n Forge.ui.setText(\"ObjectiveText\",\"VAULT OPEN • REACH THE SOUTH EXIT\");\n Forge.ui.setText(\"InfoText\",\"Head to the orange gate • Escape to win\");\n Forge.vfx.restart(\"VaultVictoryVFX\");\n Forge.audio.play(\"RelayBeep\");\n Forge.log(\"ECHO_VAULT_UNLOCKED\");\n});"
+        }
+      }
+    },
+    {
+      "id": "HUDPanel",
+      "name": "HUDPanel",
+      "kind": "empty",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "components": {
+        "UI": {
+          "type": "panel",
+          "text": "",
+          "x": 22,
+          "y": 20,
+          "width": 430,
+          "height": 142,
+          "fontSize": 12,
+          "color": "#ffffff",
+          "background": "#0a1727db",
+          "visible": true,
+          "anchor": "top-left"
+        }
+      }
+    },
+    {
+      "id": "ObjectiveText",
+      "name": "ObjectiveText",
+      "kind": "empty",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "components": {
+        "UI": {
+          "type": "text",
+          "text": "INFILTRATE • ACTIVATE 3 POWER NODES",
+          "x": 28,
+          "y": 27,
+          "width": 400,
+          "height": 36,
+          "fontSize": 17,
+          "color": "#8bf4fa",
+          "background": "#142b3cdb",
+          "visible": true,
+          "anchor": "top-left"
+        }
+      }
+    },
+    {
+      "id": "CounterText",
+      "name": "CounterText",
+      "kind": "empty",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "components": {
+        "UI": {
+          "type": "text",
+          "text": "0 / 3 POWER NODES",
+          "x": 28,
+          "y": 70,
+          "width": 260,
+          "height": 28,
+          "fontSize": 16,
+          "color": "#f2ce85",
+          "background": "#142b3cdb",
+          "visible": true,
+          "anchor": "top-left"
+        }
+      }
+    },
+    {
+      "id": "InfoText",
+      "name": "InfoText",
+      "kind": "empty",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "components": {
+        "UI": {
+          "type": "text",
+          "text": "Find the neon terminals • Press E",
+          "x": 28,
+          "y": 105,
+          "width": 390,
+          "height": 34,
+          "fontSize": 13,
+          "color": "#b1d7e8",
+          "background": "#142b3cdb",
+          "visible": true,
+          "anchor": "top-left"
+        }
+      }
+    },
+    {
+      "id": "HealthText",
+      "name": "HealthText",
+      "kind": "empty",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "components": {
+        "UI": {
+          "type": "text",
+          "text": "SHIELD 100/100",
+          "x": 12,
+          "y": 15,
+          "width": 220,
+          "height": 32,
+          "fontSize": 16,
+          "color": "#ff9ba8",
+          "background": "#102436cc",
+          "visible": true,
+          "anchor": "top-center"
+        }
+      }
+    },
+    {
+      "id": "HintButton",
+      "name": "HintButton",
+      "kind": "empty",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "components": {
+        "UI": {
+          "type": "button",
+          "text": "? Mission hint",
+          "x": 18,
+          "y": 18,
+          "width": 143,
+          "height": 38,
+          "fontSize": 14,
+          "color": "#0d2033",
+          "background": "#91eefa",
+          "visible": true,
+          "anchor": "bottom-center"
+        },
+        "Script": {
+          "name": "echo.hint",
+          "kind": "LocalScript",
+          "enabled": true,
+          "source": "Forge.onClick(async () => {\n const count=Forge.require(\"echo.state\").count();\n Forge.ui.setText(\"InfoText\",count===3?\"ESCAPE south through the opened gate\":\"Walk near the power nodes and press E • Avoid red barriers\");\n await Forge.time.wait(3);\n Forge.ui.setText(\"InfoText\",count===3?\"Exit unlocked\":\"Keep moving • Use Shift to sprint\");\n});"
+        }
+      }
+    }
+  ]
+}

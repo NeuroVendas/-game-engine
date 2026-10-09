@@ -167,8 +167,9 @@ button { cursor: pointer; }
 .studio-shell {
   height: 100%;
   display: grid;
-  grid-template-rows: 27px 45px 1fr 26px;
-  min-width: 900px;
+  grid-template-rows: 28px auto minmax(0, 1fr) 26px;
+  min-width: 0;
+  min-height: 0;
   color: #202830;
   background: #aeb8c0;
 }
@@ -189,8 +190,19 @@ button { cursor: pointer; }
   background: linear-gradient(#edf1f4,#c9d1d7);
   border-bottom:1px solid #8997a2;
 }
-.toolbar { display:flex; align-items:center; gap:4px; overflow-x:auto; scrollbar-width:none; }
-.toolbar::-webkit-scrollbar { display:none; }
+.topbar { min-width:0; overflow:visible; }
+.toolbar {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  align-content:center;
+  gap:5px;
+  width:100%;
+  min-width:0;
+  overflow:visible;
+}
+.toolbar button, .toolbar select { flex: 0 0 auto; white-space:nowrap; font-size:11px; }
+.toolbar .separator { flex:0 0 1px; }
 .separator { width:1px; height:27px; background:#98a4ad; margin:0 4px; }
 .toolbar button, .toolbar select {
   height:30px;
@@ -206,7 +218,26 @@ button { cursor: pointer; }
 .toolbar button.active { outline:2px solid #abc94a55; border-color:#78952c; }
 .toolbar .play { color:#315f18; font-weight:700; }
 
-.workspace { min-height:0; display:grid; grid-template-columns:225px 1fr 255px; }
+.workspace {
+  min-height:0;
+  min-width:0;
+  overflow:hidden;
+  display:grid;
+  grid-template-columns:minmax(190px, 17vw) minmax(0, 1fr) minmax(220px, 20vw);
+}
+@media (max-width:1100px) {
+  .workspace { grid-template-columns:minmax(165px, 20vw) minmax(0, 1fr) minmax(185px, 23vw); }
+  .toolbar button, .toolbar select { padding-inline:5px; }
+}
+@media (max-width:750px) {
+  .studio-title { display:none; }
+  .workspace { grid-template-columns:148px minmax(0, 1fr) 160px; }
+  .studio-menubar button { padding-inline:5px; }
+  .topbar { padding:4px; }
+  .toolbar { gap:3px; }
+}
+.viewport-wrap { min-width:0; min-height:0; }
+#viewport { display:block; }
 .panel {
   min-width:0;
   background:#f2f4f5;
@@ -1420,4 +1451,49 @@ input, textarea { cursor: text; }
 }
 .playable-template-card {
   border-color: #829866;
+}
+
+/* Echo Vault: a real playable built-in showcase rather than a generic card. */
+.echo-thumb, .echo-vault-template {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 60%, #22e7d24b 0%, transparent 32%),
+    repeating-linear-gradient(90deg, transparent 0 23px, #46bcd10b 23px 25px),
+    linear-gradient(150deg, #04101c, #163b56 59%, #0a192b) !important;
+  color: #a7f7fb;
+}
+.echo-thumb::after, .echo-vault-template::after {
+  content:"";
+  position:absolute;
+  inset:auto 7% 0;
+  height:30%;
+  background:linear-gradient(0deg, #30e2d138,transparent);
+  pointer-events:none;
+}
+.echo-orbit {
+  position:absolute;
+  width:84px;
+  height:84px;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%) rotate(-25deg);
+  border:5px solid #5fe5f2;
+  border-radius:50%;
+  box-shadow:0 0 15px #1bd5e999, inset 0 0 18px #1bd5e955;
+}
+.echo-orbit::after {
+  content:"";
+  position:absolute;
+  inset:13px;
+  border:6px solid #a3edb0;
+  border-radius:50%;
+  transform:rotate(43deg) scaleX(.73);
+  box-shadow:0 0 9px #8af6bc;
+}
+.echo-thumb .thumb-label, .echo-vault-template span {
+  position:relative;
+  z-index:2;
+  text-shadow:0 2px 8px #000;
 }

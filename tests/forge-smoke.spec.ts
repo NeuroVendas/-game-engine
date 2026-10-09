@@ -396,9 +396,10 @@ test("platform home, games, favorites, profile and direct play work", async ({ p
 
   await page.locator("[data-launch-tab='games']").click();
   await expect(page.locator("#launcher-page-games")).toBeVisible();
-  await expect(page.locator("#games-grid .place-card")).toHaveCount(1);
-
-  const heliosCard = page.locator("#games-grid .place-card").first();
+  // The first-party catalog now includes the original Helios benchmark and
+  // Echo Vault. Do not assume the entire Games page has only one game.
+  await expect(page.locator("#games-grid .place-card")).toHaveCount(2);
+  const heliosCard = page.locator("#games-grid .place-card[data-place-name='Project Helios']");
   await heliosCard.click({ position: { x: 50, y: 40 } });
   await expect(page.locator("#game-details-dialog")).toBeVisible();
   await expect(page.locator("#game-detail-title")).toHaveText("Project Helios");
