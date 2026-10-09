@@ -904,3 +904,27 @@ The buttons reflect current Editor/Play state and selection availability. Paste 
 ### Acceptance coverage
 
 Browser Smoke validates toolbar enable/disable state, Copy/Paste, F2 rename, Rename button focus and automatic disabling of editing actions during Play.
+
+## 31. Forge v0.5 — October 8 stabilization and release-candidate handoff
+
+This checkpoint documents the v0.5 stack's **verification progress, not a completed release**. The implementation now includes Studios/creator quick actions, custom prefabs, triggers/hazards, player health and respawn, GLB imported animations, collider authoring, VFX, and Core Relay. The active stack tip is PR #26 (`feature/v05-stabilization`); a separate **draft** PR #27 (`release/v05-rc`) collects the entire stacked development line toward `main`.
+
+### Stabilization changes
+
+- Repaired component rebuild paths and restored Trigger/Hazard runtime state.
+- Improved low-frame-rate movement and player death/respawn coverage; first/third-person camera radius restoration and explicit jump impulse diagnostics.
+- Registered the Babylon.js shadow scene component needed by lighting.
+- Preserved imported GLB geometry/animation while editing colliders, and made the Inspector's Fit Proxy/Reset Proxy actions resilient to rerenders. Fitting activates collision on GLB entities, and diagnostics expose stable entity IDs.
+- Added higher-signal Browser Smoke checks that run three previously flaky workflows first, then the full suite, plus GitHub Actions filters for stacked PRs and concurrency improvements to reduce duplicate runs.
+
+### Verification evidence at the end of the session
+
+- CI / scene validation / TypeScript / production build: **passed** on commit `af9f80d0c0248a1982e369bd0ba5836b43ac6b57` ([run 37869295914](https://github.com/NeuroVendas/-game-engine/actions/runs/37869295914)).
+- Cloud Smoke: **passed** ([run 37869295899](https://github.com/NeuroVendas/-game-engine/actions/runs/37869295899)).
+- Browser Smoke: **still failing** ([run 37869295897](https://github.com/NeuroVendas/-game-engine/actions/runs/37869295897)); the remaining focused failure is Core Relay's real-WASD `moveAlongWorldAxis` navigation, which can time out while oscillating near a waypoint. GLB Fit/Reset and direct-play player tests passed in that same focused run. A previous full 16-case run reached 14/16 green; this is **not** proof of a clean final build.
+
+### Release discipline
+
+- No merge to `main` occurred as part of this milestone.
+- The generated `forge-preview-v05` branch still builds from historical `forge-v0.5`, not automatically from PR #27.
+- The exact next steps, PR links, branch SHAs, blocker reproduction commands, and safety rules are in root `CONTINUE_HERE.md` and `docs/RECOVERY.md`. Revalidate on the current head before any release.

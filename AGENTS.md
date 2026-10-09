@@ -1,5 +1,7 @@
 # AGENTS.md — Forge =]
 
+> **October 2026 v0.5 handoff / release gate:** Continue on `feature/v05-stabilization` (PR #26); draft release candidate `release/v05-rc` is PR #27 to `main`. **Read [CONTINUE_HERE.md](CONTINUE_HERE.md) before writing code.** The latest verified `npm run check`, `npm run build`, and `npm run test:cloud` passed, but the real-WASD Core Relay browser test is still failing intermittently. **Do not merge #27, declare the v0.5 release finished, or bypass the gameplay test while Browser Smoke is red.** Treat the handoff as canonical even if `main` or the generated preview differs.
+
 This file is for AI agents and automated coding assistants working in this repository.
 
 ## Repository identity

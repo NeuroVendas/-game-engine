@@ -1,4 +1,5 @@
 import "@babylonjs/core/Collisions/collisionCoordinator";
+import "@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent";
 import "@babylonjs/core/Rendering/edgesRenderer";
 import "@babylonjs/loaders/glTF";
 import { Engine } from "@babylonjs/core/Engines/engine";
@@ -457,6 +458,23 @@ export class ForgeEngine {
     return this.entityMeshes.get(id);
   }
 
+  refreshCollider(id: string): void {
+    const entity = this.getEntity(id);
+    const root = this.getMesh(id);
+    if (!entity || !root) return;
+    this.configureCollider(entity, root);
+    if (entity.kind === "model") {
+      for (const mesh of root.getChildMeshes(false)) {
+        if (mesh.metadata?.forgeEntityId !== id
+          || mesh.metadata?.forgeColliderProxy
+          || mesh.metadata?.forgeTriggerVolume) continue;
+        mesh.checkCollisions = Boolean(entity.components?.Collider?.enabled
+          && (entity.components.Collider.mode ?? "mesh") === "mesh");
+      }
+    }
+    this.setCollisionDebug(this.collisionDebugEnabled);
+  }
+
   fitBoxColliderToVisual(id: string): boolean {
     const entity = this.getEntity(id);
     const root = this.getMesh(id);
@@ -511,6 +529,9 @@ export class ForgeEngine {
     const size = maximum.subtract(minimum);
     const center = minimum.add(maximum).scale(0.5);
 
+    // Fitting is an explicit creator request for an active physical collider.
+    // Imported GLB assets start with collision disabled until the creator opts in.
+    collider.enabled = true;
     collider.mode = "box";
     collider.size = [
       Math.max(0.05, Math.abs(size.x)),
@@ -519,7 +540,7 @@ export class ForgeEngine {
     ];
     collider.offset = [center.x, center.y, center.z];
 
-    this.rebuildEntity(id);
+    this.refreshCollider(id);
     return true;
   }
 
@@ -536,7 +557,7 @@ export class ForgeEngine {
     ];
     collider.offset = [0, 0, 0];
 
-    this.rebuildEntity(id);
+    this.refreshCollider(id);
     this.canvas.dataset.lastColliderReset = id;
     return true;
   }

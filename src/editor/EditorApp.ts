@@ -79,6 +79,99 @@ export class EditorApp {
     this.forge = new ForgeEngine(canvas, (message) => this.log(message));
     registerDefaultScripts(this.forge.scripts);
 
+    // Attach fit actions to a stable Inspector root. Imported models can finish
+    // loading between pointerdown and click and rebuild their Inspector buttons.
+    const activateColliderFit = (id: string | undefined) => {
+      const entity = id ? this.forge.getEntity(id) : undefined;
+      if (!entity || this.mode !== "editor" || entity.id !== this.selectedId) return;
+
+      this.canvas.dataset.lastColliderFit = `attempt:${id}`;
+      try {
+        this.checkpoint();
+        const fitted = this.forge.fitBoxColliderToVisual(entity.id);
+        this.canvas.dataset.lastColliderFit = fitted ? entity.id : `unavailable:${entity.id}`;
+        if (!fitted) {
+          this.log(`Could not fit collider: visual geometry for ${entity.name} is not loaded yet.`);
+          return;
+        }
+        this.setSelection(entity.id);
+        this.renderInspector();
+        this.log(`Collider fitted to visual bounds: ${entity.name}.`);
+      } catch (error) {
+        this.canvas.dataset.lastColliderFit = `error:${entity.id}`;
+        this.log(`Collider fit failed on ${entity.name}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    };
+    const fitTarget = (event: Event): HTMLButtonElement | null => {
+      const target = event.target;
+      if (!(target instanceof Element)) return null;
+      const button = target.closest<HTMLButtonElement>("[data-collider-fit]");
+      return button && this.componentList.contains(button) ? button : null;
+    };
+    let fitHandledOnPointerDown: string | null = null;
+    this.componentList.addEventListener("pointerdown", (event) => {
+      const button = fitTarget(event);
+      if (!button || button.disabled) return;
+      fitHandledOnPointerDown = button.dataset.colliderFit ?? null;
+      // Use the first pointer event, before an asynchronous model-loaded refresh
+      // can remove the button under the cursor.
+      activateColliderFit(fitHandledOnPointerDown ?? undefined);
+    }, true);
+    this.componentList.addEventListener("click", (event) => {
+      const button = fitTarget(event);
+      const id = button?.dataset.colliderFit;
+      if (fitHandledOnPointerDown) {
+        const handledId = fitHandledOnPointerDown;
+        fitHandledOnPointerDown = null;
+        if (!id || id === handledId) return;
+      }
+      if (button && !button.disabled) activateColliderFit(id);
+    });
+
+    // Handle Reset Proxy before pointer-triggered Inspector rerenders in the
+    // same way as Fit Proxy. The rebuilt UI would otherwise swallow the click.
+    const resetTarget = (event: Event): HTMLButtonElement | null => {
+      const target = event.target;
+      if (!(target instanceof Element)) return null;
+      const button = target.closest<HTMLButtonElement>("[data-collider-reset]");
+      return button && this.componentList.contains(button) ? button : null;
+    };
+    const activateColliderReset = (id: string | undefined) => {
+      const entity = id ? this.forge.getEntity(id) : undefined;
+      if (!entity || this.mode !== "editor" || entity.id !== this.selectedId) return;
+
+      this.canvas.dataset.lastColliderResetAttempt = id!;
+      try {
+        this.checkpoint();
+        if (!this.forge.resetBoxCollider(entity.id)) {
+          this.log(`Could not reset collider proxy on ${entity.name}.`);
+          return;
+        }
+        this.setSelection(entity.id);
+        this.renderInspector();
+        this.log(`Collider reset: ${entity.name}.`);
+      } catch (error) {
+        this.log(`Collider reset failed on ${entity.name}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    };
+    let resetHandledOnPointerDown: string | null = null;
+    this.componentList.addEventListener("pointerdown", (event) => {
+      const button = resetTarget(event);
+      if (!button || button.disabled) return;
+      resetHandledOnPointerDown = button.dataset.colliderReset ?? null;
+      activateColliderReset(resetHandledOnPointerDown ?? undefined);
+    }, true);
+    this.componentList.addEventListener("click", (event) => {
+      const button = resetTarget(event);
+      const id = button?.dataset.colliderReset;
+      if (resetHandledOnPointerDown) {
+        const handledId = resetHandledOnPointerDown;
+        resetHandledOnPointerDown = null;
+        if (!id || id === handledId) return;
+      }
+      if (button && !button.disabled) activateColliderReset(id);
+    });
+
     this.canvas.addEventListener("forge:model-loaded", ((event: Event) => {
       const detail = (event as CustomEvent<{ entityId?: string }>).detail;
       if (this.mode === "editor" && detail?.entityId === this.selectedId) {
@@ -174,18 +267,25 @@ export class EditorApp {
 
     this.forge.engine.runRenderLoop(() => {
       const now = performance.now();
-      const dt = Math.min((now - previous) / 1000, 0.05);
+      // Keep real elapsed time at low FPS, but bound catch-up after a paused tab.
+      const elapsed = Math.min(Math.max((now - previous) / 1000, 0), 0.25);
+      const dt = Math.min(elapsed, 0.05);
       previous = now;
 
       try {
         if (this.mode === "play") {
-          this.player?.update(dt);
-          if (this.player) {
-            this.forge.updateTriggers(this.player.body);
-            const hazardDamage = this.forge.tickActiveHazards(dt);
-            if (hazardDamage > 0) this.player.damage(hazardDamage);
+          // Split slow frames into collision-safe steps instead of discarding time.
+          const steps = Math.max(1, Math.ceil(elapsed / 0.05));
+          const step = elapsed / steps;
+          for (let i = 0; i < steps; i += 1) {
+            this.player?.update(step);
+            if (this.player) {
+              this.forge.updateTriggers(this.player.body);
+              const hazardDamage = this.forge.tickActiveHazards(step);
+              if (hazardDamage > 0) this.player.damage(hazardDamage);
+            }
+            this.forge.scripts.tick(step);
           }
-          this.forge.scripts.tick(dt);
         } else {
           this.updateEditorCamera(dt);
           if (this.selectedId) {
@@ -424,8 +524,10 @@ export class EditorApp {
       const entity = this.forge.getEntity(this.selectedId);
       if (!entity) return;
 
+      const nextName = (event.target as HTMLInputElement).value.trim() || entity.name;
+      if (nextName === entity.name) return;
       this.checkpoint();
-      entity.name = (event.target as HTMLInputElement).value.trim() || entity.name;
+      entity.name = nextName;
       this.renderTree();
       this.renderInspector();
       this.log(`Renamed to ${entity.name}`);
@@ -1716,6 +1818,8 @@ export class EditorApp {
         break;
     }
 
+    this.forge.rebuildEntity(entity.id);
+    this.setSelection(entity.id);
     this.renderInspector();
     this.log(`Added ${type} to ${entity.name}.`);
   }
@@ -1787,10 +1891,11 @@ export class EditorApp {
       case "Collider": {
         const component = components.Collider;
         if (!component) return;
+        const refresh = () => this.forge.refreshCollider(entity.id);
 
         this.appendCheckboxField(container, "Enabled", component.enabled, (value) => {
           component.enabled = value;
-        });
+        }, refresh);
 
         this.appendSelectField(container, "Mode", component.mode ?? "mesh", [
           ["mesh", "Mesh"],
@@ -1801,7 +1906,7 @@ export class EditorApp {
             component.size ??= entity.size ? [...entity.size] : [2, 2, 2];
             component.offset ??= [0, 0, 0];
           }
-        });
+        }, refresh);
 
         if ((component.mode ?? "mesh") === "box") {
           const size = component.size ?? (entity.size ? [...entity.size] : [2, 2, 2]);
@@ -1811,23 +1916,23 @@ export class EditorApp {
 
           this.appendNumberField(container, "Size X", size[0], 0.1, (value) => {
             component.size = [Math.max(0.05, Math.abs(value)), size[1], size[2]];
-          });
+          }, refresh);
           this.appendNumberField(container, "Size Y", size[1], 0.1, (value) => {
             component.size = [size[0], Math.max(0.05, Math.abs(value)), size[2]];
-          });
+          }, refresh);
           this.appendNumberField(container, "Size Z", size[2], 0.1, (value) => {
             component.size = [size[0], size[1], Math.max(0.05, Math.abs(value))];
-          });
+          }, refresh);
 
           this.appendNumberField(container, "Offset X", offset[0], 0.1, (value) => {
             component.offset = [value, offset[1], offset[2]];
-          });
+          }, refresh);
           this.appendNumberField(container, "Offset Y", offset[1], 0.1, (value) => {
             component.offset = [offset[0], value, offset[2]];
-          });
+          }, refresh);
           this.appendNumberField(container, "Offset Z", offset[2], 0.1, (value) => {
             component.offset = [offset[0], offset[1], value];
-          });
+          }, refresh);
 
           const actions = document.createElement("div");
           actions.className = "component-actions";
@@ -1835,30 +1940,15 @@ export class EditorApp {
           const fit = document.createElement("button");
           fit.type = "button";
           fit.dataset.colliderFit = entity.id;
-          fit.textContent = "Fit Proxy To Visual";
-          fit.addEventListener("click", () => {
-            this.checkpoint();
-            if (!this.forge.fitBoxColliderToVisual(entity.id)) {
-              this.log(`Could not fit collider: visual geometry for ${entity.name} is not loaded yet.`);
-              return;
-            }
-            this.setSelection(entity.id);
-            this.renderInspector();
-            this.log(`Collider fitted to visual bounds: ${entity.name}.`);
-          });
+          const loadingModel = entity.kind === "model"
+            && this.forge.getMesh(entity.id)?.metadata?.modelLoaded !== true;
+          fit.disabled = loadingModel;
+          fit.textContent = loadingModel ? "Loading model…" : "Fit Proxy To Visual";
 
           const reset = document.createElement("button");
           reset.type = "button";
           reset.dataset.colliderReset = entity.id;
           reset.textContent = "Reset Proxy";
-          reset.addEventListener("click", () => {
-            this.checkpoint();
-            if (!this.forge.resetBoxCollider(entity.id)) return;
-            this.setSelection(entity.id);
-            this.renderInspector();
-            this.log(`Collider reset: ${entity.name}.`);
-          });
-
           actions.append(fit, reset);
           container.appendChild(actions);
 
@@ -2445,7 +2535,8 @@ Forge.onUpdate((dt) => {
     labelText: string,
     value: number,
     step: number,
-    apply: (value: number) => void
+    apply: (value: number) => void,
+    refresh?: () => void
   ): void {
     const label = document.createElement("label");
     label.textContent = labelText;
@@ -2460,11 +2551,13 @@ Forge.onUpdate((dt) => {
         input.value = String(value);
         return;
       }
+      if (!input.isConnected || next === value) return;
       this.checkpoint();
       apply(next);
       if (this.selectedId) {
         const selectedId = this.selectedId;
-        this.forge.rebuildEntity(selectedId);
+        if (refresh) refresh();
+        else this.forge.rebuildEntity(selectedId);
         this.setSelection(selectedId);
       }
       this.renderInspector();
@@ -2479,7 +2572,8 @@ Forge.onUpdate((dt) => {
     container: HTMLDivElement,
     labelText: string,
     value: boolean,
-    apply: (value: boolean) => void
+    apply: (value: boolean) => void,
+    refresh?: () => void
   ): void {
     const label = document.createElement("label");
     label.textContent = labelText;
@@ -2492,7 +2586,8 @@ Forge.onUpdate((dt) => {
       apply(input.checked);
       if (this.selectedId) {
         const selectedId = this.selectedId;
-        this.forge.rebuildEntity(selectedId);
+        if (refresh) refresh();
+        else this.forge.rebuildEntity(selectedId);
         this.setSelection(selectedId);
       }
       this.renderInspector();
@@ -2508,7 +2603,8 @@ Forge.onUpdate((dt) => {
     labelText: string,
     value: string,
     options: Array<[string, string]>,
-    apply: (value: string) => void
+    apply: (value: string) => void,
+    refresh?: () => void
   ): void {
     const label = document.createElement("label");
     label.textContent = labelText;
@@ -2527,7 +2623,8 @@ Forge.onUpdate((dt) => {
       apply(select.value);
       if (this.selectedId) {
         const selectedId = this.selectedId;
-        this.forge.rebuildEntity(selectedId);
+        if (refresh) refresh();
+        else this.forge.rebuildEntity(selectedId);
         this.setSelection(selectedId);
       }
       this.renderInspector();

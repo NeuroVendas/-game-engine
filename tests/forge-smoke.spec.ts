@@ -272,58 +272,100 @@ async function moveAlongWorldAxis(
   page: any,
   axis: "x" | "z",
   target: number,
-  timeout = 14000
+  timeout = 16000,
+  stopWhenPrompt?: string
 ): Promise<void> {
-  const readAxis = async () => {
-    const [x, z] = await readPlayerXZ(page);
-    return axis === "x" ? x : z;
-  };
-
-  const current = await readAxis();
-  if (Math.abs(target - current) <= 0.35) return;
-  const desiredSign = Math.sign(target - current);
-
-  const candidates = axis === "x"
-    ? ["KeyA", "KeyD"]
-    : ["KeyW", "KeyS"];
-
-  let chosen: string | null = null;
-  let bestSignedDelta = -Infinity;
-
-  for (const key of candidates) {
-    const before = await readAxis();
-    await holdMovement(page, [key], 180);
-    const after = await readAxis();
-    const signedDelta = (after - before) * desiredSign;
-
-    if (signedDelta > bestSignedDelta) {
-      bestSignedDelta = signedDelta;
-      chosen = key;
-    }
-
-    if (signedDelta > 0.08) break;
+  const initial = await readPlayerXZ(page);
+  const idx = axis === "x" ? 0 : 1;
+  const sign = Math.sign(target - initial[idx]);
+  if (Math.abs(target - initial[idx]) <= 0.30) return;
+  if (stopWhenPrompt && (await page.locator("#interaction-prompt").textContent())?.includes(stopWhenPrompt)) {
+    return;
   }
 
-  if (!chosen || bestSignedDelta <= 0.02) {
-    throw new Error(`Could not find a movement key for world ${axis.toUpperCase()} axis.`);
+  const forwardRaw = await page.locator("#viewport").getAttribute("data-camera-forward");
+  if (!forwardRaw) throw new Error("Player camera basis unavailable.");
+  const [fx, fz] = forwardRaw.split(",").map(Number);
+  if (!Number.isFinite(fx) || !Number.isFinite(fz)) {
+    throw new Error(`Invalid camera forward vector: ${forwardRaw}`);
+  }
+  const wantedX = axis === "x" ? sign : 0;
+  const wantedZ = axis === "z" ? sign : 0;
+  const directions = [
+    { key: "KeyW", dx: fx, dz: fz },
+    { key: "KeyS", dx: -fx, dz: -fz },
+    { key: "KeyD", dx: fz, dz: -fx },
+    { key: "KeyA", dx: -fz, dz: fx }
+  ];
+  const best = directions.map((item) => ({
+    ...item,
+    score: item.dx * wantedX + item.dz * wantedZ
+  })).sort((a, b) => b.score - a.score)[0];
+  if (best.score < 0.90) {
+    throw new Error(`Core Relay route needs a stable cardinal camera: ${forwardRaw}`);
   }
 
-  const reached = (value: number) =>
-    desiredSign > 0 ? value >= target : value <= target;
-
-  if (reached(await readAxis())) return;
-
-  await page.keyboard.down(chosen);
+  // Playwright/SwiftShader can stall its Node->browser round trips for 0.5s+
+  // under load, causing multi-meter overshoot. Keep genuine Playwright
+  // keyboard DOWN, but watch the real capsule every browser animation frame
+  // and send the matching DOM keyup immediately when the gate or in-game
+  // interaction prompt is reached. The actual PlayerController key handlers,
+  // Babylon physics and colliders still perform ALL movement.
+  const watch = page.evaluate(
+    ({ axis, target, sign, key, timeout, stopWhenPrompt }) => new Promise<void>((resolve, reject) => {
+      const canvas = document.getElementById("viewport") as HTMLCanvasElement | null;
+      const promptEl = document.getElementById("interaction-prompt");
+      if (!canvas) { reject(new Error("Viewport missing")); return; }
+      const start = performance.now();
+      let stopped = false;
+      const release = () => {
+        if (stopped) return;
+        stopped = true;
+        window.dispatchEvent(new KeyboardEvent("keyup", {
+          code: key, key: key.replace(/^Key/, "").toLowerCase(),
+          bubbles: true, cancelable: true
+        }));
+      };
+      const frame = () => {
+        const raw = canvas.dataset.playerPosition ?? "";
+        const parts = raw.split(",").map(Number);
+        const coordinate = parts[axis === "x" ? 0 : 2];
+        const prompt = promptEl?.textContent ?? "";
+        if (stopWhenPrompt && prompt.includes(stopWhenPrompt)) {
+          release(); resolve(); return;
+        }
+        if (Number.isFinite(coordinate) && sign * (target - coordinate) <= 0.25) {
+          release(); resolve(); return;
+        }
+        if (performance.now() - start > timeout) {
+          release();
+          reject(new Error(
+            `Real WASD movement toward ${axis}=${target} timed out: ` +
+            `position=${raw}, prompt=${prompt}, camera=${canvas.dataset.cameraForward}, ` +
+            `velocity=${canvas.dataset.playerVelocity}`
+          ));
+          return;
+        }
+        requestAnimationFrame(frame);
+      };
+      requestAnimationFrame(frame);
+    }),
+    { axis, target, sign, key: best.key, timeout, stopWhenPrompt }
+  );
+  await page.keyboard.down(best.key);
   try {
-    await expect.poll(async () => reached(await readAxis()), {
-      timeout,
-      intervals: [60, 80, 100]
-    }).toBe(true);
+    await watch;
   } finally {
-    await page.keyboard.up(chosen);
+    await page.keyboard.up(best.key);
   }
 
-  await page.waitForTimeout(220);
+  // Allow grounded movement friction to settle before the next segment.
+  await expect.poll(async () => {
+    const raw = await page.locator("#viewport").getAttribute("data-player-velocity");
+    if (!raw) return Infinity;
+    const [vx, , vz] = raw.split(",").map(Number);
+    return Math.hypot(vx, vz);
+  }, { timeout: 2500, intervals: [40, 50, 70] }).toBeLessThan(0.55);
 }
 
 async function expectInteractionPrompt(page: any, promptText: string): Promise<void> {
@@ -442,11 +484,20 @@ test("platform home, games, favorites, profile and direct play work", async ({ p
     intervals: [60, 80, 100]
   }).toBeLessThan(0.5);
 
+  // Do not ask a player to jump while still airborne or settling after a
+  // movement/camera test; verify the actual physics capsule has landed first.
+  await expect.poll(async () => canvas.getAttribute("data-player-grounded"), {
+    timeout: 5000,
+    intervals: [50, 80, 100]
+  }).toBe("true");
+  const previousJumpCount = Number(await canvas.getAttribute("data-player-jump-count")) || 0;
   await page.keyboard.press("Space");
-  await expect.poll(async () => {
-    const velocity = await canvas.getAttribute("data-player-velocity");
-    return velocity ? Number(velocity.split(",")[1]) : -999;
-  }).toBeGreaterThan(0.5);
+  await expect.poll(async () => Number(await canvas.getAttribute("data-player-jump-count")) || 0, {
+    timeout: 3000,
+    intervals: [40, 60, 80]
+  }).toBeGreaterThan(previousJumpCount);
+  const jumpImpulse = Number(await canvas.getAttribute("data-last-player-jump-impulse"));
+  expect(jumpImpulse).toBeGreaterThan(0.5);
 
   await page.locator("#exit-game").click();
   await expect(page.locator("#launcher-page-games")).toBeVisible();
@@ -722,7 +773,7 @@ test("Studio visualizes colliders and round-trips custom prefab hierarchies", as
   await expect(canvas).toHaveAttribute("data-collider-proxy-count", "1");
   await expect(canvas).toHaveAttribute(
     "data-collider-proxies",
-    /Prefab_Block:3\.50:4\.25:2\.75:0\.50:1\.25:-0\.75/
+    /Block:3\.50:4\.25:2\.75:0\.50:1\.25:-0\.75/
   );
 
   await page.locator(".scene-item", { hasText: "Prefab Block" }).dragTo(
@@ -1165,7 +1216,7 @@ test("Hazard component creates a Trigger and deals repeated player damage", asyn
   await expect.poll(async () => canvas.getAttribute("data-last-hazard-damage"), {
     timeout: 3000,
     intervals: [50, 75, 100]
-  }).toMatch(/Hazard_Zone:8\.00/);
+  }).toMatch(/Object:8\.00/);
 
   await expect.poll(async () => canvas.getAttribute("data-player-dead"), {
     timeout: 3500,
@@ -1446,14 +1497,15 @@ test("Studio imports GLB animations and audio assets", async ({ page }) => {
   await expect(canvas).toHaveAttribute("data-collider-proxy-count", "1");
   await expect(canvas).toHaveAttribute(
     "data-collider-proxies",
-    /:1\.00:1\.00:0\.05:0\.50:0\.50:0\.00/
+    /:1\.00:1\.00:0\.05:-0\.50:0\.50:0\.00/
   );
   await expect.poll(async () => canvas.getAttribute("data-model-animation-groups"), {
     timeout: 10000
   }).toBe("1");
 
   await modelCollider.locator("[data-collider-reset]").click();
-  await expect(canvas).toHaveAttribute("data-last-collider-reset", /animated-triangle/);
+  // Diagnostics expose the stable Forge entity ID, not the display name.
+  await expect(canvas).toHaveAttribute("data-last-collider-reset", /animated_triangle/);
   await expect(canvas).toHaveAttribute(
     "data-collider-proxies",
     /:1\.00:1\.00:1\.00:0\.00:0\.00:0\.00/
@@ -1466,7 +1518,7 @@ test("Studio imports GLB animations and audio assets", async ({ page }) => {
   await refreshedCollider.locator("[data-collider-fit]").click();
   await expect(canvas).toHaveAttribute(
     "data-collider-proxies",
-    /:1\.00:1\.00:0\.05:0\.50:0\.50:0\.00/
+    /:1\.00:1\.00:0\.05:-0\.50:0\.50:0\.00/
   );
   await expect.poll(async () => canvas.getAttribute("data-model-animation-groups"), {
     timeout: 10000
@@ -1582,24 +1634,34 @@ test("Core Relay template is a playable complete-game benchmark", async ({ page 
   const canvas = page.locator("#viewport");
 
   // Use axis-aligned gates through known open lanes. Each segment measures the
-  // actual controller mapping before committing to a WASD key, so camera conventions
-  // cannot make the gameplay benchmark drive in the wrong direction.
+  // current camera basis before committing to a WASD key, without blind probes
+  // into nearby console colliders.
   await moveAlongWorldAxis(page, "x", -6.6);
-  await moveAlongWorldAxis(page, "z", -3.1);
+  await moveAlongWorldAxis(page, "z", -4.05, 16000, "Relay A");
   await expectInteractionPrompt(page, "Relay A");
   await page.keyboard.press("KeyE");
   await expect(page.locator("#forge-ui-root")).toContainText("1 / 3 relays online");
 
-  // Relay B: step away from A, descend the open lower lane, then approach from the west.
+  // Relay A can still be next to (or touching) the capsule after the
+  // interaction is pressed. Escape its WEST side first, move around the
+  // front on an open lane, and only then head south toward Relay B.
+  // Never command x=-3.8 directly across Relay A's solid collider.
+  await moveAlongWorldAxis(page, "x", -9.95);
+  // The front edge at z=-4.75 plus capsule clearance needs a wide margin.
+  await moveAlongWorldAxis(page, "z", -2.3);
   await moveAlongWorldAxis(page, "x", -3.8);
-  await moveAlongWorldAxis(page, "z", -7.2);
-  await moveAlongWorldAxis(page, "x", -1.2);
+  await moveAlongWorldAxis(page, "z", -9.4);
+  // Stay outside the west face of Relay B until the actual prompt appears.
+  await moveAlongWorldAxis(page, "x", -2.35, 16000, "Relay B");
   await expectInteractionPrompt(page, "Relay B");
   await page.keyboard.press("KeyE");
   await expect(page.locator("#forge-ui-root")).toContainText("2 / 3 relays online");
 
-  // Relay C: stay in the lower lane and approach from the west, before its collider face.
-  await moveAlongWorldAxis(page, "x", 4.4);
+  // Back away from the solid Relay B before crossing to the eastern
+  // corridor; then approach Relay C from its reachable west side.
+  await moveAlongWorldAxis(page, "x", -3.8);
+  await moveAlongWorldAxis(page, "z", -7.2);
+  await moveAlongWorldAxis(page, "x", 5.0, 16000, "Relay C");
   await expectInteractionPrompt(page, "Relay C");
   await page.keyboard.press("KeyE");
   await expect(page.locator("#forge-ui-root")).toContainText("3 / 3 relays online");

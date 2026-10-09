@@ -24,6 +24,7 @@ export class PlayerController {
   private horizontalVelocity = Vector3.Zero();
   private coyoteTime = 0;
   private jumpBuffer = 0;
+  private jumpCount = 0;
   private grounded = false;
   private firstPerson = false;
   private interactPressed = false;
@@ -32,6 +33,7 @@ export class PlayerController {
   private landingCompression = 0;
   private sprintBlend = 0;
   private thirdPersonRadius = 6;
+  private cameraCollisionGrace = 0;
   private readonly thirdPersonMinRadius = 2.35;
   private readonly thirdPersonMaxRadius = 11.5;
   private colliderHeight = 3.05;
@@ -55,16 +57,22 @@ export class PlayerController {
     this.keys.add(event.code);
 
     if (event.code === "Space" && !event.repeat) {
-      this.jumpBuffer = 0.14;
+      this.jumpBuffer = 0.24;
     }
 
     if (event.code === "KeyC" && !event.repeat) {
       if (!this.firstPerson) {
+        // Capture the actual visible zoom immediately before the mode switch.
+        // Collision handling is suspended across the first-person transition,
+        // so that returning to third-person cannot snap through the avatar.
         this.thirdPersonRadius = Math.min(
           this.thirdPersonMaxRadius,
           Math.max(this.thirdPersonMinRadius, this.camera.radius)
         );
         this.firstPerson = true;
+        this.cameraCollisionGrace = 0;
+        // First-person starts within the player's collider; avoid self-collision.
+        this.camera.checkCollisions = false;
         this.camera.lowerRadiusLimit = 0.35;
         this.camera.upperRadiusLimit = 0.6;
         this.camera.radius = 0.45;
@@ -72,11 +80,16 @@ export class PlayerController {
         this.firstPerson = false;
         this.camera.lowerRadiusLimit = this.thirdPersonMinRadius;
         this.camera.upperRadiusLimit = this.thirdPersonMaxRadius;
+        // Restore the chosen zoom before allowing collisions to adjust the camera.
+        // This prevents a collision while crossing the player capsule at radius 0.45.
+        this.camera.checkCollisions = false;
+        this.cameraCollisionGrace = 0.4;
         this.camera.radius = this.thirdPersonRadius;
       }
 
       this.avatarRoot.setEnabled(!this.firstPerson);
       this.forge.canvas.dataset.cameraMode = this.firstPerson ? "first-person" : "third-person";
+      this.forge.canvas.dataset.cameraRadius = this.camera.radius.toFixed(3);
       this.log(this.firstPerson ? "First-person camera." : "Third-person camera.");
     }
 
@@ -230,6 +243,7 @@ export class PlayerController {
     forge.canvas.dataset.playerJumpPower = this.jumpPower.toFixed(3);
     forge.canvas.dataset.playerKillY = this.killY.toFixed(3);
     this.syncHealthDiagnostics();
+    this.forge.canvas.dataset.playerJumpCount = "0";
 
     window.addEventListener("keydown", this.onKeyDown, { passive: false });
     window.addEventListener("keyup", this.onKeyUp);
@@ -250,7 +264,7 @@ export class PlayerController {
         if (this.deathTimer <= 0) this.respawn();
       }
 
-      this.forge.canvas.dataset.playerMovementState = "dead";
+      this.forge.canvas.dataset.playerMovementState = this.dead ? "dead" : "idle";
       return;
     }
 
@@ -289,6 +303,9 @@ export class PlayerController {
 
     if (this.jumpBuffer > 0 && this.coyoteTime > 0) {
       this.verticalVelocity = this.jumpPower;
+      this.jumpCount += 1;
+      this.forge.canvas.dataset.playerJumpCount = String(this.jumpCount);
+      this.forge.canvas.dataset.lastPlayerJumpImpulse = this.verticalVelocity.toFixed(3);
       this.jumpBuffer = 0;
       this.coyoteTime = 0;
       this.grounded = false;
@@ -350,6 +367,11 @@ export class PlayerController {
         this.thirdPersonMaxRadius,
         Math.max(this.thirdPersonMinRadius, this.camera.radius)
       );
+    }
+
+    if (!this.firstPerson && this.cameraCollisionGrace > 0) {
+      this.cameraCollisionGrace = Math.max(0, this.cameraCollisionGrace - dt);
+      if (this.cameraCollisionGrace === 0) this.camera.checkCollisions = true;
     }
 
     const desiredFov = this.firstPerson ? 0.79 : 0.82 + this.sprintBlend * 0.045;
@@ -553,6 +575,8 @@ export class PlayerController {
     delete this.forge.canvas.dataset.avatarRig;
     delete this.forge.canvas.dataset.avatarShape;
     delete this.forge.canvas.dataset.avatarAnimation;
+    delete this.forge.canvas.dataset.playerJumpCount;
+    delete this.forge.canvas.dataset.lastPlayerJumpImpulse;
 
     for (const part of this.avatarParts) {
       this.forge.unregisterShadowCaster(part, false);
