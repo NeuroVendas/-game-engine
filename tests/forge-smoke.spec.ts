@@ -1639,7 +1639,8 @@ test("Core Relay template is a playable complete-game benchmark", async ({ page 
   // front on an open lane, and only then head south toward Relay B.
   // Never command x=-3.8 directly across Relay A's solid collider.
   await moveAlongWorldAxis(page, "x", -9.95);
-  await moveAlongWorldAxis(page, "z", -3.0);
+  // The front edge at z=-4.75 plus capsule clearance needs a wide margin.
+  await moveAlongWorldAxis(page, "z", -2.3);
   await moveAlongWorldAxis(page, "x", -3.8);
   await moveAlongWorldAxis(page, "z", -9.4);
   // Stay outside the west face of Relay B until the actual prompt appears.
