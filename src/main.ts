@@ -60,6 +60,10 @@ const developGrid = must<HTMLDivElement>("game-grid");
 const homeProjects = must<HTMLDivElement>("home-projects");
 const recentList = must<HTMLDivElement>("recent-list");
 
+// Capture one-time verification failures before the auth SDK initializes and
+// can normalize/remove the OAuth-style hash parameters.
+const initialConfirmationProblem = confirmationRedirectProblem();
+
 let editor: EditorApp | null = null;
 let state: PlatformState = loadPlatformState();
 let projects = loadProjects();
@@ -339,8 +343,7 @@ async function bootstrapCloud(): Promise<void> {
       await hydrateAccount(session);
     } else {
       renderAll();
-      const redirectProblem = confirmationRedirectProblem();
-      if (redirectProblem) openAuth(redirectProblem);
+      if (initialConfirmationProblem) openAuth(initialConfirmationProblem);
     }
 
     onAuthChange((nextSession) => {
