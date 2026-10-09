@@ -272,44 +272,76 @@ async function moveAlongWorldAxis(
   page: any,
   axis: "x" | "z",
   target: number,
-  timeout = 14000
+  timeout = 16000
 ): Promise<void> {
-  const readAxis = async () => {
-    const [x, z] = await readPlayerXZ(page);
-    return axis === "x" ? x : z;
-  };
-
-  const current = await readAxis();
-  if (Math.abs(target - current) <= 0.35) return;
-  const desiredSign = Math.sign(target - current);
-
-  // Choose a real WASD input from the current camera basis. Probing both
-  // directions beside a solid console can push the player into its collider.
+  const startPosition = await readPlayerXZ(page);
+  const destination: [number, number] = axis === "x"
+    ? [target, startPosition[1]]
+    : [startPosition[0], target];
   const forwardRaw = await page.locator("#viewport").getAttribute("data-camera-forward");
   if (!forwardRaw) throw new Error("Player camera basis unavailable.");
   const [fx, fz] = forwardRaw.split(",").map(Number);
-  const candidates: Array<[string, number]> = axis === "x"
-    ? [["KeyW", fx], ["KeyS", -fx], ["KeyD", fz], ["KeyA", -fz]]
-    : [["KeyW", fz], ["KeyS", -fz], ["KeyD", -fx], ["KeyA", fx]];
-  candidates.sort((a, b) => b[1] * desiredSign - a[1] * desiredSign);
-  const chosen = candidates[0][0];
-
-  const reached = (value: number) =>
-    desiredSign > 0 ? value >= target : value <= target;
-
-  if (reached(await readAxis())) return;
-
-  await page.keyboard.down(chosen);
-  try {
-    await expect.poll(async () => reached(await readAxis()), {
-      timeout,
-      intervals: [60, 80, 100]
-    }).toBe(true);
-  } finally {
-    await page.keyboard.up(chosen);
+  if (!Number.isFinite(fx) || !Number.isFinite(fz)) {
+    throw new Error(`Invalid camera forward vector: ${forwardRaw}`);
   }
 
-  await page.waitForTimeout(220);
+  // Drive through the real keyboard/controller/physics stack. A one-key
+  // projection drifts sideways whenever the camera is diagonal, so steer
+  // toward the world waypoint and damp measured velocity every few frames.
+  const held = new Set<string>();
+  const setMovement = async (wanted: Set<string>) => {
+    for (const key of [...held]) {
+      if (!wanted.has(key)) {
+        await page.keyboard.up(key);
+        held.delete(key);
+      }
+    }
+    for (const key of wanted) {
+      if (!held.has(key)) {
+        await page.keyboard.down(key);
+        held.add(key);
+      }
+    }
+  };
+  const origin = Date.now();
+  let lastPosition = startPosition;
+  let lastVelocity: [number, number] = [0, 0];
+  try {
+    while (Date.now() - origin < timeout) {
+      lastPosition = await readPlayerXZ(page);
+      const velocityRaw = await page.locator("#viewport").getAttribute("data-player-velocity");
+      const [vx, , vz] = (velocityRaw ?? "0,0,0").split(",").map(Number);
+      lastVelocity = [Number.isFinite(vx) ? vx : 0, Number.isFinite(vz) ? vz : 0];
+      const dx = destination[0] - lastPosition[0];
+      const dz = destination[1] - lastPosition[1];
+      const distance = Math.hypot(dx, dz);
+      const speed = Math.hypot(...lastVelocity);
+      if (distance <= 0.42 && speed <= 0.85) return;
+
+      // Brake in world space before reaching a collider or overshooting a turn.
+      const steerX = dx - lastVelocity[0] * 0.18;
+      const steerZ = dz - lastVelocity[1] * 0.18;
+      const forward = steerX * fx + steerZ * fz;
+      const sideways = steerX * fz - steerZ * fx;
+      const wanted = new Set<string>();
+      if (forward > 0.08) wanted.add("KeyW");
+      else if (forward < -0.08) wanted.add("KeyS");
+      if (sideways > 0.08) wanted.add("KeyD");
+      else if (sideways < -0.08) wanted.add("KeyA");
+      await setMovement(wanted);
+      await page.waitForTimeout(85);
+    }
+    throw new Error(
+      `WASD route to ${axis}=${target} blocked: ` +
+      `position=[${lastPosition.map((value) => value.toFixed(2)).join(",")}], ` +
+      `destination=[${destination.join(",")}], ` +
+      `velocity=[${lastVelocity.map((value) => value.toFixed(2)).join(",")}], ` +
+      `camera=[${fx},${fz}]`
+    );
+  } finally {
+    await setMovement(new Set());
+    await page.waitForTimeout(140);
+  }
 }
 
 async function expectInteractionPrompt(page: any, promptText: string): Promise<void> {
