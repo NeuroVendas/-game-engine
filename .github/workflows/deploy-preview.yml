@@ -3,7 +3,7 @@ name: Deploy Forge Preview
 on:
   push:
     branches:
-      - forge-v0.5
+      - main
   workflow_dispatch:
 
 permissions:
@@ -26,6 +26,9 @@ jobs:
       - run: npm install
       - run: npm run check
       - run: npm run build
+
+      - name: Stamp source revision for deployment verification
+        run: printf '%s\\n' "$GITHUB_SHA" > dist/revision.txt
 
       - name: Publish dist to forge-preview branch
         run: |
