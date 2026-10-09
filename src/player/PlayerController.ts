@@ -60,10 +60,8 @@ export class PlayerController {
 
     if (event.code === "KeyC" && !event.repeat) {
       if (!this.firstPerson) {
-        this.thirdPersonRadius = Math.min(
-          this.thirdPersonMaxRadius,
-          Math.max(this.thirdPersonMinRadius, this.camera.radius)
-        );
+        // The last rendered third-person radius is the one the player saw.
+        // Collision adjustments between frames must not overwrite their saved zoom.
         this.firstPerson = true;
         this.camera.lowerRadiusLimit = 0.35;
         this.camera.upperRadiusLimit = 0.6;
