@@ -272,7 +272,8 @@ async function moveAlongWorldAxis(
   page: any,
   axis: "x" | "z",
   target: number,
-  timeout = 16000
+  timeout = 16000,
+  stopWhenPrompt?: string
 ): Promise<void> {
   const startPosition = await readPlayerXZ(page);
   const destination: [number, number] = axis === "x"
@@ -309,6 +310,13 @@ async function moveAlongWorldAxis(
   try {
     while (Date.now() - origin < timeout) {
       lastPosition = await readPlayerXZ(page);
+      // Proximity interactions are based on the live capsule-to-entity
+      // distance. Do not overshoot a real interaction trying to hit an
+      // arbitrary waypoint beyond the interactable's reach.
+      if (stopWhenPrompt) {
+        const prompt = await page.locator("#interaction-prompt").textContent();
+        if (prompt?.includes(stopWhenPrompt)) return;
+      }
       const velocityRaw = await page.locator("#viewport").getAttribute("data-player-velocity");
       const [vx, , vz] = (velocityRaw ?? "0,0,0").split(",").map(Number);
       lastVelocity = [Number.isFinite(vx) ? vx : 0, Number.isFinite(vz) ? vz : 0];
@@ -337,7 +345,8 @@ async function moveAlongWorldAxis(
       `position=[${lastPosition.map((value) => value.toFixed(2)).join(",")}], ` +
       `destination=[${destination.join(",")}], ` +
       `velocity=[${lastVelocity.map((value) => value.toFixed(2)).join(",")}], ` +
-      `camera=[${fx},${fz}]`
+      `camera=[${fx},${fz}], expectedPrompt=${stopWhenPrompt ?? "none"}, ` +
+      `actualPrompt=${await page.locator("#interaction-prompt").textContent()}`
     );
   } finally {
     await setMovement(new Set());
@@ -1614,7 +1623,7 @@ test("Core Relay template is a playable complete-game benchmark", async ({ page 
   // current camera basis before committing to a WASD key, without blind probes
   // into nearby console colliders.
   await moveAlongWorldAxis(page, "x", -6.6);
-  await moveAlongWorldAxis(page, "z", -3.1);
+  await moveAlongWorldAxis(page, "z", -4.05, 16000, "Relay A");
   await expectInteractionPrompt(page, "Relay A");
   await page.keyboard.press("KeyE");
   await expect(page.locator("#forge-ui-root")).toContainText("1 / 3 relays online");
@@ -1624,7 +1633,7 @@ test("Core Relay template is a playable complete-game benchmark", async ({ page 
   await moveAlongWorldAxis(page, "x", -3.8);
   await moveAlongWorldAxis(page, "z", -9.4);
   // Stay outside the west collider face until aligned with Relay B.
-  await moveAlongWorldAxis(page, "x", -2.35);
+  await moveAlongWorldAxis(page, "x", -2.35, 16000, "Relay B");
   await expectInteractionPrompt(page, "Relay B");
   await page.keyboard.press("KeyE");
   await expect(page.locator("#forge-ui-root")).toContainText("2 / 3 relays online");
@@ -1633,7 +1642,7 @@ test("Core Relay template is a playable complete-game benchmark", async ({ page 
   // corridor; then approach Relay C from its reachable west side.
   await moveAlongWorldAxis(page, "x", -3.8);
   await moveAlongWorldAxis(page, "z", -7.2);
-  await moveAlongWorldAxis(page, "x", 5.0);
+  await moveAlongWorldAxis(page, "x", 5.0, 16000, "Relay C");
   await expectInteractionPrompt(page, "Relay C");
   await page.keyboard.press("KeyE");
   await expect(page.locator("#forge-ui-root")).toContainText("3 / 3 relays online");
