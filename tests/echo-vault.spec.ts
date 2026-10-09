@@ -4,7 +4,7 @@ test("Echo Vault is a playable, remixable first-party game visible without an ac
   await page.goto("/");
   await page.locator("[data-launch-tab='games']").click();
 
-  const card = page.locator('.game-card[data-place-name="ECHO VAULT • Power Shift"]');
+  const card = page.locator('#games-grid .game-card[data-place-name="ECHO VAULT • Power Shift"]');
   await expect(card).toBeVisible();
   await expect(card).toContainText("ECHO VAULT");
   await card.locator('[data-action="play"]').click();
@@ -22,7 +22,7 @@ test("Echo Vault is a playable, remixable first-party game visible without an ac
   await expect(page.locator("#launcher")).toBeVisible();
 
   await page.locator("[data-launch-tab='develop']").click();
-  const official = page.locator('.game-card[data-place-name="ECHO VAULT • Power Shift"]');
+  const official = page.locator('#game-grid .game-card[data-place-name="ECHO VAULT • Power Shift"]');
   await expect(official).toBeVisible();
   await official.locator('[data-action="remix"]').click();
   await expect(page.locator("#mode-badge")).toHaveText("EDITOR");
