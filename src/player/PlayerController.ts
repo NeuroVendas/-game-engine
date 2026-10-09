@@ -32,6 +32,7 @@ export class PlayerController {
   private landingCompression = 0;
   private sprintBlend = 0;
   private thirdPersonRadius = 6;
+  private cameraCollisionGrace = 0;
   private readonly thirdPersonMinRadius = 2.35;
   private readonly thirdPersonMaxRadius = 11.5;
   private colliderHeight = 3.05;
@@ -63,6 +64,9 @@ export class PlayerController {
         // The last rendered third-person radius is the one the player saw.
         // Collision adjustments between frames must not overwrite their saved zoom.
         this.firstPerson = true;
+        this.cameraCollisionGrace = 0;
+        // First-person starts within the player's collider; avoid self-collision.
+        this.camera.checkCollisions = false;
         this.camera.lowerRadiusLimit = 0.35;
         this.camera.upperRadiusLimit = 0.6;
         this.camera.radius = 0.45;
@@ -70,6 +74,10 @@ export class PlayerController {
         this.firstPerson = false;
         this.camera.lowerRadiusLimit = this.thirdPersonMinRadius;
         this.camera.upperRadiusLimit = this.thirdPersonMaxRadius;
+        // Restore the chosen zoom before allowing collisions to adjust the camera.
+        // This prevents a collision while crossing the player capsule at radius 0.45.
+        this.camera.checkCollisions = false;
+        this.cameraCollisionGrace = 0.4;
         this.camera.radius = this.thirdPersonRadius;
       }
 
@@ -349,6 +357,11 @@ export class PlayerController {
         this.thirdPersonMaxRadius,
         Math.max(this.thirdPersonMinRadius, this.camera.radius)
       );
+    }
+
+    if (!this.firstPerson && this.cameraCollisionGrace > 0) {
+      this.cameraCollisionGrace = Math.max(0, this.cameraCollisionGrace - dt);
+      if (this.cameraCollisionGrace === 0) this.camera.checkCollisions = true;
     }
 
     const desiredFov = this.firstPerson ? 0.79 : 0.82 + this.sprintBlend * 0.045;
