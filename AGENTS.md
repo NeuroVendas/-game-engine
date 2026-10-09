@@ -1,5 +1,7 @@
 # AGENTS.md — Forge =]
 
+> **LATEST HANDOFF (2026-10-09):** [CONTINUE_HERE.md](CONTINUE_HERE.md) is authoritative. **PR #28 was merged and Echo Vault is already live**, with CI, Cloud Smoke and **22/22 browser smoke cases passing**. PR #29 auth/email hotfix was merged first and preserved. **Continue from latest `main`**, NOT the historical `feature/echo-vault-demo-ui` branch or old draft PR state. The user has yet to visually review the new release. Do not launch v0.6/desktop automatically; ask what further improvements they want after reviewing the live UI.
+
 > **Released checkpoint — 2026-10-09:** Forge v0.5.0 landed in `main` through merged [PR #27](https://github.com/NeuroVendas/-game-engine/pull/27). **Read [CONTINUE_HERE.md](CONTINUE_HERE.md)** for exact verification, next steps and historical stacked PRs. Future work should branch from current `main`; do not remerge old #13–#26 or continue on the historical `forge-v0.5` branch. CI, Cloud Smoke and two complete 16/16 browser suites passed on the released code.
 
 This file is for AI agents and automated coding assistants working in this repository.
