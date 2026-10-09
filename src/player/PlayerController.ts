@@ -166,48 +166,60 @@ export class PlayerController {
     this.avatarRoot.parent = this.body;
     this.avatarNodes.push(this.avatarRoot);
 
-    const skin = this.makeMaterial("__avatar-skin", "#d6b15d");
-    const shirt = this.makeMaterial("__avatar-shirt", "#e8edf0");
-    const pants = this.makeMaterial("__avatar-pants", "#41678f");
-    const dark = this.makeMaterial("__avatar-dark", "#202a31");
-    const accent = this.makeMaterial("__avatar-accent", "#b7f34a");
+    // Forge Scout v2: proportional silhouette, technical outerwear, hair,
+    // sleeves and boots. All meshes are visual only; the collision capsule,
+    // cameras, controls and animation pivots remain unchanged.
+    const skin = this.makeMaterial("__avatar-skin", "#dfb693");
+    const shirt = this.makeMaterial("__avatar-jacket", "#315c6c");
+    const pants = this.makeMaterial("__avatar-pants", "#26364a");
+    const dark = this.makeMaterial("__avatar-dark", "#1a2935");
+    const accent = this.makeMaterial("__avatar-accent", "#66f1d6");
+    const trim = this.makeMaterial("__avatar-trim", "#d6ebef");
 
     const torso = this.makePart(
       "__avatar-torso",
-      [1.42, 1.08, 0.62],
+      [1.22, 1.18, 0.62],
       [0, 0.18, 0],
       shirt,
       this.avatarRoot
     );
+    this.makePart("__avatar-collar", [0.66, 0.15, 0.65], [0, 0.79, 0], dark, this.avatarRoot);
+    this.makePart("__avatar-jacket-panel", [0.53, 0.82, 0.04], [0, 0.2, 0.34], dark, this.avatarRoot);
+    this.makePart("__avatar-belt", [1.12, 0.13, 0.67], [0, -0.36, 0], dark, this.avatarRoot);
 
     this.headPivot = this.makePivot("__avatar-head-pivot", [0, 0.90, 0], this.avatarRoot);
-    const head = this.makeClassicHead("__avatar-head", [0, 0.39, 0], skin);
+    this.makeClassicHead("__avatar-head", [0, 0.39, 0], skin);
+    this.makePart("__avatar-hair-crown", [0.88, 0.18, 0.85], [0, 0.78, 0], dark, this.headPivot);
+    this.makePart("__avatar-hair-left", [0.13, 0.32, 0.84], [-0.39, 0.62, 0], dark, this.headPivot);
+    this.makePart("__avatar-hair-right", [0.13, 0.32, 0.84], [0.39, 0.62, 0], dark, this.headPivot);
+    this.makePart("__avatar-hair-fringe", [0.73, 0.13, 0.09], [0, 0.69, 0.43], dark, this.headPivot);
 
-    const leftShoulder = this.makePivot("__avatar-left-shoulder", [-0.94, 0.64, 0], this.avatarRoot);
-    const rightShoulder = this.makePivot("__avatar-right-shoulder", [0.94, 0.64, 0], this.avatarRoot);
-    const leftHip = this.makePivot("__avatar-left-hip", [-0.37, -0.40, 0], this.avatarRoot);
-    const rightHip = this.makePivot("__avatar-right-hip", [0.37, -0.40, 0], this.avatarRoot);
-
+    const leftShoulder = this.makePivot("__avatar-left-shoulder", [-0.79, 0.63, 0], this.avatarRoot);
+    const rightShoulder = this.makePivot("__avatar-right-shoulder", [0.79, 0.63, 0], this.avatarRoot);
+    const leftHip = this.makePivot("__avatar-left-hip", [-0.34, -0.40, 0], this.avatarRoot);
+    const rightHip = this.makePivot("__avatar-right-hip", [0.34, -0.40, 0], this.avatarRoot);
     this.armPivots = [leftShoulder, rightShoulder];
     this.legPivots = [leftHip, rightHip];
 
-    const limbSize: [number, number, number] = [0.56, 1.18, 0.58];
-    this.makePart("__avatar-arm-left", limbSize, [0, -0.53, 0], skin, leftShoulder);
-    this.makePart("__avatar-arm-right", limbSize, [0, -0.53, 0], skin, rightShoulder);
-    this.makePart("__avatar-leg-left", limbSize, [0, -0.56, 0], pants, leftHip);
-    this.makePart("__avatar-leg-right", limbSize, [0, -0.56, 0], pants, rightHip);
+    for (const [side, shoulder] of [["left", leftShoulder], ["right", rightShoulder]] as const) {
+      this.makePart(`__avatar-sleeve-${side}`, [0.46, 0.84, 0.49], [0, -0.34, 0], shirt, shoulder);
+      this.makePart(`__avatar-cuff-${side}`, [0.47, 0.1, 0.5], [0, -0.78, 0], accent, shoulder);
+      this.makePart(`__avatar-hand-${side}`, [0.39, 0.26, 0.41], [0, -0.98, 0], skin, shoulder);
+    }
+    this.makePart("__avatar-leg-left", [0.54, 1.17, 0.56], [0, -0.56, 0], pants, leftHip);
+    this.makePart("__avatar-leg-right", [0.54, 1.17, 0.56], [0, -0.56, 0], pants, rightHip);
+    this.makePart("__avatar-boot-left", [0.56, 0.30, 0.78], [0, -1.11, 0.11], dark, leftHip);
+    this.makePart("__avatar-boot-right", [0.56, 0.30, 0.78], [0, -1.11, 0.11], dark, rightHip);
 
-    // Original Forge =] face: simple geometric eyes + bracket smile.
-    this.makePart("__avatar-eye-left", [0.075, 0.075, 0.035], [-0.16, 0.49, 0.425], dark, this.headPivot);
-    this.makePart("__avatar-eye-right", [0.075, 0.075, 0.035], [0.16, 0.49, 0.425], dark, this.headPivot);
-    this.makePart("__avatar-smile", [0.25, 0.045, 0.035], [-0.04, 0.28, 0.425], dark, this.headPivot);
-    this.makePart("__avatar-smile-bracket", [0.045, 0.18, 0.035], [0.12, 0.34, 0.425], dark, this.headPivot);
+    // Geometric Forge face with friendlier proportions and a simple expression.
+    this.makePart("__avatar-eye-left", [0.065, 0.085, 0.035], [-0.15, 0.48, 0.425], dark, this.headPivot);
+    this.makePart("__avatar-eye-right", [0.065, 0.085, 0.035], [0.15, 0.48, 0.425], dark, this.headPivot);
+    this.makePart("__avatar-smile", [0.24, 0.045, 0.035], [0, 0.27, 0.425], dark, this.headPivot);
 
-    // Forge chest mark. This is deliberately original instead of copying legacy game-platform logos.
-    this.makePart("__avatar-badge", [0.48, 0.34, 0.035], [0, 0.18, 0.31], dark, torso);
-    this.makePart("__avatar-badge-eq-top", [0.17, 0.035, 0.025], [-0.08, 0.23, 0.34], accent, torso);
-    this.makePart("__avatar-badge-eq-bottom", [0.17, 0.035, 0.025], [-0.08, 0.13, 0.34], accent, torso);
-    this.makePart("__avatar-badge-bracket", [0.035, 0.19, 0.025], [0.10, 0.18, 0.34], accent, torso);
+    this.makePart("__avatar-badge", [0.35, 0.35, 0.038], [0.31, 0.23, 0.32], trim, torso);
+    this.makePart("__avatar-badge-eq-top", [0.15, 0.032, 0.025], [0.3, 0.29, 0.35], accent, torso);
+    this.makePart("__avatar-badge-eq-bottom", [0.15, 0.032, 0.025], [0.3, 0.17, 0.35], accent, torso);
+    this.makePart("__avatar-badge-bracket", [0.03, 0.18, 0.025], [0.40, 0.23, 0.35], dark, torso);
 
     this.camera = new ArcRotateCamera(
       "__player-camera",
