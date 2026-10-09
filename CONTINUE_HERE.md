@@ -4,18 +4,18 @@
 >
 > **Repository:** `NeuroVendas/-game-engine`
 >
-> **Canonical continuation branch:** `feature/v05-studio-quick-actions`
+> **Canonical continuation branch:** `feature/v05-stabilization`
 >
 > **Handoff base commit:** `53ed8a9edcfe59e1078965f6ed818991ac0ba0c9`
 >
-> **Current top PR:** #25 — Forge v0.5: Studio quick actions
+> **Current top PR:** #26 — Stabilization (on top of #25)
 
 ## Stop and read this first
 
 If you are ChatGPT Work, Codex, another coding agent, or a developer continuing the current Forge work:
 
-1. Continue from **`feature/v05-studio-quick-actions`**.
-2. Do **not** restart from `main`, `forge-v0.5`, or `feature/v05-hazard-volumes` if the goal is to continue the latest work.
+1. Continue from **`feature/v05-stabilization`**.
+2. Do **not** restart from `main`, `forge-v0.5`, or earlier feature branches if the goal is to continue the latest work.
 3. Before adding another feature, make the current top branch pass the complete verification suite.
 4. Read `AGENTS.md`, `docs/CURRENT_STATE.md`, `docs/PROJECT_HISTORY.md`, and this file.
 5. Preserve the stacked branch/PR history below. Do not flatten or reimplement already-completed systems unless fixing a regression.
@@ -51,7 +51,8 @@ The latest line is intentionally stacked. The current continuation point is the 
 | #22 | `feature/v05-hazard-volumes` | #21 branch | Hazard / repeated damage zones |
 | #23 | `feature/v05-player-kill-plane` | #22 branch | Player Kill Y / fall death |
 | #24 | `feature/v05-studio-clipboard` | #23 branch | Hierarchy-aware copy/paste/duplicate |
-| **#25** | **`feature/v05-studio-quick-actions`** | #24 branch | **Toolbar quick actions + F2 rename — CURRENT TIP** |
+| #25 | `feature/v05-studio-quick-actions` | #24 branch | Toolbar quick actions + F2 rename |
+| **#26** | **`feature/v05-stabilization`** | #25 branch | **Component/collider lifecycle + low-FPS fixes — CURRENT TIP** |
 
 ### Parallel PR warning
 
@@ -88,6 +89,15 @@ The current stack includes, among other existing Forge systems:
 - F2 rename flow
 - Core Relay playable benchmark
 - Supabase-backed platform/cloud features already described in `docs/CURRENT_STATE.md`
+
+
+## October 8 stabilization progress (PR #26)
+
+- On `feature/v05-stabilization`, PR #26 already fixes several failure paths described below: component creation rebuild (Trigger/Hazard), collider edits without reloading imported GLB models, deferred Fit Proxy while loading, low-FPS catch-up, and test calibration changes.
+- Registered the Babylon.js `shadowGeneratorSceneComponent` side-effect module; previous Browser Smoke logs showed shadows were unavailable due to this missing registration.
+- Extended Forge CI, Browser Smoke, and Cloud Smoke `pull_request` branch filters to include stacked `feature/**` and `fix/**` PRs, so the v0.5 review stack can be validated before landing.
+- **Verification is still required**: do not mark #26 or the release green until the new Browser Smoke, CI and Cloud Smoke results are reviewed. The six failures listed below are from the older #25 handoff and must be rechecked, not treated as current failures without evidence.
+- **Release gate:** when all checks pass, integrate the stack through a reviewed release PR to `main`, update the automated preview branch from the release source, and smoke-test the deployed preview.
 
 ## Immediate task: stabilize Browser Smoke before new feature work
 
@@ -151,7 +161,7 @@ A build/typecheck alone is not sufficient proof of Studio/runtime behavior.
 
 ## Recommended continuation order
 
-1. Check out/update `feature/v05-studio-quick-actions`.
+1. Check out/update `feature/v05-stabilization`.
 2. Reproduce/fix Trigger creation/rebuild regression first because it blocks Trigger + Hazard tests.
 3. Fix collider proxy authoring/rebuild diagnostics and GLB Fit Proxy path together.
 4. Fix player auto-respawn.
