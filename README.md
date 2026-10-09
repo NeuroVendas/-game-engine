@@ -8,13 +8,11 @@ Project Helios is the first benchmark game.
 
 ## Continue current development
 
-> **AI/Work/developer continuation:** read [`CONTINUE_HERE.md`](CONTINUE_HERE.md) first.
+> **Forge v0.5.0 is merged into `main`.** [Release PR #27](https://github.com/NeuroVendas/-game-engine/pull/27) passed CI, Cloud Smoke and **two independent complete 16/16 browser suites**.
 >
-> **Current development tip:** `feature/v05-stabilization` ([PR #26](https://github.com/NeuroVendas/-game-engine/pull/26)).
+> **AI/Work/developer:** read [`CONTINUE_HERE.md`](CONTINUE_HERE.md) and [`AGENTS.md`](AGENTS.md). New development must branch from current `main`; old `forge-v0.5` and the #13–#26 stack are historical.
 >
-> **Release candidate:** `release/v05-rc` ([draft PR #27 → main](https://github.com/NeuroVendas/-game-engine/pull/27)).
->
-> **Release status (2026-10-08): BLOCKED.** CI/build and Cloud Smoke passed; Browser Smoke still fails intermittently on Core Relay's real-WASD waypoint routing. See `CONTINUE_HERE.md` for precise latest checks and reproduction steps. Do **not** restart from historical `main` or `forge-v0.5`; do not merge the release until the full suite passes.
+> A deployed preview is separate from the git release; check the preview workflow before claiming a live website.
 
 > Current package version: **0.5.0**
 >
