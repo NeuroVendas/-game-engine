@@ -1,4 +1,5 @@
 import "@babylonjs/core/Collisions/collisionCoordinator";
+import "@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent";
 import "@babylonjs/core/Rendering/edgesRenderer";
 import "@babylonjs/loaders/glTF";
 import { Engine } from "@babylonjs/core/Engines/engine";
