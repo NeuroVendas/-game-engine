@@ -462,14 +462,14 @@ test("platform home, games, favorites, profile and direct play work", async ({ p
     timeout: 5000,
     intervals: [50, 80, 100]
   }).toBe("true");
+  const previousJumpCount = Number(await canvas.getAttribute("data-player-jump-count")) || 0;
   await page.keyboard.press("Space");
-  await expect.poll(async () => {
-    const velocity = await canvas.getAttribute("data-player-velocity");
-    return velocity ? Number(velocity.split(",")[1]) : -999;
-  }, {
+  await expect.poll(async () => Number(await canvas.getAttribute("data-player-jump-count")) || 0, {
     timeout: 3000,
     intervals: [40, 60, 80]
-  }).toBeGreaterThan(0.5);
+  }).toBeGreaterThan(previousJumpCount);
+  const jumpImpulse = Number(await canvas.getAttribute("data-last-player-jump-impulse"));
+  expect(jumpImpulse).toBeGreaterThan(0.5);
 
   await page.locator("#exit-game").click();
   await expect(page.locator("#launcher-page-games")).toBeVisible();
@@ -1608,21 +1608,21 @@ test("Core Relay template is a playable complete-game benchmark", async ({ page 
   // current camera basis before committing to a WASD key, without blind probes
   // into nearby console colliders.
   await moveAlongWorldAxis(page, "x", -6.6);
-  await moveAlongWorldAxis(page, "z", -3.1);
+  await moveAlongWorldAxis(page, "z", -3.8);
   await expectInteractionPrompt(page, "Relay A");
   await page.keyboard.press("KeyE");
   await expect(page.locator("#forge-ui-root")).toContainText("1 / 3 relays online");
 
   // Relay B: step away from A, descend the open lower lane, then approach from the west.
   await moveAlongWorldAxis(page, "x", -3.8);
-  await moveAlongWorldAxis(page, "z", -7.2);
+  await moveAlongWorldAxis(page, "z", -7.7);
   await moveAlongWorldAxis(page, "x", -1.2);
   await expectInteractionPrompt(page, "Relay B");
   await page.keyboard.press("KeyE");
   await expect(page.locator("#forge-ui-root")).toContainText("2 / 3 relays online");
 
   // Relay C: stay in the lower lane and approach from the west, before its collider face.
-  await moveAlongWorldAxis(page, "x", 4.4);
+  await moveAlongWorldAxis(page, "x", 4.7);
   await expectInteractionPrompt(page, "Relay C");
   await page.keyboard.press("KeyE");
   await expect(page.locator("#forge-ui-root")).toContainText("3 / 3 relays online");
