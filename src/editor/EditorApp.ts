@@ -79,6 +79,36 @@ export class EditorApp {
     this.forge = new ForgeEngine(canvas, (message) => this.log(message));
     registerDefaultScripts(this.forge.scripts);
 
+    // Inspector content is rebuilt whenever a component is edited or a GLB loads.
+    // Delegate actions to its persistent container so transient button replacement
+    // cannot consume clicks or strand controls with old event handlers.
+    this.componentList.addEventListener("click", (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const fitButton = target.closest<HTMLButtonElement>("[data-collider-fit]");
+      if (!fitButton || !this.componentList.contains(fitButton) || this.mode !== "editor") return;
+      const id = fitButton.dataset.colliderFit;
+      const entity = id ? this.forge.getEntity(id) : undefined;
+      if (!entity || entity.id !== this.selectedId) return;
+
+      this.canvas.dataset.lastColliderFit = `attempt:${id}`;
+      try {
+        this.checkpoint();
+        const fitted = this.forge.fitBoxColliderToVisual(entity.id);
+        this.canvas.dataset.lastColliderFit = fitted ? entity.id : `unavailable:${entity.id}`;
+        if (!fitted) {
+          this.log(`Could not fit collider: visual geometry for ${entity.name} is not loaded yet.`);
+          return;
+        }
+        this.setSelection(entity.id);
+        this.renderInspector();
+        this.log(`Collider fitted to visual bounds: ${entity.name}.`);
+      } catch (error) {
+        this.canvas.dataset.lastColliderFit = `error:${entity.id}`;
+        this.log(`Collider fit failed on ${entity.name}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    });
+
     this.canvas.addEventListener("forge:model-loaded", ((event: Event) => {
       const detail = (event as CustomEvent<{ entityId?: string }>).detail;
       if (this.mode === "editor" && detail?.entityId === this.selectedId) {
@@ -1852,23 +1882,6 @@ export class EditorApp {
           fit.disabled = loadingModel;
           fit.textContent = loadingModel ? "Loading model…" : "Fit Proxy To Visual";
           fit.type = "button";
-          fit.addEventListener("click", () => {
-            try {
-              this.checkpoint();
-              const fitted = this.forge.fitBoxColliderToVisual(entity.id);
-              this.canvas.dataset.lastColliderFit = fitted ? entity.id : `unavailable:${entity.id}`;
-              if (!fitted) {
-                this.log(`Could not fit collider: visual geometry for ${entity.name} is not loaded yet.`);
-                return;
-              }
-              this.setSelection(entity.id);
-              this.renderInspector();
-              this.log(`Collider fitted to visual bounds: ${entity.name}.`);
-            } catch (error) {
-              this.canvas.dataset.lastColliderFit = `error:${entity.id}`;
-              this.log(`Collider fit failed on ${entity.name}: ${error instanceof Error ? error.message : String(error)}`);
-            }
-          });
 
           const reset = document.createElement("button");
           reset.type = "button";
