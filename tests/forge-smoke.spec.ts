@@ -279,6 +279,10 @@ async function moveAlongWorldAxis(
   const destination: [number, number] = axis === "x"
     ? [target, startPosition[1]]
     : [startPosition[0], target];
+  const axisIndex = axis === "x" ? 0 : 1;
+  const initialTravel = target - startPosition[axisIndex];
+  const travelSign = Math.sign(initialTravel);
+  if (Math.abs(initialTravel) <= 0.3) return;
   const forwardRaw = await page.locator("#viewport").getAttribute("data-camera-forward");
   if (!forwardRaw) throw new Error("Player camera basis unavailable.");
   const [fx, fz] = forwardRaw.split(",").map(Number);
@@ -322,10 +326,12 @@ async function moveAlongWorldAxis(
       lastVelocity = [Number.isFinite(vx) ? vx : 0, Number.isFinite(vz) ? vz : 0];
       const dx = destination[0] - lastPosition[0];
       const dz = destination[1] - lastPosition[1];
-      const distance = Math.hypot(dx, dz);
-      // Releasing the keys already brakes with the actual grounded friction.
-      // Requiring low speed here creates a bang-bang oscillation near a target.
-      if (distance <= 0.42) return;
+      const remaining = travelSign * (target - lastPosition[axisIndex]);
+      // A waypoint is a CROSSING GATE, not a point the player must stop on.
+      // Browser frame intervals can move the capsule past a narrow proximity
+      // tolerance in one update; steering back oscillates indefinitely.
+      // Stop at or beyond the gate, and let regular player friction settle.
+      if (remaining <= 0.30) return;
 
       // Brake in world space before reaching a collider or overshooting a turn.
       const steerX = dx - lastVelocity[0] * 0.07;
