@@ -1851,15 +1851,23 @@ export class EditorApp {
             && this.forge.getMesh(entity.id)?.metadata?.modelLoaded !== true;
           fit.disabled = loadingModel;
           fit.textContent = loadingModel ? "Loading model…" : "Fit Proxy To Visual";
+          fit.type = "button";
           fit.addEventListener("click", () => {
-            this.checkpoint();
-            if (!this.forge.fitBoxColliderToVisual(entity.id)) {
-              this.log(`Could not fit collider: visual geometry for ${entity.name} is not loaded yet.`);
-              return;
+            try {
+              this.checkpoint();
+              const fitted = this.forge.fitBoxColliderToVisual(entity.id);
+              this.canvas.dataset.lastColliderFit = fitted ? entity.id : `unavailable:${entity.id}`;
+              if (!fitted) {
+                this.log(`Could not fit collider: visual geometry for ${entity.name} is not loaded yet.`);
+                return;
+              }
+              this.setSelection(entity.id);
+              this.renderInspector();
+              this.log(`Collider fitted to visual bounds: ${entity.name}.`);
+            } catch (error) {
+              this.canvas.dataset.lastColliderFit = `error:${entity.id}`;
+              this.log(`Collider fit failed on ${entity.name}: ${error instanceof Error ? error.message : String(error)}`);
             }
-            this.setSelection(entity.id);
-            this.renderInspector();
-            this.log(`Collider fitted to visual bounds: ${entity.name}.`);
           });
 
           const reset = document.createElement("button");
