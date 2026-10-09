@@ -428,10 +428,19 @@ test("platform home, games, favorites, profile and direct play work", async ({ p
     intervals: [60, 80, 100]
   }).toBeLessThan(0.5);
 
+  // Do not ask a player to jump while still airborne or settling after a
+  // movement/camera test; verify the actual physics capsule has landed first.
+  await expect.poll(async () => canvas.getAttribute("data-player-grounded"), {
+    timeout: 5000,
+    intervals: [50, 80, 100]
+  }).toBe("true");
   await page.keyboard.press("Space");
   await expect.poll(async () => {
     const velocity = await canvas.getAttribute("data-player-velocity");
     return velocity ? Number(velocity.split(",")[1]) : -999;
+  }, {
+    timeout: 3000,
+    intervals: [40, 60, 80]
   }).toBeGreaterThan(0.5);
 
   await page.locator("#exit-game").click();
