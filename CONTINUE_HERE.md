@@ -14,10 +14,11 @@
 
 - **GitHub Release `v0.5.0` is published, NOT a draft:** https://github.com/NeuroVendas/-game-engine/releases/tag/v0.5.0
 - **Release workflow succeeded:** https://github.com/NeuroVendas/-game-engine/actions/runs/37965658343. It checked scenes, TypeScript, production build, cloud smoke and package version. This follows two independently green full Browser Smoke suites from the tested source.
-- **Public browser site is NOT LIVE yet.** Repository metadata reports `has_pages: false`. The official `Publish Forge v0.5 Website` workflow built and uploaded the artifact but Pages deployment failed with HTTP 404 ("Ensure GitHub Pages has been enabled") in https://github.com/NeuroVendas/-game-engine/actions/runs/37965541139.
-- **Human one-time action required:** owner opens https://github.com/NeuroVendas/-game-engine/settings/pages and sets **Build and deployment → Source = GitHub Actions**. After enabling, re-run the failed Pages deployment workflow or launch `Publish Forge v0.5 Website` from GitHub Actions (workflow has `workflow_dispatch`). Confirm the resulting `github-pages` environment URL and deployed `revision.txt` before sharing a playable website URL.
-- A generated static build in `forge-preview-v05` is **not** proof of a reachable hosted production site. Avoid claiming full public website launch until deployment succeeds.
-- **Current task:** finish Pages enablement/verification and then share the confirmed public URL. The Windows installable app and auto-update feature are explicitly deferred until after the v0.5 web launch.
+- **GitHub Pages is now enabled and production deployment succeeded.** GitHub Pages deployment [run 37965541139, attempt 2](https://github.com/NeuroVendas/-game-engine/actions/runs/37965541139) reports `Reported success!` and its environment URL is **https://neurovendas.github.io/-game-engine/**.
+- Deployed Pages build revision: `592430aaada1643719610611a08353b3daa23da4`, a checked build of v0.5.0. This is separate from the subsequent GitHub Release metadata and documentation commits; no gameplay source changes occurred between the tested release candidate and this Pages build.
+- **External visual smoke not independently confirmed**: automation verified GitHub's successful deployment logs and public environment URL, but a direct HTTP request from the assistant runtime was blocked by DNS/network resolution. The user should open the public URL and verify the launcher, Studio, Core Relay and cloud sign-in.
+- The static preview branch `forge-preview-v05` remains separate from the Pages production publishing mechanism.
+- **Current task:** get user's browser confirmation of the published website and repair any live UX/auth routing issues discovered. The Windows installer and auto-update idea remain deferred until the user elects to start them.
 
 ## 1. Start here if you are a DIFFERENT AI / Codex / Work
 
