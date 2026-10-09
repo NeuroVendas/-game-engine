@@ -1,0 +1,34 @@
+name: Forge Browser Smoke
+
+on:
+  push:
+    branches:
+      - forge-v0.4
+      - forge-v0.5
+      - "feature/**"
+      - "fix/**"
+  pull_request:
+    branches:
+      - main
+      - "feature/**"
+      - "fix/**"
+
+concurrency:
+  group: forge-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  browser-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npx playwright install --with-deps chromium
+      # Run fragile creator/gameplay paths first, so regressions fail fast.
+      - name: Focused Studio + gameplay regressions
+        run: npx playwright test -g "platform home, games, favorites, profile and direct play work|Studio imports GLB animations and audio assets|Core Relay template is a playable complete-game benchmark"
+      - name: Complete Browser Smoke
+        run: npm run test:browser

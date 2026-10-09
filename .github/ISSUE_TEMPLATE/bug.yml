@@ -1,0 +1,57 @@
+name: Bug report
+description: Report a reproducible Forge problem
+title: "[BUG] "
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: What broke?
+      description: Describe the problem clearly.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Give the smallest reliable reproduction.
+      placeholder: |
+        1. Open...
+        2. Click...
+        3. Enter Play...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Editor
+        - Runtime
+        - Player / Camera
+        - Scene format
+        - Scripting
+        - AI editing
+        - Project Helios
+        - Build / CI
+        - Multiplayer
+        - Social / Platform
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Screenshot, logs, or preview
+      description: Add anything that makes the issue easier to verify.

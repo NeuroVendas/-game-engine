@@ -1,0 +1,670 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Forge =]</title>
+  </head>
+  <body>
+    <section id="launcher" class="launcher">
+      <header class="site-header">
+        <button class="site-logo site-logo-button" data-go-page="home">FORGE <span>=]</span></button>
+        <nav class="site-nav" aria-label="Forge navigation">
+          <button class="nav-tab active" data-launch-tab="home">Home</button>
+          <button class="nav-tab" data-launch-tab="games">Games</button>
+          <button class="nav-tab" data-launch-tab="favorites">Favorites</button>
+          <button class="nav-tab" data-launch-tab="friends">Friends</button>
+          <button class="nav-tab develop-tab" data-launch-tab="develop">Develop</button>
+        </nav>
+        <button id="account-button" class="site-account account-button">
+          <span class="mail-icon">☺</span>
+          <span class="account-name" id="account-label">Sign In</span>
+          <span class="online-dot" id="account-dot"></span>
+        </button>
+      </header>
+
+      <div class="classic-subnav">
+        <button class="subnav-link active" data-go-page="home">My Forge</button>
+        <button class="subnav-link" data-go-page="games">Browse</button>
+        <button class="subnav-link" data-go-page="favorites">Favorites</button>
+        <button class="subnav-link" data-go-page="develop">Studio</button>
+        <div class="launcher-search">
+          <input id="launcher-search" placeholder="Search Forge..." autocomplete="off" />
+          <button id="launcher-search-button">Search</button>
+        </div>
+      </div>
+
+      <main class="launcher-content launcher-v3">
+        <aside class="launcher-sidebar">
+          <button class="profile-card profile-card-v2 profile-button" id="profile-card-button">
+            <div class="avatar-placeholder">
+              <div class="mini-avatar-head">=]</div>
+              <div class="mini-avatar-body"></div>
+            </div>
+            <strong data-display-name>Builder</strong>
+            <small>Online • Local profile</small>
+          </button>
+
+          <div class="sidebar-block launcher-links">
+            <b>My Forge</b>
+            <button class="side-link active" data-go-page="home">⌂ Home</button>
+            <button class="side-link" data-go-page="games">▦ Games</button>
+            <button class="side-link" data-go-page="favorites">★ Favorites <span class="count-pill" id="favorite-count">0</span></button>
+            <button class="side-link" data-go-page="friends">☺ Friends</button>
+            <button class="side-link" data-go-page="develop">⚒ Develop <span class="count-pill" id="project-count">1</span></button>
+          </div>
+
+          <button id="new-place-side" class="classic-big-button">+ Create New Place</button>
+
+          <div class="sidebar-status">
+            <b>Forge =] v0.5</b>
+            <span>Classic Platform Preview</span>
+            <span id="cloud-status">● Connecting to Forge Cloud...</span>
+          </div>
+        </aside>
+
+        <section class="launcher-main launcher-page" id="launcher-page-home" data-page="home">
+          <div class="welcome-strip">
+            <div>
+              <h1>Welcome back, <span data-display-name>Builder</span>!</h1>
+              <p>Play your places, continue building, or start something new.</p>
+            </div>
+            <div class="welcome-actions">
+              <button class="classic-action" data-go-page="games">Browse Games</button>
+              <button class="primary-classic" data-go-page="develop">Develop</button>
+            </div>
+          </div>
+
+          <section class="classic-section">
+            <div class="section-heading">
+              <h2>Continue Building</h2>
+              <button class="text-button" data-go-page="develop">Manage Places »</button>
+            </div>
+            <div id="home-projects" class="home-projects"></div>
+          </section>
+
+          <div class="home-columns">
+            <section class="classic-section">
+              <div class="section-heading"><h2>Recently Played</h2><button class="text-button" data-go-page="games">Browse »</button></div>
+              <div id="recent-list" class="recent-list"></div>
+            </section>
+
+            <section class="classic-section">
+              <div class="section-heading"><h2>Quick Stats</h2><button class="text-button" id="open-profile">Profile »</button></div>
+              <div class="stats-grid">
+                <div><b id="stat-projects">1</b><span>Places</span></div>
+                <div><b id="stat-favorites">0</b><span>Favorites</span></div>
+                <div><b id="stat-recent">0</b><span>Played</span></div>
+              </div>
+            </section>
+          </div>
+
+          <section class="news-box home-news">
+            <div class="news-title">Forge News</div>
+            <article><b>Forge Platform local-first shell</b><span>Games, favorites, recent history, profile and project management now work in this browser.</span></article>
+            <article><b>Project Helios</b><span>Forge's first benchmark place remains available to play or edit.</span></article>
+          </section>
+        </section>
+
+        <section class="launcher-main launcher-page" id="launcher-page-games" data-page="games" hidden>
+          <div class="launcher-heading">
+            <div><h1>Games</h1><p>Play Forge places directly without entering Studio.</p></div>
+          </div>
+          <div class="category-tabs">
+            <button class="active" data-game-filter="all">All</button>
+            <button data-game-filter="favorites">Favorites</button>
+            <button data-game-filter="recent">Recently Played</button>
+          </div>
+          <div id="games-grid" class="game-grid browse-grid"></div>
+          <div id="games-empty" class="page-empty" hidden>No places match this view.</div>
+        </section>
+
+        <section class="launcher-main launcher-page" id="launcher-page-favorites" data-page="favorites" hidden>
+          <div class="launcher-heading">
+            <div><h1>Favorites</h1><p>Your saved Forge places.</p></div>
+          </div>
+          <div id="favorites-grid" class="game-grid browse-grid"></div>
+          <div id="favorites-empty" class="page-empty" hidden>
+            <div class="old-face big">★</div>
+            <h2>No favorites yet</h2>
+            <p>Use the star button on any game card.</p>
+            <button class="classic-action" data-go-page="games">Browse Games</button>
+          </div>
+        </section>
+
+        <section class="launcher-main launcher-page" id="launcher-page-friends" data-page="friends" hidden>
+          <div class="launcher-heading">
+            <div><h1>Friends</h1><p>Add people by Forge username and manage real friend requests.</p></div>
+          </div>
+
+          <div id="friends-guest" class="social-empty honest-empty">
+            <div class="old-face big">=]</div>
+            <h2>Sign in to use Friends</h2>
+            <p>Forge Cloud accounts can send requests and keep their friend list across browsers.</p>
+            <button id="friends-sign-in" class="primary-classic">Sign In</button>
+          </div>
+
+          <div id="friends-app" hidden>
+            <section class="classic-section friend-add-section">
+              <div class="section-heading"><h2>Add Friend</h2></div>
+              <div class="friend-add-row">
+                <input id="friend-username" placeholder="Exact Forge username, e.g. builder_ab12cd34" autocomplete="off" />
+                <button id="friend-add-button" class="primary-classic">Send Request</button>
+              </div>
+              <div id="friend-message" class="friend-message">Enter a Forge username.</div>
+            </section>
+
+            <div class="home-columns friends-columns">
+              <section class="classic-section">
+                <div class="section-heading"><h2>Friends</h2><span id="friends-count" class="count-pill">0</span></div>
+                <div id="friends-list" class="people-list"></div>
+              </section>
+
+              <section class="classic-section">
+                <div class="section-heading"><h2>Requests</h2><span id="requests-count" class="count-pill">0</span></div>
+                <div id="requests-list" class="people-list"></div>
+              </section>
+            </div>
+          </div>
+        </section>
+
+        <section class="launcher-main launcher-page" id="launcher-page-develop" data-page="develop" hidden>
+          <div class="launcher-heading">
+            <div><h1>Develop</h1><p>Create, edit, test and manage your Forge places.</p></div>
+            <button id="new-place" class="primary-classic">Create New Place</button>
+          </div>
+
+          <div class="develop-toolbar">
+            <button class="active" data-develop-view="places">My Places</button>
+            <button data-develop-view="templates">Starter Templates</button>
+            <span class="develop-count" id="develop-count">1 place</span>
+          </div>
+
+          <div id="develop-places">
+            <div id="game-grid" class="game-grid develop-grid"></div>
+          </div>
+
+          <div id="develop-templates" class="template-grid" hidden>
+            <article class="template-card" data-template-create="baseplate">
+              <div class="template-thumb baseplate-template"></div>
+              <h3>Classic Baseplate</h3>
+              <p>Green baseplate, ready for blocks and scripts.</p>
+              <button>Create</button>
+            </article>
+            <article class="template-card" data-template-create="industrial">
+              <div class="template-thumb industrial-template"></div>
+              <h3>Industrial Blank</h3>
+              <p>Neutral industrial base for facilities and roleplay.</p>
+              <button>Create</button>
+            </article>
+            <article class="template-card playable-template-card" data-template-scene="core-relay">
+              <div class="template-thumb core-relay-template">
+                <div class="mini-core-ring"></div>
+                <span>CORE RELAY</span>
+              </div>
+              <h3>Core Relay — Playable Demo</h3>
+              <p>A complete mini-game using modules, interaction, UI, sound and a win state.</p>
+              <button>Create & Edit</button>
+            </article>
+          </div>
+
+          <section class="developer-note">
+            <b>Forge Studio</b>
+            <span>Studio remains available, but this milestone focuses on the platform shell and real player flow.</span>
+          </section>
+        </section>
+      </main>
+
+      <footer class="launcher-footer">
+        <span>FORGE =] • classic creation platform preview</span>
+        <span>Local-first • No fake online services</span>
+      </footer>
+    </section>
+
+    <dialog id="game-details-dialog" class="game-details-dialog">
+      <div class="game-details-window">
+        <div class="dialog-title game-details-titlebar">
+          <span>Place Details</span>
+          <button id="game-detail-close" type="button">×</button>
+        </div>
+        <div class="game-details-body">
+          <div id="game-detail-thumb" class="game-detail-thumb"></div>
+          <div class="game-detail-copy">
+            <h2 id="game-detail-title">Place</h2>
+            <div class="game-detail-byline">By <button id="game-detail-creator" class="creator-link" type="button">Forge</button></div>
+            <div id="game-detail-meta" class="game-detail-meta">Private</div>
+            <label>Description
+              <textarea id="game-detail-description" maxlength="500" rows="6"></textarea>
+            </label>
+            <label id="game-detail-visibility-row">Visibility
+              <select id="game-detail-visibility">
+                <option value="private">Private</option>
+                <option value="unlisted">Unlisted</option>
+                <option value="public">Public</option>
+              </select>
+            </label>
+            <div id="game-detail-note" class="dialog-note"></div>
+            <div id="game-detail-share-row" class="game-detail-share-row">
+              <input id="game-detail-share-url" readonly aria-label="Share link" />
+              <button id="game-detail-share" type="button">Copy Link</button>
+            </div>
+          </div>
+        </div>
+        <div class="game-details-actions">
+          <button id="game-detail-favorite" type="button">☆ Favorite</button>
+          <span class="dialog-spacer"></span>
+          <button id="game-detail-save" type="button">Save Details</button>
+          <button id="game-detail-edit" type="button">Edit</button>
+          <button id="game-detail-play" type="button" class="primary-classic">Play</button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="creator-profile-dialog" class="creator-profile-dialog">
+      <div class="creator-profile-window">
+        <div class="dialog-title creator-profile-titlebar">
+          <span>Creator Profile</span>
+          <button id="creator-profile-close" type="button">×</button>
+        </div>
+        <div class="creator-profile-head">
+          <div class="creator-avatar">=]</div>
+          <div>
+            <h2 id="creator-profile-name">Creator</h2>
+            <div id="creator-profile-username">@username</div>
+            <p id="creator-profile-bio">Forge creator.</p>
+          </div>
+        </div>
+        <div class="creator-profile-actions">
+          <button id="creator-profile-friend" type="button">Add Friend</button>
+        </div>
+        <section class="classic-section creator-games-section">
+          <div class="section-heading"><h2>Public Places</h2></div>
+          <div id="creator-profile-games" class="creator-profile-games"></div>
+        </section>
+      </div>
+    </dialog>
+
+    <dialog id="auth-dialog" class="create-dialog auth-dialog">
+      <form method="dialog" id="auth-form">
+        <div class="dialog-title">Forge Account</div>
+        <div class="auth-intro">
+          <div class="old-face big">=]</div>
+          <div>
+            <b>Sign in to Forge Cloud</b>
+            <p>Sync places, publish games, keep favorites and use your profile on other browsers.</p>
+          </div>
+        </div>
+        <label>Display name <input id="auth-display-name" maxlength="24" value="Builder" autocomplete="nickname" /></label>
+        <label>Email <input id="auth-email" type="email" autocomplete="email" required /></label>
+        <label>Password <input id="auth-password" type="password" autocomplete="current-password" minlength="6" required /></label>
+        <div id="auth-message" class="auth-message">You can keep using Forge as a guest without signing in.</div>
+        <div class="dialog-actions auth-actions">
+          <button id="auth-guest" type="button">Continue as Guest</button>
+          <button id="auth-sign-in" type="button">Sign In</button>
+          <button id="auth-sign-up" type="button" class="primary-classic">Create Account</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="profile-dialog" class="create-dialog profile-dialog">
+      <form method="dialog" id="profile-form">
+        <div class="dialog-title">My Forge Profile</div>
+        <div class="profile-editor-avatar">
+          <div class="old-face big">=]</div>
+          <div class="profile-cloud-summary">
+            <b id="profile-cloud-name">Forge Cloud</b>
+            <span id="profile-email">Guest</span>
+          </div>
+        </div>
+        <label>Username <input id="profile-username" maxlength="24" autocomplete="username" /></label>
+        <label>Display name <input id="profile-display-name" maxlength="24" value="Builder" autocomplete="nickname" /></label>
+        <label>Bio <textarea id="profile-bio" maxlength="160" rows="3"></textarea></label>
+        <p id="profile-note" class="dialog-note">Cloud profile.</p>
+        <div class="dialog-actions profile-actions">
+          <button id="profile-sign-out" type="button" class="danger-soft">Sign Out</button>
+          <span class="dialog-spacer"></span>
+          <button value="cancel">Cancel</button>
+          <button id="save-profile" value="default" class="primary-classic">Save Profile</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="rename-place-dialog" class="create-dialog">
+      <form method="dialog" id="rename-place-form">
+        <div class="dialog-title">Rename Place</div>
+        <label>Place name<input id="rename-place-name" maxlength="48" /></label>
+        <div class="dialog-actions">
+          <button value="cancel">Cancel</button>
+          <button id="confirm-rename-place" value="default" class="primary-classic">Rename</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="create-place-dialog" class="create-dialog">
+      <form method="dialog" id="create-place-form">
+        <div class="dialog-title">Create a New Place</div>
+        <label>Place name<input id="new-place-name" value="My Place" maxlength="48" /></label>
+        <label>Template
+          <select id="new-place-template">
+            <option value="baseplate">Classic Baseplate</option>
+            <option value="industrial">Industrial Blank</option>
+          </select>
+        </label>
+        <div class="dialog-actions">
+          <button value="cancel">Cancel</button>
+          <button id="confirm-create-place" value="default" class="primary-classic">Create</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div id="app" class="studio-shell" hidden>
+      <div class="studio-menubar">
+        <button id="home-button" class="studio-home">FORGE <span>=]</span></button>
+        <button>File</button>
+        <button>Edit</button>
+        <button>View</button>
+        <button>Insert</button>
+        <button>Tools</button>
+        <button>Help</button>
+        <div class="studio-title">Forge Studio — <span id="studio-project-name">Untitled</span></div>
+      </div>
+
+      <header class="topbar">
+        <div class="toolbar">
+          <button id="tool-select" title="Select (Ctrl+1)">⌖ Select</button>
+          <button id="tool-move" title="Move (Ctrl+2)">↔ Move</button>
+          <button id="tool-scale" title="Resize (Ctrl+3)">□ Resize</button>
+          <button id="tool-rotate" title="Rotate (Ctrl+4)">⟳ Rotate</button>
+          <button id="transform-space" title="Transforms follow world axes (Ctrl+5)">World</button>
+          <button id="snap-toggle" class="active" title="Toggle transform snapping">Snap On</button>
+          <select id="snap-size" title="Move snap size">
+            <option value="0.25">Move .25</option>
+            <option value="0.5">Move .5</option>
+            <option value="1" selected>Move 1</option>
+            <option value="2">Move 2</option>
+          </select>
+          <select id="rotation-snap" title="Rotation snap">
+            <option value="5">Rotate 5°</option>
+            <option value="15" selected>Rotate 15°</option>
+            <option value="45">Rotate 45°</option>
+          </select>
+          <select id="scale-snap" title="Resize snap">
+            <option value="0.05">Resize .05</option>
+            <option value="0.1" selected>Resize .1</option>
+            <option value="0.25">Resize .25</option>
+            <option value="0.5">Resize .5</option>
+          </select>
+          <span class="separator"></span>
+          <button id="undo" title="Undo (Ctrl+Z)">↶ Undo</button>
+          <button id="redo" title="Redo (Ctrl+Y / Ctrl+Shift+Z)">↷ Redo</button>
+          <button id="copy-selected" title="Copy hierarchy (Ctrl+C)">Copy</button>
+          <button id="paste-selected" title="Paste hierarchy (Ctrl+V)">Paste</button>
+          <button id="duplicate-selected" title="Duplicate hierarchy (Ctrl+D)">Duplicate</button>
+          <button id="rename-selected" title="Rename selected object (F2)">Rename</button>
+          <button id="delete-selected" title="Delete selected hierarchy (Delete)">Delete</button>
+          <button id="code-selected" title="Open script editor for selected object">&lt;/&gt; Code</button>
+          <button id="collision-debug" title="Show collider geometry in the Studio viewport">Colliders Off</button>
+          <span class="separator"></span>
+          <button id="play" class="play">▶ Play</button>
+          <button id="stop" disabled>■ Stop</button>
+          <span class="separator"></span>
+          <button id="save-local">Save</button>
+          <button id="load-local">Load</button>
+          <button id="import-scene">Import</button>
+          <button id="export-scene">Export</button>
+          <button id="import-prefab" title="Import a reusable .forge-prefab.json hierarchy">Import Prefab</button>
+          <button id="export-prefab" title="Export the selected object and its children as a reusable prefab">Export Prefab</button>
+          <input id="scene-file-input" type="file" accept=".json,.forge.json,application/json" hidden />
+          <input id="prefab-file-input" type="file" accept=".json,.forge-prefab.json,application/json" hidden />
+        </div>
+      </header>
+
+      <main class="workspace">
+        <aside class="panel explorer">
+          <div class="classic-panel-title">Toolbox</div>
+          <div class="create-palette">
+            <button data-primitive="box">▣ Block</button>
+            <button data-primitive="wedge">◩ Wedge</button>
+            <button data-primitive="cylinder">● Cylinder</button>
+            <button data-primitive="sphere">● Sphere</button>
+            <button data-primitive="capsule">⬭ Capsule</button>
+            <button data-primitive="ground">▱ Ground</button>
+            <div class="palette-label">Objects</div>
+            <button data-object="empty">◇ Empty Object</button>
+            <button data-object="group">▾ Group</button>
+            <button data-object="light">☀ Point Light</button>
+            <button data-object="spawn">⚑ Spawn Location</button>
+            <button data-object="sound">♪ Sound</button>
+            <button data-object="vfx">✦ Particle VFX</button>
+            <button id="import-audio">⇧ Import Audio</button>
+            <input id="audio-file-input" type="file" accept="audio/*,.mp3,.wav,.ogg,.m4a" hidden />
+            <button data-object="ui-text">T Screen Text</button>
+            <button data-object="ui-button">▣ UI Button</button>
+            <button data-object="script">⌘ Script</button>
+            <button data-object="localscript">⌘ LocalScript</button>
+            <button data-object="modulescript">⌘ ModuleScript</button>
+            <button id="import-model">⇧ Import GLB</button>
+            <input id="model-file-input" type="file" accept=".glb,model/gltf-binary,application/octet-stream" hidden />
+            <button id="import-texture">▧ Import Texture</button>
+            <input id="texture-file-input" type="file" accept="image/png,image/jpeg,image/webp" hidden />
+            <div class="palette-label">Industrial</div>
+            <button data-prefab="blast-door">▥ Blast Door</button>
+            <button data-prefab="console">▰ Console</button>
+            <button data-prefab="catwalk">═ Catwalk</button>
+            <button data-prefab="coolant-pump">◉ Pump</button>
+            <div class="palette-label">Project Prefabs</div>
+            <button id="save-project-prefab" type="button">＋ Save Selection</button>
+            <div id="project-prefab-list" class="project-prefab-list">
+              <div class="component-note">No saved prefabs.</div>
+            </div>
+          </div>
+
+          <div class="classic-panel-title">Explorer</div>
+          <div class="service-tree">
+            <div id="workspace-root" class="service workspace-root">▾ Workspace</div>
+            <div id="scene-tree" class="scene-tree"></div>
+            <div class="service">▾ Player</div>
+            <div class="player-editor">
+              <label>Collider height <input id="player-collider-height" type="number" min="1" max="8" step="0.05" value="3.05" /></label>
+              <label>Collider radius <input id="player-collider-radius" type="number" min="0.2" max="2" step="0.05" value="0.45" /></label>
+              <label>Walk speed <input id="player-walk-speed" type="number" min="1" max="20" step="0.1" value="5.05" /></label>
+              <label>Run speed <input id="player-run-speed" type="number" min="1" max="30" step="0.1" value="8" /></label>
+              <label>Jump power <input id="player-jump-power" type="number" min="1" max="20" step="0.1" value="7.9" /></label>
+              <label>Max health <input id="player-max-health" type="number" min="1" max="100000" step="1" value="100" /></label>
+              <label>Kill Y <input id="player-kill-y" type="number" min="-100000" max="100000" step="1" value="-100" /></label>
+              <label class="player-checkbox-label">Auto respawn <input id="player-auto-respawn" type="checkbox" checked /></label>
+              <div class="component-note">Defaults: 3.05 × 0.45 capsule • walk 5.05 • run 8 • jump 7.9 • health 100</div>
+            </div>
+            <div class="service">▾ Lighting</div>
+            <div class="lighting-editor">
+              <div class="lighting-presets" aria-label="Environment presets">
+                <button type="button" data-environment-preset="day" title="Bright neutral daylight">Day</button>
+                <button type="button" data-environment-preset="sunset" title="Warm sunset atmosphere">Sunset</button>
+                <button type="button" data-environment-preset="night" title="Dark blue night lighting">Night</button>
+                <button type="button" data-environment-preset="foggy" title="Dense overcast fog">Foggy</button>
+              </div>
+              <label>Sky <input id="env-sky" type="color" value="#7fb9e8" /></label>
+              <label>Ambient <input id="env-ambient" type="color" value="#d9e8f4" /></label>
+              <label>Fog <input id="env-fog" type="color" value="#9fc6df" /></label>
+              <label>Fog density <input id="env-fog-density" type="number" min="0" max="0.1" step="0.001" value="0" /></label>
+              <div class="lighting-actions">
+                <button id="import-sky" type="button">Import Sky Image</button>
+                <button id="clear-sky" type="button">Use Color Sky</button>
+                <input id="sky-file-input" type="file" accept="image/png,image/jpeg,image/webp" hidden />
+              </div>
+              <div id="sky-file-label" class="component-note">Color sky</div>
+            </div>
+            <div class="service">Sound</div>
+            <div class="service">UI</div>
+            <div class="service">Scripts</div>
+          </div>
+        </aside>
+
+        <section class="viewport-wrap">
+          <canvas id="viewport"></canvas>
+          <div id="forge-ui-root" class="forge-ui-root"></div>
+          <div id="game-session-bar" class="game-session-bar">
+            <button id="exit-game">← Back to Forge</button>
+            <strong id="game-session-title">Playing</strong>
+            <span>Esc is not required — mouse stays visible.</span>
+          </div>
+          <div id="mode-badge" class="mode-badge">EDITOR</div>
+          <div id="interaction-prompt" class="interaction-prompt" hidden></div>
+          <div class="viewport-tip"><strong>Studio</strong> WASD fly • right-drag look • wheel zoom • F focus</div>
+          <div class="help">Play: WASD • hold right mouse to look • wheel zoom • Shift run • Space jump • E interact</div>
+        </section>
+
+        <aside class="panel inspector">
+          <div class="classic-panel-title">Properties</div>
+          <div id="inspector-empty" class="empty">Select an object</div>
+          <div id="inspector-fields" hidden>
+            <label>Name<input id="prop-name" type="text" /></label>
+            <label>Parent<select id="prop-parent"><option value="">Workspace</option></select></label>
+            <fieldset>
+              <legend>Appearance</legend>
+              <label>Color<input id="prop-color" type="color" value="#8796a3" /></label>
+              <label>Material
+                <select id="prop-material">
+                  <option value="plastic">Plastic</option>
+                  <option value="matte">Matte</option>
+                  <option value="metal">Metal</option>
+                  <option value="glass">Glass</option>
+                  <option value="neon">Neon</option>
+                </select>
+              </label>
+              <label>Emissive<input id="prop-emissive" type="color" value="#000000" /></label>
+              <label>Transparency<input id="prop-transparency" type="number" min="0" max="1" step="0.05" value="0" /></label>
+              <label>Texture URL<input id="prop-texture" type="text" placeholder="https://.../texture.png" /></label>
+              <button id="clear-texture" type="button">Clear Texture</button>
+            </fieldset>
+            <fieldset>
+              <legend>Position</legend>
+              <div class="triplet">
+                <input id="pos-x" type="number" step="0.1" />
+                <input id="pos-y" type="number" step="0.1" />
+                <input id="pos-z" type="number" step="0.1" />
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>Rotation °</legend>
+              <div class="triplet">
+                <input id="rot-x" type="number" step="1" />
+                <input id="rot-y" type="number" step="1" />
+                <input id="rot-z" type="number" step="1" />
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>Size</legend>
+              <div class="triplet">
+                <input id="size-x" type="number" min="0.01" step="0.1" />
+                <input id="size-y" type="number" min="0.01" step="0.1" />
+                <input id="size-z" type="number" min="0.01" step="0.1" />
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>Scale</legend>
+              <div class="triplet">
+                <input id="scale-x" type="number" step="0.1" />
+                <input id="scale-y" type="number" step="0.1" />
+                <input id="scale-z" type="number" step="0.1" />
+              </div>
+            </fieldset>
+            <div id="component-list" class="components"></div>
+            <div class="component-add">
+              <select id="component-type">
+                <option value="Collider">Collider</option>
+                <option value="Trigger">Trigger Volume</option>
+                <option value="Hazard">Hazard / Damage Zone</option>
+                <option value="Interactable">Interactable</option>
+                <option value="Door">Door</option>
+                <option value="Clearance">Clearance</option>
+                <option value="PowerConsumer">Power Consumer</option>
+                <option value="Reactor">Reactor</option>
+                <option value="Light">Light</option>
+                <option value="Sound">Sound</option>
+                <option value="Particle">Particle / VFX</option>
+                <option value="UI">UI</option>
+                <option value="Model">Model</option>
+                <option value="Spawn">Spawn</option>
+                <option value="Script">Script</option>
+              </select>
+              <button id="add-component">+ Component</button>
+            </div>
+          </div>
+        </aside>
+      </main>
+
+      <footer class="output">
+        <div class="output-summary">
+          <div><strong>Output</strong> <span id="status">Forge ready.</span></div>
+          <div id="history-state">Undo 0 • Redo 0</div>
+          <div id="fps">0 FPS</div>
+        </div>
+        <div id="output-log" class="output-log" aria-label="Forge output log"></div>
+      </footer>
+    </div>
+
+    <dialog id="script-editor-dialog" class="script-editor-dialog">
+      <div class="script-window">
+        <div class="script-window-title">
+          <div>
+            <strong>Forge Script Editor</strong>
+            <span id="script-editor-target">No object selected</span>
+          </div>
+          <button id="script-close" type="button">×</button>
+        </div>
+        <div class="script-toolbar">
+          <label>Type
+            <select id="script-kind">
+              <option value="Script">Script</option>
+              <option value="LocalScript">LocalScript</option>
+              <option value="ModuleScript">ModuleScript</option>
+            </select>
+          </label>
+          <label>Script name <input id="script-name" value="custom.script" /></label>
+          <span class="script-language">Forge JavaScript • runs only in Play</span>
+        </div>
+        <textarea id="script-source" spellcheck="false" aria-label="Forge script source"></textarea>
+        <div class="script-docs">
+          <code>Forge.self.move(x,y,z)</code>
+          <code>Forge.self.setPosition(x,y,z)</code>
+          <code>Forge.world.get("ObjectId")</code>
+          <code>Forge.world.create("box", "Crate")</code>
+          <code>Forge.world.clone("Crate")</code>
+          <code>Forge.world.destroy("Crate")</code>
+          <code>Forge.onTriggerEnter((actor) =&gt; {})</code>
+          <code>Forge.onTriggerExit((actor) =&gt; {})</code>
+          <code>Forge.player.setCheckpoint()</code>
+          <code>Forge.player.respawn()</code>
+          <code>Forge.player.damage(25)</code>
+          <code>Forge.player.heal(10)</code>
+          <code>Forge.player.getHealth()</code>
+          <code>Forge.onStart(fn)</code>
+          <code>Forge.onUpdate(fn)</code>
+          <code>Forge.onInteract(fn)</code>
+          <code>Forge.onClick(fn)</code>
+          <code>Forge.onKeyDown(fn)</code>
+          <code>Forge.input.isDown("KeyE")</code>
+          <code>Forge.player.get()</code>
+          <code>Forge.camera.setFov(70)</code>
+          <code>Forge.camera.lookAt(x,y,z)</code>
+          <code>Forge.parent</code>
+          <code>Forge.require("module.name")</code>
+          <code>Forge.audio.play("Alarm")</code>
+          <code>Forge.vfx.play("Emitter")</code>
+          <code>Forge.vfx.stop("Emitter")</code>
+          <code>Forge.vfx.restart("Emitter")</code>
+          <code>Forge.ui.setText("HUD", "Ready")</code>
+        </div>
+        <div class="script-actions">
+          <span>Ctrl+S saves. Custom scripts run when you press Play.</span>
+          <button id="script-template" type="button">Starter Code</button>
+          <button id="script-check" type="button">Check Code</button>
+          <button id="script-save" type="button" class="primary-classic">Save Script</button>
+        </div>
+      </div>
+    </dialog>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

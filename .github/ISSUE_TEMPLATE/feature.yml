@@ -1,0 +1,55 @@
+name: Feature proposal
+description: Propose a Forge feature or improvement
+title: "[FEATURE] "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Creator problem
+      description: What real creator or player problem are we solving?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the simplest useful version.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Editor
+        - Runtime
+        - Components
+        - Scripting
+        - AI editing
+        - Assets
+        - UI
+        - Project Helios
+        - Multiplayer
+        - Accounts / Friends
+        - Publishing
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: helios
+    attributes:
+      label: Project Helios use
+      description: If relevant, explain how this can be proven in the benchmark game.
+  - type: textarea
+    id: ai
+    attributes:
+      label: AI editability
+      description: How should an AI inspect or modify this feature through structured data?
+  - type: checkboxes
+    id: principles
+    attributes:
+      label: Product checks
+      options:
+        - label: This keeps Forge simple enough for creators.
+        - label: This does not depend on copying another platform's protected assets or UI.
+        - label: This is more important than early monetization work.

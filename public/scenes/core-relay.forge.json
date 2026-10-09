@@ -1,0 +1,504 @@
+{
+  "format": "forge.scene",
+  "version": 1,
+  "name": "Core Relay",
+  "playerSpawn": [
+    0,
+    2,
+    12
+  ],
+  "environment": {
+    "skyColor": "#233447",
+    "ambientColor": "#9db1bd",
+    "fogColor": "#233447",
+    "fogDensity": 0.006
+  },
+  "entities": [
+    {
+      "id": "Baseplate",
+      "name": "Baseplate",
+      "kind": "ground",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "size": [
+        48,
+        1,
+        48
+      ],
+      "color": "#3f484e",
+      "material": "matte",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "Spawn",
+      "name": "Spawn Location",
+      "kind": "cylinder",
+      "position": [
+        0,
+        0.1,
+        12
+      ],
+      "size": [
+        4,
+        0.18,
+        4
+      ],
+      "color": "#77b75a",
+      "emissive": "#233f19",
+      "transparency": 0.2,
+      "components": {
+        "Spawn": {
+          "enabled": true
+        },
+        "Collider": {
+          "enabled": false
+        }
+      }
+    },
+    {
+      "id": "Core",
+      "name": "Relay Core",
+      "kind": "cylinder",
+      "position": [
+        0,
+        2,
+        -2
+      ],
+      "size": [
+        4,
+        4,
+        4
+      ],
+      "color": "#305f76",
+      "material": "neon",
+      "emissive": "#133847",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "CoreVictoryVFX",
+      "name": "Core Victory VFX",
+      "kind": "empty",
+      "position": [
+        0,
+        3.2,
+        -2
+      ],
+      "size": [
+        1,
+        1,
+        1
+      ],
+      "components": {
+        "Particle": {
+          "enabled": true,
+          "preset": "energy",
+          "color": "#b7f34a",
+          "color2": "#5ed0ff",
+          "emitRate": 120,
+          "capacity": 650,
+          "lifetime": 1.35,
+          "size": 0.38,
+          "speed": 2.4,
+          "autoplay": false
+        }
+      }
+    },
+    {
+      "id": "ExitDoor",
+      "name": "Exit Door",
+      "kind": "box",
+      "position": [
+        0,
+        2,
+        -16
+      ],
+      "size": [
+        7,
+        4,
+        1
+      ],
+      "color": "#7f3a32",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "WallLeft",
+      "name": "Left Wall",
+      "kind": "box",
+      "position": [
+        -12,
+        2,
+        -5
+      ],
+      "size": [
+        1,
+        4,
+        24
+      ],
+      "color": "#59636a",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "WallRight",
+      "name": "Right Wall",
+      "kind": "box",
+      "position": [
+        12,
+        2,
+        -5
+      ],
+      "size": [
+        1,
+        4,
+        24
+      ],
+      "color": "#59636a",
+      "material": "metal",
+      "components": {
+        "Collider": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "RelayA",
+      "name": "Relay A",
+      "kind": "box",
+      "position": [
+        -7,
+        1,
+        -6
+      ],
+      "size": [
+        2.5,
+        2,
+        2.5
+      ],
+      "color": "#6f7d84",
+      "material": "metal",
+      "emissive": "#101719",
+      "components": {
+        "Collider": {
+          "enabled": true
+        },
+        "Interactable": {
+          "enabled": true,
+          "prompt": "E • Activate Relay A"
+        },
+        "Script": {
+          "name": "core.relay.a",
+          "kind": "Script",
+          "enabled": true,
+          "source": "const state = Forge.require(\"core.relay.state\");\n\nForge.onInteract(() => {\n  const result = state.activate(\"A\");\n  Forge.self.setColor(result.newlyActivated ? \"#b7f34a\" : \"#6f7d84\");\n  Forge.ui.setText(\"ObjectiveText\", result.message);\n  Forge.ui.setText(\"CounterText\", result.count + \" / 3 relays online\");\n  Forge.audio.play(\"RelayBeep\");\n\n  if (result.complete) {\n    Forge.emit(\"core.complete\");\n  }\n});"
+        }
+      }
+    },
+    {
+      "id": "RelayB",
+      "name": "Relay B",
+      "kind": "box",
+      "position": [
+        0,
+        1,
+        -10
+      ],
+      "size": [
+        2.5,
+        2,
+        2.5
+      ],
+      "color": "#6f7d84",
+      "material": "metal",
+      "emissive": "#101719",
+      "components": {
+        "Collider": {
+          "enabled": true
+        },
+        "Interactable": {
+          "enabled": true,
+          "prompt": "E • Activate Relay B"
+        },
+        "Script": {
+          "name": "core.relay.b",
+          "kind": "Script",
+          "enabled": true,
+          "source": "const state = Forge.require(\"core.relay.state\");\n\nForge.onInteract(() => {\n  const result = state.activate(\"B\");\n  Forge.self.setColor(result.newlyActivated ? \"#b7f34a\" : \"#6f7d84\");\n  Forge.ui.setText(\"ObjectiveText\", result.message);\n  Forge.ui.setText(\"CounterText\", result.count + \" / 3 relays online\");\n  Forge.audio.play(\"RelayBeep\");\n\n  if (result.complete) {\n    Forge.emit(\"core.complete\");\n  }\n});"
+        }
+      }
+    },
+    {
+      "id": "RelayC",
+      "name": "Relay C",
+      "kind": "box",
+      "position": [
+        7,
+        1,
+        -6
+      ],
+      "size": [
+        2.5,
+        2,
+        2.5
+      ],
+      "color": "#6f7d84",
+      "material": "metal",
+      "emissive": "#101719",
+      "components": {
+        "Collider": {
+          "enabled": true
+        },
+        "Interactable": {
+          "enabled": true,
+          "prompt": "E • Activate Relay C"
+        },
+        "Script": {
+          "name": "core.relay.c",
+          "kind": "Script",
+          "enabled": true,
+          "source": "const state = Forge.require(\"core.relay.state\");\n\nForge.onInteract(() => {\n  const result = state.activate(\"C\");\n  Forge.self.setColor(result.newlyActivated ? \"#b7f34a\" : \"#6f7d84\");\n  Forge.ui.setText(\"ObjectiveText\", result.message);\n  Forge.ui.setText(\"CounterText\", result.count + \" / 3 relays online\");\n  Forge.audio.play(\"RelayBeep\");\n\n  if (result.complete) {\n    Forge.emit(\"core.complete\");\n  }\n});"
+        }
+      }
+    },
+    {
+      "id": "CoreLight",
+      "name": "Core Light",
+      "kind": "empty",
+      "position": [
+        0,
+        5,
+        -2
+      ],
+      "size": [
+        1,
+        1,
+        1
+      ],
+      "components": {
+        "Light": {
+          "type": "point",
+          "color": "#5bd1ff",
+          "intensity": 2.1,
+          "range": 22
+        }
+      }
+    },
+    {
+      "id": "RelayBeep",
+      "name": "RelayBeep",
+      "kind": "empty",
+      "position": [
+        0,
+        1,
+        -2
+      ],
+      "size": [
+        1,
+        1,
+        1
+      ],
+      "components": {
+        "Sound": {
+          "src": "./assets/core-relay-beep.wav",
+          "fileName": "core-relay-beep.wav",
+          "volume": 0.65,
+          "loop": false,
+          "autoplay": false,
+          "spatial": false,
+          "maxDistance": 30
+        }
+      }
+    },
+    {
+      "id": "StateModule",
+      "name": "Core Relay State",
+      "kind": "empty",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "size": [
+        1,
+        1,
+        1
+      ],
+      "components": {
+        "Script": {
+          "name": "core.relay.state",
+          "kind": "ModuleScript",
+          "enabled": true,
+          "source": "const active = new Set();\n\nForge.module({\n  activate(relay) {\n    const before = active.size;\n    active.add(relay);\n    const count = active.size;\n    const complete = count === 3;\n    return {\n      count,\n      complete,\n      newlyActivated: count > before,\n      message: complete\n        ? \"CORE ONLINE • Exit unlocked!\"\n        : \"Relay \" + relay + \" online • find \" + (3 - count) + \" more\"\n    };\n  },\n  count() {\n    return active.size;\n  }\n});"
+        }
+      }
+    },
+    {
+      "id": "GameController",
+      "name": "Game Controller",
+      "kind": "empty",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "size": [
+        1,
+        1,
+        1
+      ],
+      "components": {
+        "Script": {
+          "name": "core.relay.controller",
+          "kind": "Script",
+          "enabled": true,
+          "source": "Forge.onStart(() => {\n  Forge.ui.setText(\"ObjectiveText\", \"Activate the 3 relay consoles\");\n  Forge.ui.setText(\"CounterText\", \"0 / 3 relays online\");\n  Forge.log(\"CORE_RELAY_READY\");\n});\n\nForge.on(\"core.complete\", () => {\n  const door = Forge.world.get(\"ExitDoor\");\n  const core = Forge.world.get(\"Core\");\n\n  if (door) door.move(0, 5, 0);\n  if (core) core.setColor(\"#b7f34a\");\n\n  Forge.ui.setText(\"ObjectiveText\", \"CORE ONLINE • YOU WIN\");\n  Forge.ui.setText(\"CounterText\", \"3 / 3 relays online\");\n  Forge.audio.play(\"RelayBeep\");\n  Forge.vfx.restart(\"CoreVictoryVFX\");\n  Forge.log(\"CORE_RELAY_WIN\");\n});"
+        }
+      }
+    },
+    {
+      "id": "HUDPanel",
+      "name": "HUD Panel",
+      "kind": "empty",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "size": [
+        1,
+        1,
+        1
+      ],
+      "components": {
+        "UI": {
+          "type": "panel",
+          "x": 0,
+          "y": 18,
+          "width": 430,
+          "height": 92,
+          "color": "#ffffff",
+          "background": "#111a22d9",
+          "visible": true,
+          "anchor": "top-center"
+        }
+      }
+    },
+    {
+      "id": "ObjectiveText",
+      "name": "ObjectiveText",
+      "kind": "empty",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "size": [
+        1,
+        1,
+        1
+      ],
+      "parentId": "HUDPanel",
+      "components": {
+        "UI": {
+          "type": "text",
+          "text": "Activate the 3 relay consoles",
+          "x": 0,
+          "y": 12,
+          "width": 390,
+          "height": 34,
+          "fontSize": 20,
+          "color": "#ffffff",
+          "background": "transparent",
+          "visible": true,
+          "anchor": "top-center"
+        }
+      }
+    },
+    {
+      "id": "CounterText",
+      "name": "CounterText",
+      "kind": "empty",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "size": [
+        1,
+        1,
+        1
+      ],
+      "parentId": "HUDPanel",
+      "components": {
+        "UI": {
+          "type": "text",
+          "text": "0 / 3 relays online",
+          "x": 0,
+          "y": 48,
+          "width": 390,
+          "height": 26,
+          "fontSize": 14,
+          "color": "#b7f34a",
+          "background": "transparent",
+          "visible": true,
+          "anchor": "top-center"
+        }
+      }
+    },
+    {
+      "id": "HintButton",
+      "name": "Hint Button",
+      "kind": "empty",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "size": [
+        1,
+        1,
+        1
+      ],
+      "components": {
+        "UI": {
+          "type": "button",
+          "text": "Need a hint?",
+          "x": 18,
+          "y": 18,
+          "width": 130,
+          "height": 34,
+          "fontSize": 13,
+          "color": "#21300c",
+          "background": "#b7f34a",
+          "visible": true,
+          "anchor": "bottom-center"
+        },
+        "Script": {
+          "name": "core.relay.hint",
+          "kind": "LocalScript",
+          "enabled": true,
+          "source": "Forge.onClick(async () => {\n  Forge.ui.setText(\"ObjectiveText\", \"Walk to each metal relay and press E\");\n  await Forge.time.wait(2);\n  const state = Forge.require(\"core.relay.state\");\n  Forge.ui.setText(\"ObjectiveText\", state.count() === 3\n    ? \"CORE ONLINE • YOU WIN\"\n    : \"Activate the 3 relay consoles\");\n});"
+        }
+      }
+    }
+  ]
+}
