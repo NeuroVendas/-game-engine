@@ -53,6 +53,13 @@ export function onAuthChange(callback: (session: Session | null) => void): () =>
   return () => data.subscription.unsubscribe();
 }
 
+// Build the confirmation target from the active Forge page, never from a
+// development-only Supabase Site URL (previously localhost:3000).
+// Keep the full GitHub Pages project path: /-game-engine/.
+export function authReturnUrl(): string {
+  return new URL(window.location.pathname, window.location.origin).href;
+}
+
 export async function signUp(
   email: string,
   password: string,
@@ -62,12 +69,22 @@ export async function signUp(
     email,
     password,
     options: {
+      emailRedirectTo: authReturnUrl(),
       data: { display_name: displayName.trim() || "Builder" }
     }
   });
 
   if (error) throw error;
   return data;
+}
+
+export async function resendConfirmation(email: string): Promise<void> {
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email: email.trim(),
+    options: { emailRedirectTo: authReturnUrl() }
+  });
+  if (error) throw error;
 }
 
 export async function signIn(email: string, password: string): Promise<Session> {
