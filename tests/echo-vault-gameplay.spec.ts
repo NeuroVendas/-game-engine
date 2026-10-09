@@ -109,7 +109,11 @@ test("Echo Vault power nodes, checkpoint and exit work as one real WASD playthro
   await expect(hud).toContainText("3 / 3 POWER NODES");
   await expect(page.locator("#output-log")).toContainText("ECHO_VAULT_UNLOCKED");
 
-  // The exit is reachable only once all three power nodes unlock the door.
+  // The eastern service aisle contains a solid storage crate at
+  // (10,-14). Cut one lane inward *before* advancing south so the
+  // avatar does not try to pass through the container.
+  // The exit is reachable only once all three nodes unlock the door.
+  await traverse(page, "x", 7);
   await traverse(page, "z", -21);
   await traverse(page, "x", 0);
   await traverse(page, "z", -29);
