@@ -20,6 +20,16 @@
 - The static preview branch `forge-preview-v05` remains separate from the Pages production publishing mechanism.
 - **Current task:** get user's browser confirmation of the published website and repair any live UX/auth routing issues discovered. The Windows installer and auto-update idea remain deferred until the user elects to start them.
 
+## Auth email verification hotfix (2026-10-09)
+
+- **PR [#29](https://github.com/NeuroVendas/-game-engine/pull/29) merged into main:** `fd8592a5078c5753ebcf0dabecfdf1d472199637`.
+- **QA on PR:** CI PASS, Cloud Smoke PASS, focused auth + gameplay regressions PASS, full Playwright Browser Smoke **18/18 PASS** ([run 37972717381](https://github.com/NeuroVendas/-game-engine/actions/runs/37972717381)).
+- **Pages production:** [run 37974062446](https://github.com/NeuroVendas/-game-engine/actions/runs/37974062446) PASS; external HTTP fetch of [revision.txt](https://neurovendas.github.io/-game-engine/revision.txt) returned exactly `fd8592a5078c5753ebcf0dabecfdf1d472199637`, and live [homepage](https://neurovendas.github.io/-game-engine/) was accessible.
+- **Root cause:** Supabase Auth used old `http://localhost:3000` for default redirect; logs showed one successful signup email confirmation and a subsequent invalid/used one-time token. The user updated Supabase **Site URL and Redirect URLs** to `https://neurovendas.github.io/-game-engine/` in Auth URL Configuration.
+- **Code fix:** explicit `emailRedirectTo` for signup and resend targeting the current Forge pathname; actionable expired-link feedback; prevent stale callback/session failure from incorrectly marking Forge Cloud offline.
+- **Remaining verification:** a live new-user sign-up through Supabase mail delivery was **not** performed after the fix (automated tests mocked signup/resend to avoid creating accounts/sending mail). User's already-verified account can sign in with the existing credentials. Do not assert end-to-end email delivery without a new manual test.
+- **Other work:** Echo Vault/UI/character improvements live in draft [PR #28](https://github.com/NeuroVendas/-game-engine/pull/28), NOT released in the public v0.5 hotfix. Do not overwrite main with that feature stack without reviewing/rebasing its changes.
+
 ## 1. Start here if you are a DIFFERENT AI / Codex / Work
 
 1. This is **Forge =]**, NOT the `happy-coding` or `evolution-neuro` repository.
