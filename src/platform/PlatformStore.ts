@@ -56,7 +56,8 @@ export function saveProjects(projects: ForgeSceneDocument[]): void {
 }
 
 export function projectId(scene: ForgeSceneDocument): string {
-  if (scene.platform?.isOfficial || scene.name === "Project Helios") {
+  if (scene.name === "Project Helios" || scene.platform?.slug === "project-helios") return "official:helios";
+  if (scene.platform?.isOfficial) {
     const slug = scene.platform?.slug
       ?? scene.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     return `official:${slug}`;
