@@ -1586,16 +1586,20 @@ test("Core Relay template is a playable complete-game benchmark", async ({ page 
   await page.keyboard.press("KeyE");
   await expect(page.locator("#forge-ui-root")).toContainText("1 / 3 relays online");
 
-  // Relay B: step away from A, descend the open lower lane, then approach from the west.
+  // Relay B: approach from the west without asking the player to walk
+  // through the console's solid box collider. Stop at a reachable side lane.
   await moveAlongWorldAxis(page, "x", -3.8);
   await moveAlongWorldAxis(page, "z", -7.2);
-  await moveAlongWorldAxis(page, "x", -1.2);
+  await moveAlongWorldAxis(page, "x", -2.35);
+  await moveAlongWorldAxis(page, "z", -9.3);
   await expectInteractionPrompt(page, "Relay B");
   await page.keyboard.press("KeyE");
   await expect(page.locator("#forge-ui-root")).toContainText("2 / 3 relays online");
 
-  // Relay C: stay in the lower lane and approach from the west, before its collider face.
-  await moveAlongWorldAxis(page, "x", 4.4);
+  // Back away from the solid Relay B before crossing to the eastern
+  // corridor; then approach Relay C from its reachable west side.
+  await moveAlongWorldAxis(page, "z", -7.2);
+  await moveAlongWorldAxis(page, "x", 5.0);
   await expectInteractionPrompt(page, "Relay C");
   await page.keyboard.press("KeyE");
   await expect(page.locator("#forge-ui-root")).toContainText("3 / 3 relays online");
