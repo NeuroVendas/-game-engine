@@ -17,6 +17,7 @@ import {
   pingCloud,
   removeFriend,
   requestFriendByUsername,
+  resendConfirmation,
   setCloudFavorite,
   setCloudVisibility,
   signIn,
@@ -58,6 +59,10 @@ const favoritesGrid = must<HTMLDivElement>("favorites-grid");
 const developGrid = must<HTMLDivElement>("game-grid");
 const homeProjects = must<HTMLDivElement>("home-projects");
 const recentList = must<HTMLDivElement>("recent-list");
+
+// Capture one-time verification failures before the auth SDK initializes and
+// can normalize/remove the OAuth-style hash parameters.
+const initialConfirmationProblem = confirmationRedirectProblem();
 
 let editor: EditorApp | null = null;
 let state: PlatformState = loadPlatformState();
@@ -325,9 +330,21 @@ async function bootstrapCloud(): Promise<void> {
     await refreshPublicCloud();
     applyGameHashRoute();
 
-    const session = await getSession();
-    if (session) await hydrateAccount(session);
-    else renderAll();
+    // A stale confirmation link must not mark the whole Forge Cloud offline.
+    // Supabase can reject an expired one-time token while the database and
+    // public catalog are perfectly healthy.
+    let session: Session | null = null;
+    try {
+      session = await getSession();
+    } catch (error) {
+      console.warn("Auth callback/session recovery failed", error);
+    }
+    if (session) {
+      await hydrateAccount(session);
+    } else {
+      renderAll();
+      if (initialConfirmationProblem) openAuth(initialConfirmationProblem);
+    }
 
     onAuthChange((nextSession) => {
       if (nextSession?.user.id === cloudSession?.user.id) return;
@@ -1107,11 +1124,42 @@ async function handleSignUp(): Promise<void> {
     }
 
     message.className = "auth-message success";
-    message.textContent = "Account created. Check your email to confirm it, then return here and Sign In.";
+    message.textContent = "Check your email and click the newest confirmation link. It will return you to Forge. If you already clicked the link successfully, you can Sign In now.";
   } catch (error) {
     message.className = "auth-message error";
     message.textContent = error instanceof Error ? error.message : String(error);
   }
+}
+
+async function handleResendConfirmation(): Promise<void> {
+  const emailInput = must<HTMLInputElement>("auth-email");
+  const message = must<HTMLElement>("auth-message");
+  if (!emailInput.reportValidity() || !emailInput.value.trim()) {
+    emailInput.focus();
+    return;
+  }
+  message.className = "auth-message";
+  message.textContent = "Sending a new confirmation email...";
+  try {
+    await resendConfirmation(emailInput.value.trim());
+    message.className = "auth-message success";
+    message.textContent = "If this account needs confirmation, a new email has been sent. Use only the newest link. If your account is already confirmed, just Sign In.";
+  } catch (error) {
+    message.className = "auth-message error";
+    message.textContent = error instanceof Error ? error.message : String(error);
+  }
+}
+
+function confirmationRedirectProblem(): string | null {
+  const query = new URLSearchParams(location.search);
+  const hash = location.hash.startsWith("#") ? new URLSearchParams(location.hash.slice(1)) : new URLSearchParams();
+  const code = query.get("error_code") || hash.get("error_code");
+  const error = query.get("error") || hash.get("error");
+  if (!error && !code) return null;
+  if (code === "otp_expired" || code === "token_expired" || code === "invalid_token") {
+    return "That confirmation link is expired or already used. First try Sign In: your email may already be verified. If not, enter your email and select Resend confirmation.";
+  }
+  return "We couldn't finish email confirmation. Try signing in first, or resend a confirmation email if your account is still unverified.";
 }
 
 async function togglePublish(scene: ForgeSceneDocument): Promise<void> {
@@ -1305,6 +1353,7 @@ must<HTMLButtonElement>("open-profile").addEventListener("click", () => {
 
 must<HTMLButtonElement>("auth-sign-in").addEventListener("click", () => void handleSignIn());
 must<HTMLButtonElement>("auth-sign-up").addEventListener("click", () => void handleSignUp());
+must<HTMLButtonElement>("auth-resend").addEventListener("click", () => void handleResendConfirmation());
 must<HTMLButtonElement>("auth-guest").addEventListener("click", () => authDialog.close());
 
 must<HTMLFormElement>("profile-form").addEventListener("submit", (event) => {
