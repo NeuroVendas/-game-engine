@@ -56,7 +56,7 @@ export class PlayerController {
     this.keys.add(event.code);
 
     if (event.code === "Space" && !event.repeat) {
-      this.jumpBuffer = 0.14;
+      this.jumpBuffer = 0.24;
     }
 
     if (event.code === "KeyC" && !event.repeat) {
