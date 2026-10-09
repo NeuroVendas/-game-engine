@@ -1,5 +1,16 @@
 # Forge =] — CONTINUE HERE (authoritative AI handoff)
 
+## READ THIS FIRST — latest checkpoint (2026-10-09)
+
+**STATUS: Echo Vault + Studio usability update is MERGED AND PUBLIC. Do not repeat PR #28, restart its branch, or rerun a long stabilization cycle as if it were incomplete.**
+
+- **Current authoritative source:** `main` at latest SHA (last checked `676fd182d41f5de6e87669b34efcda5036fafea1`, documentation commit). The feature change was merged via [PR #28](https://github.com/NeuroVendas/-game-engine/pull/28) with merge SHA `42069324032839aad16bad6ead73a10f4d01ca2e`. The original registration-email hotfix [PR #29](https://github.com/NeuroVendas/-game-engine/pull/29) is already incorporated.
+- **Production URL:** https://neurovendas.github.io/-game-engine/ — public website deployment verified at [Pages run 37979557033](https://github.com/NeuroVendas/-game-engine/actions/runs/37979557033), and the HTTP `revision.txt` returned exact build commit `42069324032839aad16bad6ead73a10f4d01ca2e` at prior verification. The later documentation-only main commit should NOT be mistaken for a gameplay build change.
+- **QA on PR #28 head `fc648c82eb1525e180979483f958ea210f5fda70`:** CI PASS, Cloud Smoke PASS, focused browser PASS, complete Playwright **22/22 PASS** — [workflow 37977797737](https://github.com/NeuroVendas/-game-engine/actions/runs/37977797737). Includes real-WASD Echo Vault mission completion: checkpoints, three interactable consoles, vault unlock, victory trigger. An earlier 21/22 run failed on a crate in the escape route; this was corrected WITHOUT teleporting player or disabling collision.
+- **What user asked for:** visibly fix text overflow and horizontal-scrolling toolbar, Code editor usability, ugly avatar, demonstrate engine with a functional game. Released: responsive/wrapping Studio toolbar, Code button opens real Script editor (creates script when empty), original Forge Scout avatar visual update, public/remixable Echo Vault 119-entity showcase. **The user has NOT yet confirmed visually that these changes meet their standards.**
+- **NEXT ACTION FOR ANOTHER AI:** ask user to hard-refresh public Forge; get feedback/screenshots about Studio layout, editor, avatar and Echo Vault. Inspect actual browser layout and implement more substantial docking, code editor UX and player animation improvements *only if user wants to continue*. Develop in a **new branch off current `main`**. Do not automatically start v0.6 or desktop packaging. Every release requires actual browser QA and a verifiable Pages deploy.
+- **Docs below contain historical v0.5 status. For latest state, use THIS section and the “Echo Vault and Studio usability release” section.**
+
 > **Last updated:** 2026-10-09 (America/Asuncion).
 >
 > **Repository:** [NeuroVendas/-game-engine](https://github.com/NeuroVendas/-game-engine)
@@ -18,7 +29,7 @@
 - Deployed Pages build revision: `592430aaada1643719610611a08353b3daa23da4`, a checked build of v0.5.0. This is separate from the subsequent GitHub Release metadata and documentation commits; no gameplay source changes occurred between the tested release candidate and this Pages build.
 - **External visual smoke not independently confirmed**: automation verified GitHub's successful deployment logs and public environment URL, but a direct HTTP request from the assistant runtime was blocked by DNS/network resolution. The user should open the public URL and verify the launcher, Studio, Core Relay and cloud sign-in.
 - The static preview branch `forge-preview-v05` remains separate from the Pages production publishing mechanism.
-- **Current task:** get user's browser confirmation of the published website and repair any live UX/auth routing issues discovered. The Windows installer and auto-update idea remain deferred until the user elects to start them.
+- **Historical next step (now addressed):** the user confirmed the logged-in profile appeared, and the email redirection hotfix was deployed. The subsequent Echo Vault release is also complete; see latest checkpoint above. Windows installer/auto-update is deferred unless user requests it.
 
 ## Auth email verification hotfix (2026-10-09)
 
@@ -28,7 +39,7 @@
 - **Root cause:** Supabase Auth used old `http://localhost:3000` for default redirect; logs showed one successful signup email confirmation and a subsequent invalid/used one-time token. The user updated Supabase **Site URL and Redirect URLs** to `https://neurovendas.github.io/-game-engine/` in Auth URL Configuration.
 - **Code fix:** explicit `emailRedirectTo` for signup and resend targeting the current Forge pathname; actionable expired-link feedback; prevent stale callback/session failure from incorrectly marking Forge Cloud offline.
 - **Remaining verification:** a live new-user sign-up through Supabase mail delivery was **not** performed after the fix (automated tests mocked signup/resend to avoid creating accounts/sending mail). User's already-verified account can sign in with the existing credentials. Do not assert end-to-end email delivery without a new manual test.
-- **Other work:** Echo Vault/UI/character improvements live in draft [PR #28](https://github.com/NeuroVendas/-game-engine/pull/28), NOT released in the public v0.5 hotfix. Do not overwrite main with that feature stack without reviewing/rebasing its changes.
+- **Later release (already complete):** Echo Vault/UI/character improvements were subsequently merged through [PR #28](https://github.com/NeuroVendas/-game-engine/pull/28), with 22/22 full browser tests and production deployment confirmed. See the latest-checkpoint section above.
 
 ## Echo Vault and Studio usability release — 2026-10-09
 
